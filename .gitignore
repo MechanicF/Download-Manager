@@ -1,0 +1,4 @@
+node_modules/
+downloads.db
+config.json
+qbit_cookie.txt
