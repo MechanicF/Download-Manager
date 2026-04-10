@@ -36,7 +36,7 @@ install_env() {
 install_app() {
     clear
     echo -e "${GREEN}==================================================${RESET}"
-    echo -e "${GREEN}      🚀 Download Manager Pro 一键部署向导        ${RESET}"
+    echo -e "${GREEN}      🚀 Download Manager 一键部署向导            ${RESET}"
     echo -e "${GREEN}==================================================${RESET}"
     
     read -p "👉 请设置 Web 面板访问端口 [默认: 1111]: " HTTP_PORT
@@ -53,7 +53,7 @@ install_app() {
     echo -e "\n${YELLOW}>> 开始克隆项目到 ${INSTALL_DIR}...${RESET}"
     rm -rf "$INSTALL_DIR"
     git clone "$REPO_URL" "$INSTALL_DIR"
-    cd "$INSTALL_DIR"
+    cd "$INSTALL_DIR" || exit
 
     echo -e "${YELLOW}>> 正在配置自定义端口...${RESET}"
     sed -i "s/const PORT = 1111;/const PORT = ${HTTP_PORT};/g" app.js
@@ -61,13 +61,13 @@ install_app() {
     sed -i "s/:28080/:${WS_PORT}/g" app.js
 
     echo -e "${YELLOW}>> 正在安装 Node.js 核心依赖 (这可能需要几分钟)...${RESET}"
-    npm init -y >/dev/null 2>&1
     npm install express cors axios ws better-sqlite3 form-data ssh2
 
     echo -e "${YELLOW}>> 正在启动服务并配置开机自启...${RESET}"
-    chmod +x manager.sh
+    chmod +x manager.sh 2>/dev/null || true
     pm2 start app.js --name "$APP_NAME"
     pm2 save
+    # 彻底修复了烦人的视觉报错，采用静默注入
     env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1
 
     IP=$(curl -s ifconfig.me)
@@ -76,7 +76,7 @@ install_app() {
     echo -e "🔗 访问地址: ${YELLOW}http://${IP}:${HTTP_PORT}${RESET}"
     echo -e "👤 默认账号: ${YELLOW}admin${RESET}"
     echo -e "🔑 默认密码: ${YELLOW}password${RESET}"
-    echo -e "\n⚙️  管理面板: 以后你可以随时在终端输入 ${CYAN}bash $INSTALL_DIR/manager.sh${RESET} 来呼出此菜单。"
+    echo -e "\n⚙️  管理面板: 以后随时在终端输入 ${CYAN}bash $INSTALL_DIR/manager.sh${RESET} 呼出菜单。"
     echo -e "⚠️  为了安全，请务必在登录后前往【全局设置】修改默认密码！"
     echo -e "${GREEN}==================================================${RESET}"
     exit 0
@@ -85,28 +85,25 @@ install_app() {
 # ================= 3. 更新模块 =================
 update_app() {
     echo -e "\n${YELLOW}>> 开始从 GitHub 拉取最新版本...${RESET}"
-    cd "$INSTALL_DIR"
+    cd "$INSTALL_DIR" || exit
     
-    # 提取当前端口配置，防止被覆盖
-    HTTP_PORT=$(grep "const PORT =" app.js | tr -dc '0-9')
-    WS_PORT=$(grep "const WS_PORT =" app.js | tr -dc '0-9')
+    HTTP_PORT=$(grep "const PORT =" app.js | grep -o '[0-9]\+')
+    WS_PORT=$(grep "const WS_PORT =" app.js | grep -o '[0-9]\+')
     
     echo -e "当前端口保护: HTTP=${HTTP_PORT}, WS=${WS_PORT}"
     
-    # 强制覆盖拉取
     git fetch --all
     git reset --hard origin/main
     git pull
     
-    # 恢复端口
     if [ -n "$HTTP_PORT" ] && [ -n "$WS_PORT" ]; then
         sed -i "s/const PORT = 1111;/const PORT = ${HTTP_PORT};/g" app.js
         sed -i "s/const WS_PORT = 28080;/const WS_PORT = ${WS_PORT};/g" app.js
         sed -i "s/:28080/:${WS_PORT}/g" app.js
     fi
     
-    chmod +x manager.sh
-    echo -e "${YELLOW}>> 安装可能存在的新依赖...${RESET}"
+    chmod +x manager.sh 2>/dev/null || true
+    echo -e "${YELLOW}>> 更新可能存在的新依赖...${RESET}"
     npm install
     
     pm2 restart "$APP_NAME"
@@ -135,7 +132,6 @@ uninstall_app() {
 }
 
 # ================= 入口逻辑判定 =================
-# 如果安装目录不存在，或者安装目录里没有 app.js，说明未安装
 if [ ! -d "$INSTALL_DIR" ] || [ ! -f "$INSTALL_DIR/app.js" ]; then
     install_app
 fi
@@ -174,7 +170,7 @@ while true; do
     case $choice in
         1)
             echo -e "\n${GREEN}启动中...${RESET}"
-            cd "$INSTALL_DIR"
+            cd "$INSTALL_DIR" || exit
             pm2 start app.js --name "$APP_NAME"
             read -p "按回车键返回菜单..."
             ;;
