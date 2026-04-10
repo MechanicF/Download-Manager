@@ -68,7 +68,7 @@ install_app() {
     chmod +x manager.sh
     pm2 start app.js --name "$APP_NAME"
     pm2 save
-    pm2 startup | grep -v "sudo" | bash
+    env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1
 
     IP=$(curl -s ifconfig.me)
     echo -e "\n${GREEN}==================================================${RESET}"
@@ -194,7 +194,7 @@ while true; do
             ;;
         5)
             echo -e "\n${CYAN}配置开机自启中...${RESET}"
-            pm2 startup | grep -v "sudo" | bash
+            env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1
             pm2 save
             echo -e "${GREEN}设置成功！服务器重启后面板会自动运行。${RESET}"
             read -p "按回车键返回菜单..."
