@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Download Manager Pro</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
   
   <script>
     function initTheme() {
@@ -75,6 +72,7 @@
     .btn-success { background: var(--success); } .btn-success:hover { background: #73d13d; }
     .btn-warning { background: var(--warning); } .btn-warning:hover { background: #ffc53d; }
     .btn-danger { background: var(--danger); } .btn-danger:hover { background: #ff7875; }
+    .btn-info { background: #722ed1; } .btn-info:hover { background: #9254de; }
     .btn-sm { padding: 4px 12px; font-size: 12px; }
     #theme-toggle-btn { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.4s, color 0.4s, border-color 0.4s; }
 
@@ -107,11 +105,6 @@
     .form-control { padding: 8px 12px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); font-size: 13px; outline: none; transition: background-color 0.4s, color 0.4s, border-color 0.4s, box-shadow 0.3s; background: var(--input-bg); max-width: 100%; color: var(--text-main); }
     .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.2); }
     
-    #terminal-container { flex: 1; background: #000; padding: 12px; border-radius: var(--radius-md); overflow: hidden; position: relative; min-height: 350px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
-    .xterm { position: absolute; top: 12px; bottom: 12px; left: 12px; right: 12px; }
-    .xterm * { font-family: 'JetBrains Mono', Consolas, "Courier New", monospace !important; letter-spacing: normal !important; }
-    .xterm-viewport { overflow-y: auto !important; }
-
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
     .modal-overlay.show { display: flex; opacity: 1; }
     .modal { background: var(--card-bg); width: 520px; max-width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-float); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.4s; border: 1px solid var(--border-color); }
@@ -175,6 +168,12 @@
     .config-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .config-label { font-weight: 600; font-size: 14px; color: var(--text-main); }
     .config-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+
+    /* 任务详情表单样式 */
+    .detail-row { display: flex; padding: 10px 0; border-bottom: 1px dashed var(--border-color); }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { width: 120px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+    .detail-value { color: var(--text-main); word-break: break-all; }
     
     @media (max-width: 768px) {
       .menu-toggle { display: inline-block; } .navbar { padding: 0 16px; } .navbar .logo { font-size: 16px; } .navbar .global-stats { gap: 8px; } .navbar .stat-item { display: none; } #ws-status { display: inline-block !important; padding: 4px 8px; }
@@ -227,8 +226,6 @@
         </ul>
 
         <li class="nav-item" onclick="switchTab('openlist', this)">☁️ 云端文件</li>
-        <li class="nav-item" onclick="switchTab('ssh', this)">💻 SSH 终端</li>
-        
         <li class="nav-item" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 24px; transition: border-color 0.4s;" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
         
         <li>
@@ -288,21 +285,6 @@
             <div style="padding: 60px; text-align: center; color: var(--text-muted);">请在右侧全局设置中添加 OpenList 账号</div>
           </div>
         </div>
-      </div>
-
-      <div id="section-ssh" class="section">
-        <div class="toolbar" style="gap: 12px; align-items: center; flex-wrap: wrap;">
-          <select id="ssh-history" class="form-control" onchange="loadHistory(this.value)"><option value="">-- 连接历史 --</option></select>
-          <input type="text" id="ssh-host" placeholder="服务器 IP" class="form-control">
-          <input type="text" id="ssh-port" placeholder="端口(22)" value="22" class="form-control" style="width: 80px;">
-          <input type="text" id="ssh-user" placeholder="用户名(root)" class="form-control" style="width: 100px;">
-          <select id="ssh-auth-type" class="form-control" onchange="toggleAuthType()"><option value="password">密码验证</option><option value="key">私钥验证</option></select>
-          <input type="password" id="ssh-pass" placeholder="服务器密码" class="form-control">
-          <input type="file" id="ssh-key-file" class="form-control" style="display:none; width: 200px;" accept=".pem,.id_rsa,*" onchange="onKeySelect(event)">
-          <button class="btn btn-primary" onclick="connectSSH()" id="btn-ssh-conn">🔌 发起连接</button>
-          <button class="btn btn-danger" onclick="disconnectSSH()" id="btn-ssh-disc" style="display:none;">❌ 断开连接</button>
-        </div>
-        <div id="terminal-container"></div>
       </div>
 
       <div id="section-settings" class="section">
@@ -377,9 +359,53 @@
   </div>
 
   <div class="modal-overlay" id="new-task-modal">
-    <div class="modal"><div class="modal-header"><span>➕ 新建下载任务</span> <button class="close-btn" onclick="hideModal('new-task-modal')">✖</button></div><div class="modal-body"><div class="form-group"><label>选择下载器</label><select id="task-engine-select" class="form-control" style="width:100%; font-weight: 500;"></select></div><div class="form-group"><label>下载链接 (支持批量，每行一个)</label><textarea id="url-input" class="form-control" style="resize:vertical;min-height:140px;width:100%; font-family: monospace; font-size: 12px; padding: 12px;"></textarea></div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('new-task-modal')">取 消</button><button class="btn btn-primary" onclick="addDownload()">开始下载</button></div></div>
+    <div class="modal">
+      <div class="modal-header">
+        <span>➕ 新建下载任务</span> 
+        <button class="close-btn" onclick="hideModal('new-task-modal')">✖</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>分配引擎</label>
+          <select id="task-engine-select" class="form-control" style="width:100%; font-weight: 500;"></select>
+        </div>
+        <div class="form-group" style="margin-top: 20px;">
+          <div style="display:flex; gap:16px; margin-bottom: 12px;">
+            <label style="cursor:pointer; font-weight:600;"><input type="radio" name="task_type" value="url" checked onchange="toggleTaskType()"> 🔗 链接下载</label>
+            <label style="cursor:pointer; font-weight:600; color:var(--primary);"><input type="radio" name="task_type" value="torrent" onchange="toggleTaskType()"> 📄 种子文件上传</label>
+          </div>
+        </div>
+        <div class="form-group" id="box-url">
+          <label>资源链接 (支持批量 HTTP / 磁力链，每行一个)</label>
+          <textarea id="url-input" class="form-control" style="resize:vertical;min-height:140px;width:100%; font-family: monospace; font-size: 12px; padding: 12px;"></textarea>
+        </div>
+        <div class="form-group" id="box-torrent" style="display:none; padding: 30px 20px; border: 2px dashed var(--input-border); border-radius: var(--radius-sm); text-align: center; background: var(--bg-body);">
+          <input type="file" id="torrent-file" accept=".torrent" style="display: none;" onchange="document.getElementById('torrent-filename').textContent = this.files[0] ? this.files[0].name : '未选择文件';">
+          <button class="btn btn-default" onclick="document.getElementById('torrent-file').click()">选择 .torrent 文件</button>
+          <div id="torrent-filename" style="margin-top: 12px; font-size: 13px; color: var(--primary); font-weight: bold;">未选择文件</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="hideModal('new-task-modal')">取 消</button>
+        <button class="btn btn-primary" onclick="addDownload()">开始下载</button>
+      </div>
+    </div>
   </div>
   
+  <div class="modal-overlay" id="task-detail-modal">
+    <div class="modal" style="width: 480px;">
+      <div class="modal-header">
+        <span>ℹ️ 任务底层数据</span> 
+        <button class="close-btn" onclick="hideModal('task-detail-modal')">✖</button>
+      </div>
+      <div class="modal-body" id="task-detail-content" style="font-size: 13px; line-height: 1.6;">
+        </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="hideModal('task-detail-modal')">关 闭</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="engine-select-modal">
     <div class="modal" style="width: 420px;"><div class="modal-header"><span>📥 发送至下载器</span> <button class="close-btn" onclick="hideModal('engine-select-modal')">✖</button></div><div class="modal-body"><p style="margin-bottom: 16px; font-size: 14px; color: var(--text-main);">请选择要使用的下载器：</p><select id="ol-engine-select" class="form-control" style="width:100%; margin-bottom: 8px; font-weight:500;"></select></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('engine-select-modal')">取 消</button><button class="btn btn-primary" onclick="executeOlDownload()">确认发送</button></div></div>
   </div>
@@ -390,7 +416,8 @@
   <div class="toast-container" id="toast-container"></div>
   
   <script>
-    let ws = null; let tasks = []; let refreshInterval = null; let term = null, fitAddon = null, sshWs = null; let currentKeyContent = ""; let sysConfig = {}; let aria2Nodes = []; let olAccounts = []; 
+    let ws = null; let tasks = []; let refreshInterval = null; 
+    let sysConfig = {}; let aria2Nodes = []; let olAccounts = []; 
     
     function toggleTheme() { const current = document.documentElement.getAttribute('data-theme'); const newTheme = current === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('dm_theme', newTheme); const btn = document.getElementById('theme-toggle-btn'); btn.style.transform = 'scale(0.8) rotate(15deg)'; setTimeout(() => { updateThemeIcon(newTheme); btn.style.transform = 'scale(1) rotate(0deg)'; }, 150); }
     function updateThemeIcon(theme) { const btn = document.getElementById('theme-toggle-btn'); if (btn) btn.innerHTML = theme === 'dark' ? '☀️ 亮色' : '🌙 夜间'; }
@@ -417,11 +444,28 @@
       if(el) el.classList.add('active'); 
       document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active')); 
       document.getElementById('section-' + tabId).classList.add('active'); 
-      if (tabId === 'ssh') { if (!term) { term = new Terminal({ theme: { background: '#000' }, cursorBlink: true, fontSize: 14 }); fitAddon = new FitAddon.FitAddon(); term.loadAddon(fitAddon); term.open(document.getElementById('terminal-container')); term.writeln('Welcome to Download Manager Secure Shell'); term.onData(data => { if (sshWs && sshWs.readyState === WebSocket.OPEN) sshWs.send(JSON.stringify({ type: 'data', data })); }); renderHistoryList(); } setTimeout(() => { if (fitAddon) fitAddon.fit(); }, 200); window.addEventListener('resize', () => { if (fitAddon) fitAddon.fit(); }); } else if (tabId === 'openlist') { if (olFiles.length === 0) loadOpenList(currentOpenListPath); } else if (tabId === 'settings') { loadConfigToSettingsView(); }
+      if (tabId === 'openlist') { if (olFiles.length === 0) loadOpenList(currentOpenListPath); } 
+      else if (tabId === 'settings') { loadConfigToSettingsView(); }
       closeMobileMenu(); 
     }
+    
+    // 🔗 种子上传界面切换
+    function toggleTaskType() {
+        const type = document.querySelector('input[name="task_type"]:checked').value;
+        document.getElementById('box-url').style.display = type === 'url' ? 'block' : 'none';
+        document.getElementById('box-torrent').style.display = type === 'torrent' ? 'block' : 'none';
+    }
 
-    function showNewTaskModal() { document.getElementById('url-input').value = ''; populateEngineSelector('task-engine-select'); showModal('new-task-modal'); }
+    function showNewTaskModal() { 
+      document.getElementById('url-input').value = ''; 
+      document.getElementById('torrent-file').value = '';
+      document.getElementById('torrent-filename').textContent = '未选择文件';
+      document.querySelector('input[name="task_type"][value="url"]').checked = true;
+      toggleTaskType();
+      populateEngineSelector('task-engine-select'); 
+      showModal('new-task-modal'); 
+    }
+    
     function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateEngineSelector('ol-engine-select'); showModal('engine-select-modal'); }
     function populateEngineSelector(elementId) {
       const sel = document.getElementById(elementId);
@@ -438,21 +482,51 @@
     function toggleTask(taskId, isChecked) { if (isChecked) selectedTasks.add(taskId); else selectedTasks.delete(taskId); updateTaskToolbar(); }
     function toggleAllTasks(isChecked) { const visibleTasks = getFilteredTasks(); if (isChecked) visibleTasks.forEach(t => selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
     function updateTaskToolbar() { document.getElementById('task-selected-count').textContent = `已选 ${selectedTasks.size} 项`; const visibleTasks = getFilteredTasks(); document.getElementById('task-select-all').checked = visibleTasks.length > 0 && selectedTasks.size === visibleTasks.length; }
-    async function batchTaskAction(action) { if (selectedTasks.size === 0) return showToast('未选择任何任务', 'warning'); const actionName = action === 'pause' ? '暂停' : (action === 'resume' ? '继续' : '删除'); if (action === 'delete' && !confirm(`确定要删除选中的 ${selectedTasks.size} 个任务吗？`)) return; showToast(`正在处理...`, 'success'); const ids = Array.from(selectedTasks); const res = await api('/api/tasks/batch', { method: 'POST', body: JSON.stringify({ ids, action }) }); if (res.success) { showToast(`操作成功`, 'success'); selectedTasks.clear(); refreshTasks(); } else { showToast('操作失败，请重试', 'error'); } }
+    
+    // 🌟 修复：批量处理带上明确的 this，并增加 1 秒延迟等待底层引擎反馈
+    async function batchTaskAction(action) { 
+      if (selectedTasks.size === 0) return showToast('未选择任何任务', 'warning'); 
+      if (action === 'delete' && !confirm(`确定要删除选中的 ${selectedTasks.size} 个任务吗？`)) return; 
+      showToast(`正在发送指令...`, 'success'); 
+      const ids = Array.from(selectedTasks); 
+      const res = await api('/api/tasks/batch', { method: 'POST', body: JSON.stringify({ ids, action }) }); 
+      if (res.success) { 
+        showToast(`操作成功，等待引擎响应`, 'success'); 
+        selectedTasks.clear(); 
+        setTimeout(refreshTasks, 1000); // 给后端引擎1秒的反应时间
+      } else { showToast('操作失败', 'error'); } 
+    }
+    
     function getFilteredTasks() { if (!tasks) return []; return tasks.filter(t => { if (currentTaskFilter === 'all') return true; if (currentTaskFilter === 'downloading') return t.status === 'downloading'; if (currentTaskFilter === 'waiting') return t.status === 'waiting' || t.status === 'paused'; if (currentTaskFilter === 'complete') return t.status === 'complete' || t.status === 'error'; return true; }); }
     
+    // 🌟 核心修复：纯原生 DOM 差分引擎，文件名的修改也加入动态更新！
     function renderTasks() {
       const list = document.getElementById('task-list'); 
       let filteredTasks = getFilteredTasks();
       
-      filteredTasks.sort((a, b) => { let cmp = 0; if (taskSortBy === 'created_at') cmp = new Date(a.created_at || 0) - new Date(b.created_at || 0); else if (taskSortBy === 'name') cmp = (a.filename || '').localeCompare(b.filename || '', undefined, {numeric: true, sensitivity: 'base'}); else if (taskSortBy === 'size') cmp = a.total_size - b.total_size; else if (taskSortBy === 'progress') cmp = a.progress - b.progress; return taskSortDesc ? -cmp : cmp; });
+      // 稳定的日期解析：兼容所有浏览器
+      filteredTasks.sort((a, b) => { 
+        let cmp = 0; 
+        if (taskSortBy === 'created_at') {
+          const timeA = new Date((a.created_at || '').replace(' ', 'T')).getTime() || 0;
+          const timeB = new Date((b.created_at || '').replace(' ', 'T')).getTime() || 0;
+          cmp = timeA - timeB;
+        } else if (taskSortBy === 'name') {
+          cmp = (a.filename || '').localeCompare(b.filename || '', undefined, {numeric: true, sensitivity: 'base'}); 
+        } else if (taskSortBy === 'size') {
+          cmp = a.total_size - b.total_size; 
+        } else if (taskSortBy === 'progress') {
+          cmp = a.progress - b.progress; 
+        }
+        return taskSortDesc ? -cmp : cmp; 
+      });
+      
       updateTaskToolbar();
       
       if (filteredTasks.length === 0) { 
         list.innerHTML = '<div style="text-align: center; padding: 80px 20px; color: var(--text-muted);"><div style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;">📭</div><p>暂无任务</p></div>'; 
         return; 
       }
-      
       if (list.querySelector('.text-muted')) list.innerHTML = '';
 
       const currentIds = new Set(filteredTasks.map(t => String(t.id)));
@@ -464,7 +538,7 @@
 
       const statusText = { 'downloading': '下载中', 'waiting': '等待中', 'paused': '已暂停', 'complete': '已完成', 'error': '发生错误' };
 
-      filteredTasks.forEach(t => {
+      filteredTasks.forEach((t, i) => {
         let eta = t.speed > 0 ? (t.total_size - t.downloaded_size) / t.speed : 0; 
         let progress = t.progress ? parseFloat(t.progress).toFixed(2) : 0; 
         if(t.status === 'complete') progress = 100;
@@ -483,14 +557,14 @@
             <div class="task-header">
               <div class="task-title" title="${t.filename}">
                 <input type="checkbox" class="custom-checkbox cb-task" value="${t.id}" ${isChecked} onclick="toggleTask('${t.id}', this.checked)">
-                <span class="t-name">${t.filename || '获取信息中...'}</span>
+                <span class="t-name"></span>
               </div>
               <div class="task-actions"></div>
             </div>
             <div class="task-body">
               <div class="progress-wrapper"><div class="progress-bar" style="width: ${progress}%"></div><div class="progress-text" style="position:absolute;width:100%;text-align:center;font-size:10px;font-weight:bold;color:#333; z-index:1;">${progress}%</div></div>
               <div class="task-meta">
-                <div class="meta-left"><span><span class="tag ${engineClass}" title="${t.engine}">${engineTag}</span></span><span class="s-text">${statusText[t.status] || t.status}</span><span style="color:var(--border-color);">|</span><span class="s-size">${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}</span></div>
+                <div class="meta-left"><span><span class="tag ${engineClass}" title="${t.engine}">${engineTag}</span></span><span class="s-text"></span><span style="color:var(--border-color);">|</span><span class="s-size"></span></div>
                 <div class="meta-right"></div>
               </div>
             </div>
@@ -501,22 +575,67 @@
         card.className = `task-card ${t.status}`;
         card.querySelector('.progress-bar').style.width = `${progress}%`;
         card.querySelector('.progress-text').textContent = `${progress}%`;
+        
+        // 🌟 修复未知命名：持续将后端的真实名称刷进来
+        card.querySelector('.t-name').textContent = t.filename || '获取信息中...';
+        
         card.querySelector('.s-text').textContent = statusText[t.status] || t.status;
         card.querySelector('.s-size').textContent = `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`;
         card.querySelector('.meta-right').innerHTML = ['downloading'].includes(t.status) ? `<span style="color:var(--primary);">⬇️ ${formatSize(t.speed)}/s</span> <span style="color:var(--text-muted); font-weight:normal;">⏳ ${formatTime(eta)}</span>` : '';
         card.querySelector('.cb-task').checked = selectedTasks.has(t.id);
 
         let actionsHtml = '';
-        if(t.status !== 'paused' && t.status !== 'complete' && t.status !== 'error') actionsHtml += `<button class="btn btn-warning btn-sm" onclick="singleAction('${t.id}', 'pause')">暂停</button>`;
-        if(t.status === 'paused' || t.status === 'error') actionsHtml += `<button class="btn btn-success btn-sm" onclick="singleAction('${t.id}', 'resume')">继续</button>`;
-        actionsHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}', 'delete')"><span style="color:var(--danger);">删除</span></button>`;
+        actionsHtml += `<button class="btn btn-info btn-sm" onclick="showTaskDetails('${t.id}')">详情</button>`;
+        // 🌟 修复：摒弃全局 event，直接在按钮内部通过 this 传参并增加 1秒延迟
+        if(t.status !== 'paused' && t.status !== 'complete' && t.status !== 'error') actionsHtml += `<button class="btn btn-warning btn-sm" onclick="singleAction('${t.id}', 'pause', this)">暂停</button>`;
+        if(t.status === 'paused' || t.status === 'error') actionsHtml += `<button class="btn btn-success btn-sm" onclick="singleAction('${t.id}', 'resume', this)">继续</button>`;
+        actionsHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}', 'delete', this)"><span style="color:var(--danger);">删除</span></button>`;
         card.querySelector('.task-actions').innerHTML = actionsHtml;
 
-        list.appendChild(card);
+        if (list.children[i] !== card) {
+          list.insertBefore(card, list.children[i]);
+        }
       });
     }
+    
+    // 🌟 新增：任务底层详情展示
+    async function showTaskDetails(id) {
+        document.getElementById('task-detail-content').innerHTML = '<div style="text-align:center; padding: 20px; color: var(--primary);">正在从引擎内存读取数据...</div>';
+        showModal('task-detail-modal');
+        const res = await api(`/api/tasks/${id}/details`);
+        
+        if (res.success) {
+            let html = '';
+            if (res.engine === 'Aria2') {
+                const d = res.data;
+                html += `<div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${d.dir}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">当前连接数</div><div class="detail-value">${d.connections}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">分块切片</div><div class="detail-value">${d.numPieces} 块</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">InfoHash</div><div class="detail-value" style="font-size:11px;">${d.infoHash || '无'}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">引擎状态码</div><div class="detail-value">${d.errorCode === '0' ? '<span style="color:var(--success)">0 (运行正常)</span>' : '<span style="color:var(--danger)">'+d.errorMessage+'</span>'}</div></div>`;
+            } else {
+                const d = res.data;
+                html += `<div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${d.save_path}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">已做种时间</div><div class="detail-value">${Math.floor(d.seeding_time/60)} 分钟</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Peers 连接</div><div class="detail-value">${d.peers} / ${d.peers_total}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Seeds 连接</div><div class="detail-value">${d.seeds} / ${d.seeds_total}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">当前分享率</div><div class="detail-value" style="color:var(--primary); font-weight:bold;">${(d.share_ratio||0).toFixed(2)}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Tracker</div><div class="detail-value">${res.trackers && res.trackers.length > 0 ? res.trackers[0].url : '无记录'}</div></div>`;
+            }
+            document.getElementById('task-detail-content').innerHTML = html;
+        } else {
+            document.getElementById('task-detail-content').innerHTML = `<div style="text-align:center; padding: 20px; color: var(--danger);">获取失败: ${res.error || '任务可能已在引擎中销毁'}</div>`;
+        }
+    }
 
-    async function singleAction(id, type) { if (type === 'delete' && !confirm('确定要删除此任务吗？')) return; const btn = event.currentTarget; btn.style.opacity = '0.5'; btn.disabled = true; await api(`/api/tasks/${id}/${type}`, { method: 'POST' }); refreshTasks(); }
+    // 🌟 修复：安全传参 btn，避免 undefined event，且添加 1000ms 强制延时
+    async function singleAction(id, type, btn) { 
+      if (type === 'delete' && !confirm('确定要删除此任务吗？')) return; 
+      if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; } 
+      await api(`/api/tasks/${id}/${type}`, { method: 'POST' }); 
+      setTimeout(refreshTasks, 1000); 
+    }
+
     function getCurrentOlIdx() { const val = document.getElementById('ol-account-select').value; return val === "" ? 0 : parseInt(val); }
     function switchOlAccount() { currentOpenListPath = '/'; loadOpenList(); }
     async function loadOpenList(path = currentOpenListPath) {
@@ -558,7 +677,7 @@
     function toggleBatchMode() { const mode = document.querySelector('input[name="batch-rename-mode"]:checked').value; document.getElementById('batch-mode-replace').style.display = mode === 'replace' ? 'block' : 'none'; document.getElementById('batch-mode-sequence').style.display = mode === 'sequence' ? 'block' : 'none'; generateRenamePreview(); }
     function calculateNewName(oldName, mode) { if (mode === 'replace') { const searchStr = document.getElementById('rename-batch-search').value; const replaceStr = document.getElementById('rename-batch-replace').value; if (!searchStr) return oldName; return oldName.split(searchStr).join(replaceStr); } else if (mode === 'sequence') { const formatStr = document.getElementById('rename-batch-format').value; let num = window._seqCurrentNum++; if (!formatStr) return oldName; const dotIdx = oldName.lastIndexOf('.'); const ext = dotIdx > -1 ? oldName.substring(dotIdx) : ''; let newName = formatStr.replace(/\{ext\}/g, ext); if (newName.includes('{number}')) { newName = newName.replace(/\{number\}/g, num); } else { newName = newName + num; } return newName; } return oldName; }
     function generateRenamePreview() { const box = document.getElementById('rename-preview-box'); if (olSelected.size === 0) { box.innerHTML = ''; return; } const mode = document.querySelector('input[name="batch-rename-mode"]:checked').value; const selectedNames = Array.from(olSelected).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); window._seqCurrentNum = parseInt(document.getElementById('rename-batch-start').value) || 1; let html = ''; selectedNames.forEach(oldName => { let newName = calculateNewName(oldName, mode); if (oldName !== newName) { html += `<div class="preview-item"><del>${oldName}</del><br>➜ <span>${newName}</span></div>`; } else { html += `<div class="preview-item" style="opacity:0.5;">${oldName} (未修改)</div>`; } }); box.innerHTML = html || '请输入规则...'; }
-    function showRenameModal() { if (olSelected.size === 0) return; const isSingle = olSelected.size === 1; document.getElementById('rename-title').textContent = isSingle ? '✏️ 重命名' : `✏️ 批量重命名 (${olSelected.size} 个文件)`; document.querySelector('input[name="batch-rename-mode"][value="replace"]').checked = true; if(isSingle) { document.getElementById('rename-batch-search').value = Array.from(olSelected)[0]; document.getElementById('rename-mode-selector').style.display = 'none'; } else { document.getElementById('rename-batch-search').value = ''; document.getElementById('rename-mode-selector').style.display = 'flex'; } document.getElementById('rename-batch-replace').value = ''; document.getElementById('rename-batch-format').value = '{number}{ext}'; document.getElementById('rename-batch-start').value = '1'; toggleBatchMode(); showModal('rename-modal'); generateRenamePreview(); }
+    function showRenameModal() { if (olSelected.size === 0) return; const isSingle = olSelected.size === 1; document.getElementById('rename-title').textContent = isSingle ? '✏️ 单体文件重命名' : `✏️ 批量重命名 (${olSelected.size} 个文件)`; document.querySelector('input[name="batch-rename-mode"][value="replace"]').checked = true; if(isSingle) { document.getElementById('rename-batch-search').value = Array.from(olSelected)[0]; document.getElementById('rename-mode-selector').style.display = 'none'; } else { document.getElementById('rename-batch-search').value = ''; document.getElementById('rename-mode-selector').style.display = 'flex'; } document.getElementById('rename-batch-replace').value = ''; document.getElementById('rename-batch-format').value = '{number}{ext}'; document.getElementById('rename-batch-start').value = '1'; toggleBatchMode(); showModal('rename-modal'); generateRenamePreview(); }
     async function submitRename() { const btn = document.getElementById('btn-submit-rename'); btn.textContent = '处理中...'; btn.disabled = true; const mode = document.querySelector('input[name="batch-rename-mode"]:checked').value; const selectedNames = Array.from(olSelected).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); window._seqCurrentNum = parseInt(document.getElementById('rename-batch-start').value) || 1; let successCount = 0; const olIdx = getCurrentOlIdx(); for (const oldName of selectedNames) { const newName = calculateNewName(oldName, mode); if (newName !== oldName) { const path = currentOpenListPath === '/' ? `/${oldName}` : `${currentOpenListPath}/${oldName}`; const res = await api('/api/openlist/rename', { method: 'POST', body: JSON.stringify({ name: newName, path, olIdx }) }); if(res.code === 200) successCount++; } } btn.innerHTML = '保存修改'; btn.disabled = false; hideModal('rename-modal'); showToast(`操作完成，成功重命名 ${successCount} 个文件`); loadOpenList(currentOpenListPath); }
     async function deleteSelectedFiles() { if (!confirm(`确定要删除这 ${olSelected.size} 个文件吗？此操作无法恢复！`)) return; showToast('正在删除...', 'warning'); const names = Array.from(olSelected); const olIdx = getCurrentOlIdx(); const res = await api('/api/openlist/remove', { method: 'POST', body: JSON.stringify({ dir: currentOpenListPath, names, olIdx }) }); if (res.code === 200) { showToast('文件已删除', 'success'); loadOpenList(currentOpenListPath); } else { showToast('删除失败: ' + res.message, 'error'); } }
     
@@ -659,9 +778,7 @@
           const meta = currentEditEngine.type === 'qbit' ? qbitMeta : aria2Meta;
           for (const key of Object.keys(meta)) {
             const el = document.getElementById(`gui-input-${key}`);
-            if (el && currentJson[key] !== undefined) {
-              el.value = currentJson[key];
-            }
+            if (el && currentJson[key] !== undefined) { el.value = currentJson[key]; }
           }
         } catch(e) {}
       } else {
@@ -760,15 +877,34 @@
       const res = await api(url, { method: 'POST', body: JSON.stringify(payload) });
       btn.disabled = false; btn.innerHTML = '💾 保存并应用配置';
       
-      if (res.success) {
-        showToast('参数已更新', 'success');
-        closeEngineConfigView();
-      } else {
-        showToast('保存失败: ' + (res.error || '未知错误'), 'error');
-      }
+      if (res.success) { showToast('参数已更新', 'success'); closeEngineConfigView(); } else { showToast('保存失败: ' + (res.error || '未知错误'), 'error'); }
     }
 
-    async function addDownload() { const url = document.getElementById('url-input').value.trim(); const engine = document.getElementById('task-engine-select').value; if (!url) return showToast('链接不能为空', 'warning'); const res = await api('/api/download', { method: 'POST', body: JSON.stringify({ url, engine }) }); if (res.success) { hideModal('new-task-modal'); showToast(res.message); refreshTasks(); } else showToast('添加任务失败', 'error'); }
+    // 🔗 🌟 种子直传与多任务支持 
+    async function addDownload() { 
+      const engine = document.getElementById('task-engine-select').value; 
+      const type = document.querySelector('input[name="task_type"]:checked').value;
+      
+      if (type === 'url') {
+        const url = document.getElementById('url-input').value.trim(); 
+        if (!url) return showToast('链接不能为空', 'warning'); 
+        const res = await api('/api/download', { method: 'POST', body: JSON.stringify({ url, engine }) }); 
+        if (res.success) { hideModal('new-task-modal'); showToast(res.message); refreshTasks(); } 
+        else showToast('添加任务失败: ' + (res.error || ''), 'error');
+      } else {
+        const file = document.getElementById('torrent-file').files[0];
+        if (!file) return showToast('请选择种子文件', 'warning');
+        
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = e.target.result.split(',')[1];
+          const res = await api('/api/upload', { method: 'POST', body: JSON.stringify({ engine, fileBase64: base64, filename: file.name }) });
+          if (res.success) { hideModal('new-task-modal'); showToast('种子提交成功', 'success'); refreshTasks(); }
+          else { showToast('种子提交失败: ' + res.error, 'error'); }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
     
     async function refreshTasks() { 
       tasks = await api('/api/tasks'); if (tasks.error) return; 
@@ -785,10 +921,27 @@
       
       const stats = await api('/api/global-stats'); document.getElementById('global-speed').textContent = `⬇️ ${formatSize((stats.aria2Speed || 0) + (stats.qbitSpeed || 0))}/s`; let sbHtml = `qBittorrent: <span style="color: ${stats.qbit ? 'var(--success)' : 'var(--danger)'}">${stats.qbit ? '在线' : '离线'}</span><br>`; if(sysConfig.aria2 && Array.isArray(sysConfig.aria2)) { sysConfig.aria2.forEach((node, i) => { const isOnline = stats.aria2Nodes && stats.aria2Nodes[i]; sbHtml += `${node.name}: <span style="color: ${isOnline ? 'var(--success)' : 'var(--danger)'}">${isOnline ? '在线' : '离线'}</span><br>`; }); } document.getElementById('sidebar-engines-status').innerHTML = sbHtml; 
     }
+
+    function connectWS() { 
+      if (ws) { ws.onclose = null; ws.close(); } 
+      ws = new WebSocket(`ws://${location.hostname}:28080/tasks?token=${authToken}`); 
+      const wsStatus = document.getElementById('ws-status'); 
+      ws.onopen = () => { wsStatus.textContent = '🟢 已连接'; wsStatus.style.color = 'var(--success)'; }; 
+      ws.onclose = () => { wsStatus.textContent = '🔴 已断开，重连中...'; wsStatus.style.color = 'var(--danger)'; setTimeout(connectWS, 3000); }; 
+      ws.onmessage = (e) => { 
+        try { 
+          const data = JSON.parse(e.data); 
+          const idx = tasks.findIndex(t => t.id === data.id); 
+          if (idx > -1) { 
+            tasks[idx] = { ...tasks[idx], ...data }; 
+          } else {
+            tasks.unshift(data);
+          }
+          renderTasks(); 
+        } catch {} 
+      }; 
+    }
     
-    function toggleAuthType() { const type = document.getElementById('ssh-auth-type').value; document.getElementById('ssh-pass').style.display = type === 'password' ? 'inline-block' : 'none'; document.getElementById('ssh-key-file').style.display = type === 'key' ? 'inline-block' : 'none'; } function onKeySelect(e) { const file = e.target.files[0]; if(!file) { currentKeyContent = ""; return; } const reader = new FileReader(); reader.onload = ev => { currentKeyContent = ev.target.result; showToast('密钥已加载'); }; reader.readAsText(file); } function renderHistoryList() { const sel = document.getElementById('ssh-history'); sel.innerHTML = '<option value="">-- 历史记录 --</option>'; JSON.parse(localStorage.getItem('ssh_history') || '[]').forEach((h, i) => sel.innerHTML += `<option value="${i}">${h.username}@${h.host}</option>`); } function loadHistory(idx) { if(idx === "") return; const h = JSON.parse(localStorage.getItem('ssh_history') || '[]')[idx]; if(h) { document.getElementById('ssh-host').value = h.host; document.getElementById('ssh-port').value = h.port; document.getElementById('ssh-user').value = h.username; } } function saveHistory(host, port, username) { let history = JSON.parse(localStorage.getItem('ssh_history') || '[]').filter(h => !(h.host === host && h.username === username)); history.unshift({ host, port, username }); localStorage.setItem('ssh_history', JSON.stringify(history.slice(0, 15))); renderHistoryList(); }
-    function connectSSH() { const host = document.getElementById('ssh-host').value, port = parseInt(document.getElementById('ssh-port').value) || 22, username = document.getElementById('ssh-user').value, authType = document.getElementById('ssh-auth-type').value, password = document.getElementById('ssh-pass').value; if(!host || !username) return showToast('请输入 IP 和用户名', 'warning'); if (sshWs) { sshWs.onclose = null; sshWs.close(); } term.clear(); term.writeln('\x1b[38;5;39m正在连接服务器...\x1b[0m'); sshWs = new WebSocket(`ws://${location.hostname}:28080/ssh?token=${authToken}`); sshWs.onopen = () => { const config = { host, port, username }; if (authType === 'key') config.privateKey = currentKeyContent; else config.password = password; sshWs.send(JSON.stringify({ type: 'connect', config })); term.onResize(size => { if (sshWs.readyState === WebSocket.OPEN) sshWs.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows })); }); }; sshWs.onmessage = (e) => { const msg = JSON.parse(e.data); if (msg.type === 'data') term.write(msg.data); else if (msg.type === 'status') { term.write(msg.msg); if (msg.msg.includes('Connected')) { document.getElementById('btn-ssh-conn').style.display = 'none'; document.getElementById('btn-ssh-disc').style.display = 'inline-flex'; saveHistory(host, port, username); setTimeout(() => { if (fitAddon) fitAddon.fit(); }, 150); } } }; sshWs.onclose = () => { term.writeln('\r\n\x1b[31m[连接已断开]\x1b[0m'); document.getElementById('btn-ssh-conn').style.display = 'inline-flex'; document.getElementById('btn-ssh-disc').style.display = 'none'; }; } function disconnectSSH() { if(sshWs) sshWs.close(); }
-    function connectWS() { if (ws) { ws.onclose = null; ws.close(); } ws = new WebSocket(`ws://${location.hostname}:28080/tasks?token=${authToken}`); const wsStatus = document.getElementById('ws-status'); ws.onopen = () => { wsStatus.textContent = '🟢 已连接'; wsStatus.style.color = 'var(--success)'; }; ws.onclose = () => { wsStatus.textContent = '🔴 已断开，重连中...'; wsStatus.style.color = 'var(--danger)'; setTimeout(connectWS, 3000); }; ws.onmessage = (e) => { try { const data = JSON.parse(e.data); const idx = tasks.findIndex(t => t.id === data.id); if (idx > -1) { tasks[idx] = { ...tasks[idx], ...data }; renderTasks(); } } catch {} }; }
     async function initApp() { if (!authToken) { document.getElementById('login-screen').style.display = 'flex'; return; } const cfg = await api('/api/config'); if (cfg.error) return; document.getElementById('login-screen').style.display = 'none'; sysConfig = cfg; updateOlDropdown(); refreshTasks(); connectWS(); if (refreshInterval) clearInterval(refreshInterval); refreshInterval = setInterval(refreshTasks, 2000); }
     initApp();
   </script>
