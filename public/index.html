@@ -4,15 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Download Manager Pro</title>
-  
   <script>
-    function initTheme() {
-      const savedTheme = localStorage.getItem('dm_theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    }
+    function initTheme() { document.documentElement.setAttribute('data-theme', localStorage.getItem('dm_theme') || 'light'); }
     initTheme();
   </script>
-
   <style>
     :root {
       --primary: #1890ff; --primary-hover: #40a9ff; --primary-light: #e6f7ff;
@@ -20,7 +15,7 @@
       --bg-body: #f5f7fa; --bg-content: #ffffff; --bg-sidebar: #ffffff; --bg-navbar: #ffffff; --card-bg: #ffffff;
       --text-main: #262626; --text-muted: #8c8c8c; --border-color: #ebeef5;
       --input-bg: #ffffff; --input-border: #dcdfe6; --hover-bg: #f5f7fa;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04); --shadow-md: 0 6px 16px rgba(0,0,0,0.08); --shadow-float: 0 12px 24px rgba(0,0,0,0.12);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04); --shadow-md: 0 6px 16px rgba(0,0,0,0.08);
       --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
     }
     [data-theme="dark"] {
@@ -28,331 +23,257 @@
       --bg-body: #000000; --bg-content: #0a0a0a; --bg-sidebar: #0a0a0a; --bg-navbar: #0a0a0a; --card-bg: #141414;
       --text-main: #e5e5e5; --text-muted: #8b8b8b; --border-color: #262626;
       --input-bg: #141414; --input-border: #333333; --hover-bg: #1f1f1f;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.4); --shadow-md: 0 6px 16px rgba(0,0,0,0.6); --shadow-float: 0 12px 24px rgba(0,0,0,0.8);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.4); --shadow-md: 0 6px 16px rgba(0,0,0,0.6);
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.25); border-radius: 4px; transition: background 0.3s; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(136, 136, 136, 0.5); }
-
+    ::-webkit-scrollbar-thumb { background: rgba(136, 136, 136, 0.25); border-radius: 4px; }
     html, body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; }
     body { display: flex; flex-direction: column; transition: background-color 0.4s ease, color 0.4s ease; }
-    
-    .navbar { background: var(--bg-navbar); color: var(--text-main); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border-color); z-index: 1001; flex-shrink: 0; transition: background-color 0.4s, border-color 0.4s, color 0.4s; }
-    .navbar .logo { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; display: flex; align-items: center; }
-    .menu-toggle { display: none; cursor: pointer; margin-right: 15px; font-size: 22px; line-height: 1; color: var(--text-main); transition: color 0.4s; }
-    .navbar .global-stats { display: flex; gap: 15px; font-size: 13px; font-weight: 500; align-items: center; }
-    .navbar .stat-item { background: var(--hover-bg); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color); white-space: nowrap; transition: background-color 0.4s, border-color 0.4s, color 0.4s; }
-    
+    .navbar { background: var(--bg-navbar); color: var(--text-main); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border-color); z-index: 1001; flex-shrink: 0; transition: background-color 0.4s ease; }
+    .navbar .logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; white-space: nowrap; }
+    .menu-toggle { display: none; cursor: pointer; margin-right: 15px; font-size: 22px; line-height: 1; }
+    .global-stats { display: flex; gap: 15px; font-size: 13px; align-items: center; white-space: nowrap; }
+    .stat-item { background: var(--hover-bg); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color); }
     .main-wrapper { display: flex; flex: 1; overflow: hidden; position: relative; }
-    .sidebar { width: 240px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s, border-color 0.4s; z-index: 1000; }
-    .sidebar-menu { list-style: none; padding: 16px 12px; margin: 0; }
-    .sidebar-menu .nav-item { padding: 12px 16px; margin-bottom: 4px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s; font-size: 14px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; color: var(--text-main); }
-    .sidebar-menu .nav-item:hover { background: var(--hover-bg); }
-    .sidebar-menu .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
-    .sub-menu { list-style: none; background: transparent; display: none; margin-bottom: 8px; }
+    .mobile-overlay { display: none; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 999; backdrop-filter: blur(2px); }
+    .mobile-overlay.show { display: block; }
+    .sidebar { width: 240px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow-y: auto; transition: left 0.3s ease, background-color 0.4s ease; z-index: 1000; flex-shrink: 0; }
+    .sidebar-menu { list-style: none; padding: 16px 12px; }
+    .nav-item { padding: 12px 16px; margin-bottom: 4px; cursor: pointer; border-radius: var(--radius-sm); font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: var(--text-main); transition: 0.2s; }
+    .nav-item:hover { background: var(--hover-bg); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+    .sub-menu { list-style: none; display: none; margin-bottom: 8px; }
     .sub-menu.open { display: block; }
-    .sub-item { padding: 10px 16px 10px 42px; cursor: pointer; font-size: 13px; color: var(--text-muted); transition: 0.2s; border-radius: var(--radius-sm); margin-bottom: 2px; }
+    .sub-item { padding: 10px 16px 10px 42px; cursor: pointer; font-size: 13px; color: var(--text-muted); border-radius: var(--radius-sm); transition: 0.2s; }
     .sub-item:hover { background: var(--hover-bg); color: var(--text-main); }
     .sub-item.active { color: var(--primary); font-weight: 600; }
-    .content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; width: 100%; background: var(--bg-content); transition: background-color 0.4s ease; position: relative; }
-    .section { display: none; flex: 1; flex-direction: column; animation: fadeIn 0.3s ease; }
+    .content { flex: 1; padding: 24px; overflow-y: auto; background: var(--bg-content); transition: background-color 0.4s ease; }
+    .section { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
     .section.active { display: flex; }
+    
+    /* === 动画补丁 === */
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    .toolbar { background: var(--card-bg); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex-shrink: 0; transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease; border: 1px solid var(--border-color); }
+    @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+    @keyframes spin-slow { 100% { transform: rotate(360deg); } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     
-    .btn { border: none; padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500; color: white; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; justify-content: center; }
+    .toolbar { background: var(--card-bg); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 16px; display: flex; gap: 12px; align-items: center; border: 1px solid var(--border-color); transition: background-color 0.4s; flex-wrap: wrap; }
+    .btn { border: none; padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500; color: white; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; white-space: nowrap; }
     .btn:active { transform: translateY(1px); }
-    .btn-primary { background: var(--primary); box-shadow: 0 2px 6px rgba(24,144,255,0.2); } .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 4px 12px rgba(24,144,255,0.3); }
-    .btn-default { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--input-border); box-shadow: 0 1px 2px rgba(0,0,0,0.02); transition: all 0.4s; } 
-    .btn-default:hover { color: var(--primary); border-color: var(--primary); background: var(--bg-body); }
-    .btn-success { background: var(--success); } .btn-success:hover { background: #73d13d; }
-    .btn-warning { background: var(--warning); } .btn-warning:hover { background: #ffc53d; }
-    .btn-danger { background: var(--danger); } .btn-danger:hover { background: #ff7875; }
-    .btn-info { background: #722ed1; } .btn-info:hover { background: #9254de; }
-    .btn-sm { padding: 4px 12px; font-size: 12px; }
-    #theme-toggle-btn { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.4s, color 0.4s, border-color 0.4s; }
-
-    .task-card { background: var(--card-bg); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 12px; display: flex; flex-direction: column; transition: background-color 0.4s, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s, border-color 0.4s; flex-shrink: 0; border: 1px solid var(--border-color); overflow: hidden; }
-    .task-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--primary); }
-    .task-card.downloading { border-left: 4px solid var(--primary); }
-    .task-card.complete { border-left: 4px solid var(--success); }
-    .task-card.paused { border-left: 4px solid var(--warning); opacity: 0.85; }
-    .task-card.error { border-left: 4px solid var(--danger); }
-    .task-header { padding: 16px 20px 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .task-title { font-size: 15px; font-weight: 600; color: var(--text-main); word-break: break-all; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 200px; transition: color 0.4s; }
-    .task-title:hover span.t-name { color: var(--primary); }
-    .task-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; flex-wrap: wrap; }
-    .task-card:hover .task-actions { opacity: 1; }
-    .task-body { padding: 0 20px 16px; padding-left: 42px; }
-    .progress-wrapper { background: var(--bg-body); height: 10px; border-radius: 5px; margin: 12px 0; overflow: hidden; position: relative; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.4s; }
-    .progress-bar { height: 100%; background: linear-gradient(90deg, #1890ff, #69c0ff); transition: width 0.3s ease; border-radius: 5px; position: relative; overflow: hidden; }
-    .progress-bar::after { content: ""; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient( -45deg, rgba(255, 255, 255, 0.2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.2) 75%, transparent 75%, transparent ); background-size: 20px 20px; animation: progressStripes 2s linear infinite; }
+    .btn-primary { background: var(--primary); } .btn-primary:hover { background: var(--primary-hover); }
+    .btn-default { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--input-border); } .btn-default:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-success { background: var(--success); } .btn-warning { background: var(--warning); } .btn-danger { background: var(--danger); }
+    .btn-info { background: #722ed1; } .btn-sm { padding: 4px 12px; font-size: 12px; }
+    
+    .task-card { background: var(--card-bg); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 12px; border-left: 4px solid #ddd; border: 1px solid var(--border-color); padding: 16px; transition: transform 0.3s, box-shadow 0.3s, background-color 0.4s, border-color 0.4s; }
+    .task-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--primary); }
+    .task-card.downloading { border-left-color: var(--primary); animation: pulse-border 2s infinite alternate; }
+    @keyframes pulse-border { from { border-left-color: var(--primary); box-shadow: var(--shadow-sm); } to { border-left-color: #91d5ff; box-shadow: 0 4px 12px rgba(24,144,255,0.15); } }
+    .task-card.complete { border-left-color: var(--success); background: linear-gradient(90deg, var(--card-bg) 85%, var(--primary-light) 100%); }
+    .task-card.paused { border-left-color: var(--warning); opacity: 0.85; filter: grayscale(20%); }
+    
+    .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .progress-wrapper { background: var(--bg-body); height: 10px; border-radius: 5px; margin: 12px 0; overflow: hidden; position: relative; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #1890ff, #69c0ff); transition: width 0.3s ease; position: relative; overflow: hidden; }
+    .progress-bar::after { content: ""; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(-45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent); background-size: 20px 20px; animation: progressStripes 2s linear infinite; }
     @keyframes progressStripes { 0% { background-position: 0 0; } 100% { background-position: 20px 0; } }
-    .task-card.complete .progress-bar { background: var(--success); animation: none; }
-    .task-card.complete .progress-bar::after { display: none; }
-    .task-card.paused .progress-bar { background: var(--warning); animation: none; }
-    .task-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; gap: 10px; transition: color 0.4s; }
-    .meta-left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    .meta-right { font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 15px; }
-    .tag { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; color: white; white-space: nowrap; }
-    .tag.aria2 { background: #722ed1; }
-    .tag.qbit { background: #13c2c2; }
+    .task-card.complete .progress-bar { background: var(--success); } .task-card.complete .progress-bar::after { display: none; }
+    .task-card.paused .progress-bar { background: var(--warning); } .task-card.paused .progress-bar::after { display: none; }
     
-    .form-control { padding: 8px 12px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); font-size: 13px; outline: none; transition: background-color 0.4s, color 0.4s, border-color 0.4s, box-shadow 0.3s; background: var(--input-bg); max-width: 100%; color: var(--text-main); }
-    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.2); }
-    
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
-    .modal-overlay.show { display: flex; opacity: 1; }
-    .modal { background: var(--card-bg); width: 520px; max-width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-float); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.4s; border: 1px solid var(--border-color); }
-    .modal-overlay.show .modal { transform: scale(1); }
-    .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; color: var(--text-main); transition: border-color 0.4s, color 0.4s; }
-    .modal-header button.close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; transition: 0.2s; }
-    .modal-header button.close-btn:hover { color: var(--danger); transform: rotate(90deg); }
-    .modal-body { padding: 24px; overflow-y: auto; background: var(--bg-content); transition: background-color 0.4s; }
-    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border-color); text-align: right; background: var(--bg-body); flex-shrink: 0; transition: border-color 0.4s, background-color 0.4s; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--text-main); transition: color 0.4s; }
-
-    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; pointer-events: none; }
-    .toast { background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: var(--radius-md); font-size: 14px; box-shadow: var(--shadow-md); opacity: 0; transform: translateX(50px); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); pointer-events: auto; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 8px; }
-    [data-theme="dark"] .toast { background: rgba(40,40,40,0.95); border: 1px solid #444; }
-    .toast.show { opacity: 1; transform: translateX(0); }
-    .toast.success { border-left: 4px solid var(--success); }
-    .toast.error { border-left: 4px solid var(--danger); }
-    .toast.warning { border-left: 4px solid var(--warning); }
-
-    .ol-table-wrapper { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); flex: 1; transition: background-color 0.4s, box-shadow 0.4s; border: 1px solid var(--border-color); }
-    .ol-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
-    .ol-table th { padding: 14px 16px; background: var(--table-th-bg); border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-muted); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; transition: background-color 0.4s, border-color 0.4s, color 0.4s; }
-    .ol-table th:hover { color: var(--text-main); }
-    .ol-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); vertical-align: middle; transition: background-color 0.2s, border-color 0.4s; color: var(--text-main); }
-    .ol-table tr:hover td { background: var(--hover-bg); }
-    .custom-checkbox { margin-right: 12px; cursor: pointer; width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--input-border); accent-color: var(--primary); flex-shrink: 0; transition: background-color 0.4s, border-color 0.4s; background: var(--input-bg); }
-    .ol-filename-cell { display: flex; align-items: center; cursor: pointer; color: var(--text-main); font-weight: 500; word-break: break-all; transition: color 0.2s; }
-    .ol-filename-cell:hover { color: var(--primary); }
-    .sort-icon { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
-
-    .preview-box { max-height: 200px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: var(--radius-sm); font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 12px; border: 1px solid #333; }
-    .preview-item { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #333; line-height: 1.5; }
-    .preview-item del { color: #f14c4c; text-decoration-color: rgba(241,76,76,0.5); }
-    .preview-item span { color: #89d185; font-weight: bold; }
-    
-    .config-card { border: 1px solid var(--border-color); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; position: relative; background: var(--bg-body); transition: background-color 0.4s, border-color 0.4s; }
-    .config-card:hover { border-color: var(--primary); }
-    .config-card .remove-btn { position: absolute; top: 12px; right: 12px; color: var(--text-muted); cursor: pointer; border: none; background: none; font-size: 16px; transition: color 0.2s, transform 0.2s; }
-    .config-card .remove-btn:hover { color: var(--danger); transform: scale(1.1); }
-
-    #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 999999; display: none; align-items: center; justify-content: center; padding: 20px; transition: background-color 0.4s; }
-    .login-box { background: var(--card-bg); padding: 40px 32px; border-radius: var(--radius-lg); width: 100%; max-width: 420px; text-align: center; box-shadow: var(--shadow-float); position: relative; border: 1px solid var(--border-color); transition: background-color 0.4s, border-color 0.4s, box-shadow 0.4s; }
-    .login-box h2 { color: var(--text-main); margin-bottom: 30px; letter-spacing: 0.5px; font-size: 24px; font-weight: 600; transition: color 0.4s; }
-    .login-box input { background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-main); width: 100%; padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; outline: none; transition: background-color 0.4s, border-color 0.4s, color 0.4s, box-shadow 0.3s; font-size: 15px; }
-    .login-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(24,144,255,0.15); }
-    .login-box button { background: var(--primary); color: #fff; border: none; padding: 14px; width: 100%; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 16px; transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s; box-shadow: 0 4px 12px rgba(24,144,255,0.3); }
-    .login-box button:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(24,144,255,0.4); }
-
-    .mobile-overlay { display: none; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 999; backdrop-filter: blur(2px); }
+    .form-control { padding: 8px 12px; border: 1px solid var(--input-border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text-main); width: 100%; transition: border-color 0.3s, background-color 0.4s; outline: none; }
+    .form-control:focus { border-color: var(--primary); }
     
     .settings-grid { display: flex; gap: 30px; align-items: flex-start; }
-    .settings-col { flex: 1; min-width: 0; }
+    .settings-col { flex: 1; min-width: 320px; }
     
-    .config-tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 16px; }
-    .config-tab { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent; transition: 0.3s; }
-    .config-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .config-tab:hover:not(.active) { color: var(--text-main); }
-    .config-item { display: flex; flex-direction: column; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--border-color); }
-    .config-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    .config-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .config-label { font-weight: 600; font-size: 14px; color: var(--text-main); }
-    .config-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s; }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal { background: var(--card-bg); width: 520px; max-width: 95%; border-radius: var(--radius-lg); padding: 24px; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); transform: scale(0.95); transition: transform 0.3s ease; max-height: 90vh; overflow-y: auto; }
+    .modal-overlay.show .modal { transform: scale(1); }
+    .detail-row { display: flex; padding: 10px 0; border-bottom: 1px dashed var(--border-color); font-size: 13px; }
+    .detail-label { width: 100px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
+    .config-card { border: 1px solid var(--border-color); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; background: var(--bg-body); position: relative; transition: border-color 0.3s; }
+    .config-card:hover { border-color: var(--primary); }
+    .ol-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
+    .ol-table th, .ol-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); text-align: left; }
+    .ol-table th { background: var(--hover-bg); cursor: pointer; color: var(--text-muted); transition: 0.2s; }
+    .ol-table th:hover { color: var(--text-main); }
+    .ol-table tr:hover td { background: var(--hover-bg); }
 
-    /* 任务详情表单样式 */
-    .detail-row { display: flex; padding: 10px 0; border-bottom: 1px dashed var(--border-color); }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label { width: 120px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
-    .detail-value { color: var(--text-main); word-break: break-all; }
-    
+    .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 11000; display: flex; flex-direction: column; gap: 10px; }
+    .toast { background: var(--card-bg); color: var(--text-main); padding: 12px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); border-left: 4px solid var(--success); display: flex; align-items: center; gap: 10px; font-size: 14px; animation: slideIn 0.3s ease; }
+    .toast.error { border-left-color: var(--danger); } .toast.warning { border-left-color: var(--warning); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* === 📱 移动端完美响应式重构 === */
     @media (max-width: 768px) {
-      .menu-toggle { display: inline-block; } .navbar { padding: 0 16px; } .navbar .logo { font-size: 16px; } .navbar .global-stats { gap: 8px; } .navbar .stat-item { display: none; } #ws-status { display: inline-block !important; padding: 4px 8px; }
-      .sidebar { position: fixed; left: -260px; top: 56px; height: calc(100vh - 56px); width: 260px; } .sidebar.open { left: 0; } .mobile-overlay.show { display: block; }
-      .content { padding: 12px; } .toolbar { padding: 12px; gap: 8px; margin-bottom: 12px; } .toolbar > div { width: 100%; flex-wrap: wrap; } .toolbar .btn { flex: 1; min-width: 80px; padding: 8px; } .toolbar input[type="text"], .toolbar select { width: 100% !important; flex: 1 1 100%; margin-bottom: 6px; }
-      .task-card { margin-bottom: 10px; } .task-header { padding: 12px 16px 8px; } .task-actions { opacity: 1; margin-top: 10px; width: 100%; justify-content: flex-end; } .task-actions .btn { flex: 1; } .task-meta .meta-left, .task-meta .meta-right { width: 100%; justify-content: space-between; gap: 8px; } .task-body { padding: 0 16px 16px; padding-left: 16px; } .task-title { width: 100%; }
-      .ol-table th:nth-child(4), .ol-table td:nth-child(4) { display: none; } .ol-table th:nth-child(3), .ol-table td:nth-child(3) { width: 80px; font-size: 12px; } 
-      .toast-container { bottom: 16px; left: 16px; right: 16px; align-items: center; } .toast { width: 100%; justify-content: center; }
-      .settings-grid { flex-direction: column; gap: 0; } .settings-col { width: 100%; }
+      .menu-toggle { display: inline-block; }
+      .navbar { padding: 0 16px; }
+      .stat-item { display: none; } /* 隐藏顶部网速，节省空间 */
+      #ws-status { display: inline-block !important; border:none; padding:0; background: transparent; }
+      .sidebar { position: fixed; left: -260px; top: 56px; height: calc(100vh - 56px); width: 260px; transition: left 0.3s ease; z-index: 1000; }
+      .sidebar.open { left: 0; box-shadow: 4px 0 16px rgba(0,0,0,0.2); }
+      .content { padding: 16px 12px; }
+      
+      /* 工具栏弹性适配：允许换行，绝不拉伸变形 */
+      .toolbar { padding: 12px; gap: 12px; }
+      .toolbar > div { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+      .toolbar select, .toolbar input[type="text"] { flex: 1; min-width: 130px; }
+      
+      /* 批量操作栏：开启横向滚动，保护按钮原有比例 */
+      .toolbar:nth-of-type(2) { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+      .toolbar:nth-of-type(2) > label { display: flex; align-items: center; white-space: nowrap; margin-right: 6px; }
+      .toolbar:nth-of-type(2) button { flex: 0 0 auto; white-space: nowrap; }
+      .toolbar:nth-of-type(2) > div { margin: 0 4px; }
+      
+      /* 下载卡片重排版：按逻辑层级自然堆叠 */
+      .task-card { padding: 14px; }
+      .task-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .task-title { width: 100%; }
+      .task-actions { width: 100%; display: flex; justify-content: flex-end; gap: 8px; }
+      .task-actions button { flex: 0 1 auto; padding: 6px 14px; font-size: 13px; }
+      .task-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .meta-right { width: 100%; display: flex; justify-content: space-between; margin-top: 4px; }
+      
+      /* 设置与云盘适配 */
+      .settings-grid { flex-direction: column; gap: 16px; }
+      .settings-col { width: 100%; min-width: auto; }
+      .ol-table th:nth-child(4), .ol-table td:nth-child(4) { display: none; }
+      
+      /* 🚀 灵动岛在手机端的专属姿态：悬浮通知式 */
+      #push-queue-container {
+        position: fixed; top: 66px; left: 50%; transform: translateX(-50%);
+        width: 90%; margin: 0 !important; z-index: 1050;
+      }
+      #push-queue-container > div {
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+        border: 1px solid var(--primary) !important; background: var(--card-bg) !important;
+      }
     }
   </style>
 </head>
 <body>
-
-  <div id="login-screen">
-    <div class="login-box">
-      <h2>Manager Pro 登录</h2>
-      <input type="text" id="login-user" placeholder="用户名">
-      <input type="password" id="login-pass" placeholder="密码" onkeyup="if(event.key==='Enter') doLogin()">
-      <button onclick="doLogin()">登 录</button>
+  <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-body);z-index:10000;display:none;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg);padding:40px;border-radius:16px;width:380px;box-shadow:var(--shadow-md);text-align:center;border:1px solid var(--border-color);">
+      <h2 style="margin-bottom:24px; color:var(--text-main);">Manager Pro</h2>
+      <input type="text" id="login-user" class="form-control" placeholder="账号" style="margin-bottom:16px; padding:12px;">
+      <input type="password" id="login-pass" class="form-control" placeholder="密码" style="margin-bottom:24px; padding:12px;" onkeyup="if(event.key==='Enter') doLogin()">
+      <button onclick="doLogin()" class="btn btn-primary" style="width:100%; padding:12px; font-size:15px;">登 录 / Login</button>
     </div>
   </div>
 
   <header class="navbar">
-    <div class="logo">
-      <span class="menu-toggle" onclick="toggleMobileMenu()">☰</span>
-      Download Manager
-    </div>
+    <div class="logo"><span class="menu-toggle" onclick="toggleMobileMenu()">☰</span> Manager Pro</div>
+    <div id="push-queue-container" style="flex:1; margin:0 20px; display:flex; justify-content:flex-start; align-items:center; overflow:hidden;"></div>
     <div class="global-stats">
-      <div class="stat-item" id="global-speed">⬇️ 0 B/s | ⬆️ 0 B/s</div>
+      <div class="stat-item" id="global-speed">⬇️ 0 B/s</div>
       <div class="stat-item" id="ws-status" style="border-color:transparent;">🟡 连接中</div>
-      <button class="btn btn-default btn-sm" id="theme-toggle-btn" onclick="toggleTheme()">🌙 夜间</button>
+      <button class="btn btn-default btn-sm" onclick="toggleTheme()">🌙 主题</button>
       <button class="btn btn-default btn-sm" onclick="doLogout()"><span style="color:var(--danger)">退出</span></button>
     </div>
   </header>
 
   <div class="main-wrapper">
     <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobileMenu()"></div>
-
     <aside class="sidebar">
       <ul class="sidebar-menu">
-        <li class="nav-item active" onclick="switchTab('downloads', this)">
-          <div>📥 下载管理</div><div style="font-size: 10px;" id="dl-arrow">▼</div>
-        </li>
-        <ul class="sub-menu open" id="downloads-submenu">
-          <li class="sub-item active" onclick="filterTasks('all', this)">🟣 全部任务 <span id="cnt-all" style="float:right; font-size:11px; opacity:0.6;"></span></li>
-          <li class="sub-item" onclick="filterTasks('downloading', this)">▶️ 正在下载 <span id="cnt-dl" style="float:right; font-size:11px; opacity:0.6;"></span></li>
-          <li class="sub-item" onclick="filterTasks('waiting', this)">⏳ 等待/暂停 <span id="cnt-wt" style="float:right; font-size:11px; opacity:0.6;"></span></li>
-          <li class="sub-item" onclick="filterTasks('complete', this)">✅ 已完成 <span id="cnt-cp" style="float:right; font-size:11px; opacity:0.6;"></span></li>
+        <li class="nav-item active" onclick="switchTab('downloads', this)"><div>📥 下载管理</div></li>
+        <ul class="sub-menu open" id="downloads-submenu" style="display:block;">
+          <li class="sub-item active" onclick="filterTasks('all', this)">🟣 全部任务 <span id="cnt-all" style="float:right; opacity:0.6;"></span></li>
+          <li class="sub-item" onclick="filterTasks('downloading', this)">▶️ 正在下载 <span id="cnt-dl" style="float:right; opacity:0.6;"></span></li>
+          <li class="sub-item" onclick="filterTasks('waiting', this)">⏳ 等待/暂停 <span id="cnt-wt" style="float:right; opacity:0.6;"></span></li>
+          <li class="sub-item" onclick="filterTasks('complete', this)">✅ 已完成 <span id="cnt-cp" style="float:right; opacity:0.6;"></span></li>
         </ul>
-
         <li class="nav-item" onclick="switchTab('openlist', this)">☁️ 云端文件</li>
-        <li class="nav-item" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 24px; transition: border-color 0.4s;" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
-        
-        <li>
-          <div style="padding: 16px; font-size: 12px; line-height: 2.2; color: var(--text-muted); transition: color 0.4s;" id="sidebar-engines-status"></div>
-        </li>
+        <li class="nav-item" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:20px;" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
+        <li><div id="sidebar-engines-status" style="padding:16px; font-size:12px; color:var(--text-muted); line-height:2.2;"></div></li>
       </ul>
     </aside>
 
     <main class="content">
       <div id="section-downloads" class="section active">
-        <div class="toolbar" style="justify-content: space-between;">
-          <div style="display: flex; gap: 12px; flex: 1;">
-            <button class="btn btn-primary" onclick="showNewTaskModal()">➕ 新建任务</button>
-            <button class="btn btn-default" onclick="refreshTasks()">🔄 刷新</button>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center; font-size: 13px; flex: 1; justify-content: flex-end;">
-            排序:
-            <select id="task-sort-select" class="form-control" style="padding: 6px 10px; font-size: 12px; width: 140px;" onchange="changeTaskSort()">
+        <div class="toolbar" style="justify-content:space-between;">
+          <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="showNewTaskModal()">➕ 新建任务</button> <button class="btn btn-default" onclick="refreshTasks()">🔄 刷新</button></div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:13px;">
+            排序: 
+            <select id="task-sort-select" class="form-control" style="width:140px; padding:6px;" onchange="changeTaskSort()">
               <option value="created_at_desc">按时间倒序</option>
               <option value="created_at_asc">按时间正序</option>
               <option value="name_asc">按名称 (A-Z)</option>
               <option value="size_desc">按文件大小</option>
-              <option value="progress_desc">按下载进度</option>
             </select>
           </div>
         </div>
-
-        <div class="toolbar" style="background: var(--bg-body); padding: 10px 16px;">
-          <label style="cursor: pointer; display: flex; align-items: center; font-weight: 600; color: var(--primary); white-space: nowrap;">
-            <input type="checkbox" class="custom-checkbox" id="task-select-all" onclick="toggleAllTasks(this.checked)"> 全选当前
-          </label>
-          <div style="border-left: 1px solid var(--input-border); height: 16px; margin: 0 12px; transition: border-color 0.4s;"></div>
-          <button class="btn btn-warning btn-sm" onclick="batchTaskAction('pause')">⏸️ 暂停</button>
-          <button class="btn btn-success btn-sm" onclick="batchTaskAction('resume')">▶️ 继续</button>
-          <button class="btn btn-danger btn-sm" onclick="batchTaskAction('delete')">🗑️ 删除</button>
-          <span id="task-selected-count" style="font-size: 13px; color: var(--text-muted); margin-left: auto;">已选 0 项</span>
+        <div class="toolbar" style="background:var(--bg-body); padding:10px 16px;">
+            <label style="margin-right:15px; font-weight:600; color:var(--primary); cursor:pointer;"><input type="checkbox" id="task-select-all" onclick="toggleAllTasks(this.checked)" style="margin-right:6px;">全选</label>
+            <div style="border-left:1px solid var(--border-color); height:16px; margin:0 10px;"></div>
+            <button class="btn btn-warning btn-sm" onclick="batchTaskAction('pause')">暂停</button>
+            <button class="btn btn-success btn-sm" onclick="batchTaskAction('resume')">继续</button>
+            <button class="btn btn-danger btn-sm" onclick="batchTaskAction('delete')">删除</button>
         </div>
-
-        <div id="task-list" style="overflow-y: auto; flex: 1; padding-bottom: 20px;"></div>
+        
+        <div id="task-list" style="padding-bottom: 20px;"></div>
       </div>
 
       <div id="section-openlist" class="section">
-        <div class="toolbar" style="gap: 12px; align-items: center; display: flex;">
-          <select id="ol-account-select" class="form-control" style="width: 140px; font-weight: bold; color: var(--primary);" onchange="switchOlAccount()">
-            <option value="">配置加载中...</option>
-          </select>
+        <div class="toolbar">
+          <select id="ol-account-select" class="form-control" style="width:160px; font-weight:bold; color:var(--primary);" onchange="loadOpenList('/')"></select>
           <button class="btn btn-default" onclick="openListGoUp()">⬆️ 返回上级</button>
-          <input type="text" id="openlist-path" class="form-control" style="flex: 1; min-width: 150px; background: var(--bg-body);" value="/" readonly>
-          <button class="btn btn-primary" onclick="loadOpenList()">🔄 刷新目录</button>
-          <div style="border-left: 1px solid var(--border-color); height: 24px; margin: 0 8px; transition: border-color 0.4s;"></div>
-          <button class="btn btn-success" id="btn-ol-download" style="display:none;" onclick="showEngineSelectModalForOL()">📥 发送至下载器</button>
-          <button class="btn btn-warning" id="btn-ol-rename" style="display:none;" onclick="showRenameModal()">✏️ 批量重命名</button>
-          <button class="btn btn-danger" id="btn-ol-delete" style="display:none;" onclick="deleteSelectedFiles()">🗑️ 删除</button>
+          <input type="text" id="openlist-path" class="form-control" style="flex:1; min-width:100px; background:var(--bg-body);" value="/" readonly>
+          <button class="btn btn-primary" onclick="loadOpenList()">🔄 刷新</button>
+          <div style="border-left:1px solid var(--border-color); height:20px; margin:0 5px;"></div>
+          <button class="btn btn-success" id="btn-ol-download" style="display:none;" onclick="showEngineSelectModalForOL()">发送至引擎</button>
+          <button class="btn btn-warning" id="btn-ol-rename" style="display:none;" onclick="showRenameModal()">重命名</button>
+          <button class="btn btn-danger" id="btn-ol-delete" style="display:none;" onclick="deleteSelectedFiles()">删除</button>
         </div>
-        <div class="ol-table-wrapper">
-          <div id="openlist-content">
-            <div style="padding: 60px; text-align: center; color: var(--text-muted);">请在右侧全局设置中添加 OpenList 账号</div>
-          </div>
-        </div>
+        <div id="openlist-content" style="background:var(--card-bg); border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-x:auto;"></div>
       </div>
 
       <div id="section-settings" class="section">
-        <div class="toolbar" style="justify-content: space-between; border-left: 4px solid var(--primary);">
-          <h3 style="margin: 0; color: var(--text-main); font-weight: 600; display: flex; align-items: center; gap: 8px;">⚙️ 系统配置</h3>
-          <button class="btn btn-primary" onclick="saveSettings()">💾 保存并应用</button>
-        </div>
-
+        <div class="toolbar" style="border-left:4px solid var(--primary); justify-content:space-between;"><h3 style="margin:0;">⚙️ 系统核心配置</h3><button class="btn btn-primary" onclick="saveSettings()">💾 保存并应用</button></div>
         <div class="settings-grid">
           <div class="settings-col">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4 style="color: var(--primary); margin:0; font-size: 15px;">☁️ OpenList 设置</h4>
-              <button class="btn btn-success btn-sm" onclick="addOlAccount()">➕ 新增网盘</button>
-            </div>
-            <div id="ol-accounts-container" style="margin-bottom: 30px;"></div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4 style="color: #722ed1; margin:0; font-size: 15px;">🟣 Aria2 节点设置</h4>
-              <button class="btn btn-primary btn-sm" onclick="addAria2NodeForm()" style="background: #722ed1;">➕ 新增节点</button>
+            <div style="display:flex;justify-content:space-between;margin-bottom:15px;align-items:center;">
+              <h4 style="color:#722ed1; margin:0;">🟣 Aria2 节点集群</h4>
+              <button class="btn btn-primary btn-sm" style="background:#722ed1;" onclick="addAria2NodeForm()">➕ 新增</button>
             </div>
             <div id="aria2-nodes-container"></div>
           </div>
-
           <div class="settings-col">
-            <h4 style="margin-bottom: 16px; color: var(--danger); font-size: 15px;">🔒 面板安全设置</h4>
-            <div class="config-card">
-              <div class="form-group"><label>面板登录账号</label><input type="text" id="panel-user" class="form-control"></div>
-              <div class="form-group"><label>面板登录密码</label><input type="password" id="panel-pass" class="form-control" placeholder="留空则保持当前密码不变"></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:15px;align-items:center;">
+              <h4 style="color:var(--primary); margin:0;">☁️ OpenList 云盘绑定</h4>
+              <button class="btn btn-success btn-sm" onclick="addOlAccount()">➕ 新增</button>
             </div>
+            <div id="ol-accounts-container"></div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; margin-top: 30px;">
-              <h4 style="color: #13c2c2; margin:0; font-size: 15px;">🟠 qBittorrent 设置</h4>
-              <button class="btn btn-default btn-sm" onclick="openEngineConfigView('qbit')" style="border-color: #13c2c2; color: #13c2c2; font-weight: bold;">⚙️ 高级参数配置</button>
-            </div>
+            <h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
             <div class="config-card">
-              <div class="form-group"><label>WebUI URL (如 http://IP:8080)</label><input type="text" id="qbit-url" class="form-control" placeholder="例如 http://IP:8080"></div>
-              <div class="form-group"><label>用户名</label><input type="text" id="qbit-user" class="form-control"></div>
-              <div class="form-group"><label>密码</label><input type="password" id="qbit-pass" class="form-control"></div>
+              <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录账号</label>
+              <input type="text" id="panel-user" class="form-control" style="margin-bottom:12px;">
+              <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录密码 (留空则不修改)</label>
+              <input type="password" id="panel-pass" class="form-control" placeholder="******">
             </div>
           </div>
         </div>
       </div>
-
-      <div id="section-engine-config" class="section">
-        <div class="toolbar" style="justify-content: space-between; border-left: 4px solid var(--warning);">
+      
+      <div id="section-engine-config" class="section" style="flex-direction:column; height:100%;">
+        <div class="toolbar" style="justify-content: space-between; border-left: 4px solid var(--warning); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 16px;">
-            <button class="btn btn-default" onclick="closeEngineConfigView()">⬅ 返回</button>
-            <h3 id="engine-config-title" style="margin: 0; color: var(--text-main); font-weight: 600;">⚙️ 引擎高级参数设置</h3>
+            <button class="btn btn-default" onclick="switchTab('settings')">⬅ 返回设置</button>
+            <h3 id="engine-config-title" style="margin: 0;">⚙️ Aria2 核心参数</h3>
           </div>
-          <button class="btn btn-primary" id="btn-save-engine-config" onclick="saveEngineConfig()">💾 保存并应用配置</button>
+          <div>
+            <button class="btn btn-default" id="btn-toggle-cfg" onclick="toggleConfigMode()" style="margin-right: 10px;">💻 切换至源码模式</button>
+            <button class="btn btn-primary" onclick="saveEngineConfig()">💾 保存并热重载</button>
+          </div>
         </div>
-
-        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex: 1; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-sm);">
-          <div class="config-tabs" style="padding: 0 20px; background: var(--bg-body); margin: 0;">
-            <div class="config-tab active" id="tab-btn-gui" onclick="switchConfigTab('gui')">常用参数配置</div>
-            <div class="config-tab" id="tab-btn-json" onclick="switchConfigTab('json')">编辑 JSON 配置</div>
-          </div>
-          
-          <div style="flex: 1; overflow-y: auto; padding: 24px;">
-            <div id="engine-config-gui" style="max-width: 800px; margin: 0 auto;"></div>
-
-            <div id="engine-config-json-wrapper" style="display:none; height: 100%; flex-direction: column;">
-              <div style="background: var(--primary-light); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; color: var(--text-main); border: 1px dashed var(--primary); flex-shrink: 0;">
-                ⚠️ 警告：此处直接修改引擎的原始 JSON 配置。格式错误可能导致下载器无法工作。
-              </div>
-              <textarea id="engine-config-json-input" class="form-control" style="flex: 1; min-height: 400px; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; resize: none; background: var(--input-bg); color: var(--text-main);" spellcheck="false"></textarea>
-            </div>
-          </div>
+        <div id="engine-config-visual" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 30px; overflow-y: auto;"></div>
+        <div id="engine-config-raw" style="display:none; flex-direction:column; flex:1;">
+           <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">⚠️ 源码模式：直接修改 Aria2 底层 JSON 配置，支持全量参数，格式错误会导致崩溃，请谨慎操作。</div>
+           <textarea id="engine-config-json-input" class="form-control" style="flex:1; font-family: monospace; resize: none;"></textarea>
         </div>
       </div>
     </main>
@@ -360,589 +281,753 @@
 
   <div class="modal-overlay" id="new-task-modal">
     <div class="modal">
-      <div class="modal-header">
-        <span>➕ 新建下载任务</span> 
-        <button class="close-btn" onclick="hideModal('new-task-modal')">✖</button>
+      <div style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;">➕ 新建下载</h3><button class="btn btn-default btn-sm" onclick="hideModal('new-task-modal')" style="border:none; background:none; font-size:16px;">✖</button></div>
+      <select id="task-engine-select" class="form-control" style="margin-bottom:15px; font-weight:bold;"></select>
+      <div style="margin-bottom:15px; display:flex; gap:20px;">
+        <label style="cursor:pointer; font-weight:600;"><input type="radio" name="task_type" value="url" checked onchange="toggleTaskType()"> 🔗 链接直链</label>
+        <label style="cursor:pointer; font-weight:600; color:var(--primary);"><input type="radio" name="task_type" value="torrent" onchange="toggleTaskType()"> 📄 种子上传</label>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>分配引擎</label>
-          <select id="task-engine-select" class="form-control" style="width:100%; font-weight: 500;"></select>
-        </div>
-        <div class="form-group" style="margin-top: 20px;">
-          <div style="display:flex; gap:16px; margin-bottom: 12px;">
-            <label style="cursor:pointer; font-weight:600;"><input type="radio" name="task_type" value="url" checked onchange="toggleTaskType()"> 🔗 链接下载</label>
-            <label style="cursor:pointer; font-weight:600; color:var(--primary);"><input type="radio" name="task_type" value="torrent" onchange="toggleTaskType()"> 📄 种子文件上传</label>
-          </div>
-        </div>
-        <div class="form-group" id="box-url">
-          <label>资源链接 (支持批量 HTTP / 磁力链，每行一个)</label>
-          <textarea id="url-input" class="form-control" style="resize:vertical;min-height:140px;width:100%; font-family: monospace; font-size: 12px; padding: 12px;"></textarea>
-        </div>
-        <div class="form-group" id="box-torrent" style="display:none; padding: 30px 20px; border: 2px dashed var(--input-border); border-radius: var(--radius-sm); text-align: center; background: var(--bg-body);">
-          <input type="file" id="torrent-file" accept=".torrent" style="display: none;" onchange="document.getElementById('torrent-filename').textContent = this.files[0] ? this.files[0].name : '未选择文件';">
-          <button class="btn btn-default" onclick="document.getElementById('torrent-file').click()">选择 .torrent 文件</button>
-          <div id="torrent-filename" style="margin-top: 12px; font-size: 13px; color: var(--primary); font-weight: bold;">未选择文件</div>
-        </div>
+      <div id="box-url"><textarea id="url-input" class="form-control" style="height:140px; font-family:monospace; font-size:12px;" placeholder="支持批量，每行一条 (HTTP/HTTPS/FTP/Magnet)"></textarea></div>
+      <div id="box-torrent" style="display:none; padding:30px; border:2px dashed var(--primary); border-radius:var(--radius-sm); text-align:center; background:var(--primary-light);">
+        <input type="file" id="torrent-file" accept=".torrent" style="display:none;" onchange="document.getElementById('t-name').innerText=this.files[0]?this.files[0].name:'未选择文件';">
+        <div id="t-name" style="margin-bottom:15px; color:var(--primary); font-weight:bold; font-size:14px;">未选择文件</div>
+        <button class="btn btn-primary" onclick="document.getElementById('torrent-file').click()">浏览本地 .torrent 文件</button>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-default" onclick="hideModal('new-task-modal')">取 消</button>
-        <button class="btn btn-primary" onclick="addDownload()">开始下载</button>
-      </div>
-    </div>
-  </div>
-  
-  <div class="modal-overlay" id="task-detail-modal">
-    <div class="modal" style="width: 480px;">
-      <div class="modal-header">
-        <span>ℹ️ 任务底层数据</span> 
-        <button class="close-btn" onclick="hideModal('task-detail-modal')">✖</button>
-      </div>
-      <div class="modal-body" id="task-detail-content" style="font-size: 13px; line-height: 1.6;">
-        </div>
-      <div class="modal-footer">
-        <button class="btn btn-default" onclick="hideModal('task-detail-modal')">关 闭</button>
+      <div style="margin-top:24px; text-align:right; border-top:1px solid var(--border-color); padding-top:15px;">
+        <button class="btn btn-default" onclick="hideModal('new-task-modal')" style="margin-right:10px;">取消</button>
+        <button class="btn btn-primary" onclick="addDownload()">🚀 开始投递</button>
       </div>
     </div>
   </div>
 
+  <div class="modal-overlay" id="task-detail-modal">
+    <div class="modal" style="width: 500px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;">ℹ️ 任务底层数据</h3><button class="btn btn-default btn-sm" onclick="hideModal('task-detail-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
+      <div id="task-detail-content" style="font-size: 13px;"></div>
+    </div>
+  </div>
+  
   <div class="modal-overlay" id="engine-select-modal">
-    <div class="modal" style="width: 420px;"><div class="modal-header"><span>📥 发送至下载器</span> <button class="close-btn" onclick="hideModal('engine-select-modal')">✖</button></div><div class="modal-body"><p style="margin-bottom: 16px; font-size: 14px; color: var(--text-main);">请选择要使用的下载器：</p><select id="ol-engine-select" class="form-control" style="width:100%; margin-bottom: 8px; font-weight:500;"></select></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('engine-select-modal')">取 消</button><button class="btn btn-primary" onclick="executeOlDownload()">确认发送</button></div></div>
+    <div class="modal" style="width: 400px;">
+      <h3 style="margin-bottom:15px;">发送云盘文件至下载器</h3>
+      <select id="ol-engine-select" class="form-control" style="margin-bottom:20px; font-weight:bold;"></select>
+      <div style="text-align:right;"><button class="btn btn-default" onclick="hideModal('engine-select-modal')" style="margin-right:10px;">取消</button><button class="btn btn-primary" onclick="executeOlDownload()">确定发送</button></div>
+    </div>
   </div>
   
   <div class="modal-overlay" id="rename-modal">
-    <div class="modal" style="width: 580px;"><div class="modal-header"><span id="rename-title">✏️ 批量重命名</span> <button class="close-btn" onclick="hideModal('rename-modal')">✖</button></div><div class="modal-body" id="rename-body-batch"><div style="margin-bottom: 20px; display: flex; gap: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; transition: border-color 0.4s;" id="rename-mode-selector"><label style="cursor: pointer; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 6px;"><input type="radio" name="batch-rename-mode" value="replace" checked onchange="toggleBatchMode()"> 🔍 查找与替换</label><label style="cursor: pointer; font-weight: 600; color: #722ed1; display: flex; align-items: center; gap: 6px;"><input type="radio" name="batch-rename-mode" value="sequence" onchange="toggleBatchMode()"> 🔢 顺序递增命名</label></div><div id="batch-mode-replace"><div class="form-group"><label>查找内容</label><input type="text" id="rename-batch-search" class="form-control" oninput="generateRenamePreview()"></div><div class="form-group"><label>替换为</label><input type="text" id="rename-batch-replace" class="form-control" oninput="generateRenamePreview()" placeholder="可留空以删除该内容"></div></div><div id="batch-mode-sequence" style="display:none;"><div style="background: var(--bg-body); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; color: var(--text-main); border: 1px dashed var(--primary); transition: background-color 0.4s;">可用变量：<br><code style="color:var(--danger);font-weight:bold;">{number}</code> (递增数字) &nbsp;&nbsp;|&nbsp;&nbsp; <code style="color:var(--success);font-weight:bold;">{ext}</code> (原文件扩展名)</div><div class="form-group"><label>新文件名格式</label><input type="text" id="rename-batch-format" class="form-control" oninput="generateRenamePreview()" placeholder="例如: 视频_S01E{number}{ext}"></div><div class="form-group"><label>起始数字</label><input type="number" id="rename-batch-start" class="form-control" value="1" oninput="generateRenamePreview()"></div></div><label style="display:block; margin-top: 24px; font-size: 14px; font-weight: 600; color: var(--text-main);">预览:</label><div class="preview-box" id="rename-preview-box">请输入规则以查看预览...</div></div><div class="modal-footer"><button class="btn btn-default" onclick="hideModal('rename-modal')">取 消</button><button class="btn btn-primary" id="btn-submit-rename" onclick="submitRename()">保存修改</button></div></div>
+    <div class="modal" style="width: 500px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;" id="rename-title">✏️ 重命名</h3><button class="btn btn-default btn-sm" onclick="hideModal('rename-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
+      <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector">
+          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none';"> 查找替换</label>
+          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block';"> 序列化</label>
+      </div>
+      <div id="rn-replace-box">
+          <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;">
+          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除)">
+      </div>
+      <div id="rn-seq-box" style="display:none;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; background:var(--hover-bg); padding:8px; border-radius:4px;">变量: <code>{n}</code> 代表递增数字，<code>{ext}</code> 代表原后缀</div>
+          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集_S01E{n}{ext}" style="margin-bottom:10px;">
+          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字">
+      </div>
+      <div style="text-align:right; margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;">
+          <button class="btn btn-default" onclick="hideModal('rename-modal')" style="margin-right:10px;">取消</button>
+          <button class="btn btn-primary" onclick="submitRename()">保存修改</button>
+      </div>
+    </div>
   </div>
+
   <div class="toast-container" id="toast-container"></div>
-  
+
   <script>
-    let ws = null; let tasks = []; let refreshInterval = null; 
-    let sysConfig = {}; let aria2Nodes = []; let olAccounts = []; 
-    
-    function toggleTheme() { const current = document.documentElement.getAttribute('data-theme'); const newTheme = current === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('dm_theme', newTheme); const btn = document.getElementById('theme-toggle-btn'); btn.style.transform = 'scale(0.8) rotate(15deg)'; setTimeout(() => { updateThemeIcon(newTheme); btn.style.transform = 'scale(1) rotate(0deg)'; }, 150); }
-    function updateThemeIcon(theme) { const btn = document.getElementById('theme-toggle-btn'); if (btn) btn.innerHTML = theme === 'dark' ? '☀️ 亮色' : '🌙 夜间'; }
-    document.addEventListener('DOMContentLoaded', () => { updateThemeIcon(document.documentElement.getAttribute('data-theme')); });
-    function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('mobile-overlay').classList.toggle('show'); }
-    function closeMobileMenu() { document.querySelector('.sidebar').classList.remove('open'); document.getElementById('mobile-overlay').classList.remove('show'); }
-    let authToken = localStorage.getItem('manager_auth_token') || ''; if (!authToken) document.getElementById('login-screen').style.display = 'flex';
-    let currentTaskFilter = 'all'; let savedSort = localStorage.getItem('dm_task_sort') || 'created_at_desc'; let sortParts = savedSort.split('_'); let taskSortDesc = sortParts.pop() === 'desc'; let taskSortBy = sortParts.join('_'); let selectedTasks = new Set();
-    let currentOpenListPath = '/'; let olFiles = []; let olSelected = new Set(); let olSortBy = 'name'; let olSortDesc = false;
+    let authToken = localStorage.getItem('manager_auth_token') || '';
+    let tasks = []; let sysConfig = {}; let ws = null;
+    let currentTaskFilter = 'all'; let selectedTasks = new Set();
+    let currentOpenListPath = '/'; let olFiles = []; let olSelected = new Set(); 
+    let olSortBy = 'name'; let olSortDesc = false;
 
-    async function api(url, options = {}) {
-      const headers = { 'Content-Type': 'application/json' }; if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
-      const res = await fetch(url, { headers, ...options });
-      if (res.status === 401) { document.getElementById('login-screen').style.display = 'flex'; if (ws) { ws.onclose = null; ws.close(); } if (refreshInterval) clearInterval(refreshInterval); return { error: 'Unauthorized' }; }
-      try { return await res.json(); } catch { return {}; }
-    }
-    async function doLogin() { const u = document.getElementById('login-user').value || 'admin'; const p = document.getElementById('login-pass').value || 'password'; const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({username: u, password: p}) }); const data = await res.json(); if (data.success) { authToken = data.token; localStorage.setItem('manager_auth_token', authToken); document.getElementById('login-screen').style.display = 'none'; showToast('登录成功', 'success'); initApp(); } else { showToast('用户名或密码错误', 'error'); } }
-    function doLogout() { authToken = ''; localStorage.removeItem('manager_auth_token'); location.reload(); }
-    function showModal(id) { document.getElementById(id).classList.add('show'); } function hideModal(id) { document.getElementById(id).classList.remove('show'); }
-    
-    function switchTab(tabId, el) { 
-      document.querySelectorAll('.sidebar-menu .nav-item').forEach(li => li.classList.remove('active')); 
-      if (tabId !== 'downloads') { document.querySelectorAll('.sub-menu').forEach(m => m.classList.remove('open')); document.getElementById('dl-arrow').textContent = '▼'; } else { document.getElementById('downloads-submenu').classList.add('open'); document.getElementById('dl-arrow').textContent = '▲'; }
-      if(el) el.classList.add('active'); 
-      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active')); 
-      document.getElementById('section-' + tabId).classList.add('active'); 
-      if (tabId === 'openlist') { if (olFiles.length === 0) loadOpenList(currentOpenListPath); } 
-      else if (tabId === 'settings') { loadConfigToSettingsView(); }
-      closeMobileMenu(); 
-    }
-    
-    // 🔗 种子上传界面切换
-    function toggleTaskType() {
-        const type = document.querySelector('input[name="task_type"]:checked').value;
-        document.getElementById('box-url').style.display = type === 'url' ? 'block' : 'none';
-        document.getElementById('box-torrent').style.display = type === 'torrent' ? 'block' : 'none';
+    let savedSort = localStorage.getItem('dm_task_sort') || 'created_at_desc'; 
+    let sortParts = savedSort.split('_'); let taskSortDesc = sortParts.pop() === 'desc'; let taskSortBy = sortParts.join('_');
+
+    function showToast(m, t='success'){ const d = document.createElement('div'); d.className=`toast ${t}`; d.innerHTML=`<span>${t==='success'?'✅':'❌'}</span> <span>${m}</span>`; document.getElementById('toast-container').appendChild(d); setTimeout(()=>d.remove(), 3000); }
+    function formatSize(b) { if(!b) return '0 B'; const k=1024, s=['B','KB','MB','GB','TB'], i=Math.floor(Math.log(b)/Math.log(k)); return (b/Math.pow(k,i)).toFixed(2)+' '+s[i]; }
+    function formatTime(s) { if(!s||s===Infinity) return '--:--:--'; const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=Math.floor(s%60); return `${h>0?h+'h ':''}${m}m ${sc}s`; }
+    function showModal(id){ document.getElementById(id).classList.add('show'); }
+    function hideModal(id){ document.getElementById(id).classList.remove('show'); }
+    function toggleMobileMenu(){ const s=document.querySelector('.sidebar'), o=document.getElementById('mobile-overlay'); if(s)s.classList.toggle('open'); if(o)o.classList.toggle('show'); }
+    function closeMobileMenu(){ const s=document.querySelector('.sidebar'), o=document.getElementById('mobile-overlay'); if(s)s.classList.remove('open'); if(o)o.classList.remove('show'); }
+    function toggleTheme(){ const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',t); localStorage.setItem('dm_theme',t); }
+
+    async function api(u, o={}){
+      const h = {'Content-Type':'application/json'}; if(authToken) h['Authorization']='Bearer '+authToken;
+      const r = await fetch(u, {headers:h, ...o});
+      if(r.status===401){ document.getElementById('login-screen').style.display='flex'; return {error:'Unauthorized'}; }
+      return r.json();
     }
 
-    function showNewTaskModal() { 
-      document.getElementById('url-input').value = ''; 
-      document.getElementById('torrent-file').value = '';
-      document.getElementById('torrent-filename').textContent = '未选择文件';
-      document.querySelector('input[name="task_type"][value="url"]').checked = true;
-      toggleTaskType();
-      populateEngineSelector('task-engine-select'); 
-      showModal('new-task-modal'); 
+    async function doLogin(){
+      const u=document.getElementById('login-user').value, p=document.getElementById('login-pass').value;
+      const r=await api('/api/login',{method:'POST',body:JSON.stringify({username:u,password:p})});
+      if(r.success){ authToken=r.token; localStorage.setItem('manager_auth_token',authToken); location.reload(); }
+      else showToast('账号或密码错误', 'error');
     }
-    
-    function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateEngineSelector('ol-engine-select'); showModal('engine-select-modal'); }
-    function populateEngineSelector(elementId) {
-      const sel = document.getElementById(elementId);
-      sel.innerHTML = '<option value="auto">✨ 自动选择下载器</option>';
-      sel.innerHTML += '<option value="qbit">🟠 qBittorrent</option>';
-      if (sysConfig.aria2 && Array.isArray(sysConfig.aria2)) { sysConfig.aria2.forEach((node, idx) => { sel.innerHTML += `<option value="aria2_${idx}">🟣 Aria2: ${node.name}</option>`; }); }
-    }
-    function showToast(msg, type = 'success') { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); let icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : '⚠️'); toast.className = `toast ${type}`; toast.innerHTML = `<span>${icon}</span> <span>${msg}</span>`; container.appendChild(toast); setTimeout(() => toast.classList.add('show'), 10); setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000); }
-    function formatSize(bytes) { if (!bytes || bytes === 0) return '0 B'; const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'], i = Math.floor(Math.log(bytes) / Math.log(k)); return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]; }
-    function formatTime(seconds) { if (!seconds || seconds === Infinity || seconds <= 0) return '--:--:--'; const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = Math.floor(seconds % 60); return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`; }
-    function toggleSubMenu(menuId, el) { switchTab('downloads', el); }
-    function filterTasks(filterType, el) { document.querySelectorAll('.sub-item').forEach(li => li.classList.remove('active')); el.classList.add('active'); currentTaskFilter = filterType; selectedTasks.clear(); renderTasks(); closeMobileMenu(); }
-    function changeTaskSort() { const val = document.getElementById('task-sort-select').value; localStorage.setItem('dm_task_sort', val); const parts = val.split('_'); taskSortDesc = parts.pop() === 'desc'; taskSortBy = parts.join('_'); renderTasks(); }
-    function toggleTask(taskId, isChecked) { if (isChecked) selectedTasks.add(taskId); else selectedTasks.delete(taskId); updateTaskToolbar(); }
-    function toggleAllTasks(isChecked) { const visibleTasks = getFilteredTasks(); if (isChecked) visibleTasks.forEach(t => selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
-    function updateTaskToolbar() { document.getElementById('task-selected-count').textContent = `已选 ${selectedTasks.size} 项`; const visibleTasks = getFilteredTasks(); document.getElementById('task-select-all').checked = visibleTasks.length > 0 && selectedTasks.size === visibleTasks.length; }
-    
-    // 🌟 修复：批量处理带上明确的 this，并增加 1 秒延迟等待底层引擎反馈
-    async function batchTaskAction(action) { 
-      if (selectedTasks.size === 0) return showToast('未选择任何任务', 'warning'); 
-      if (action === 'delete' && !confirm(`确定要删除选中的 ${selectedTasks.size} 个任务吗？`)) return; 
-      showToast(`正在发送指令...`, 'success'); 
-      const ids = Array.from(selectedTasks); 
-      const res = await api('/api/tasks/batch', { method: 'POST', body: JSON.stringify({ ids, action }) }); 
-      if (res.success) { 
-        showToast(`操作成功，等待引擎响应`, 'success'); 
-        selectedTasks.clear(); 
-        setTimeout(refreshTasks, 1000); // 给后端引擎1秒的反应时间
-      } else { showToast('操作失败', 'error'); } 
-    }
-    
-    function getFilteredTasks() { if (!tasks) return []; return tasks.filter(t => { if (currentTaskFilter === 'all') return true; if (currentTaskFilter === 'downloading') return t.status === 'downloading'; if (currentTaskFilter === 'waiting') return t.status === 'waiting' || t.status === 'paused'; if (currentTaskFilter === 'complete') return t.status === 'complete' || t.status === 'error'; return true; }); }
-    
-    // 🌟 核心修复：纯原生 DOM 差分引擎，文件名的修改也加入动态更新！
-    function renderTasks() {
-      const list = document.getElementById('task-list'); 
-      let filteredTasks = getFilteredTasks();
+    function doLogout(){ localStorage.removeItem('manager_auth_token'); location.reload(); }
+
+    function switchTab(id, el){
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); 
+      const targetSec = document.getElementById('section-'+id);
+      if(targetSec) { targetSec.classList.add('active'); if(id==='engine-config') targetSec.style.display='flex'; }
       
-      // 稳定的日期解析：兼容所有浏览器
-      filteredTasks.sort((a, b) => { 
-        let cmp = 0; 
-        if (taskSortBy === 'created_at') {
-          const timeA = new Date((a.created_at || '').replace(' ', 'T')).getTime() || 0;
-          const timeB = new Date((b.created_at || '').replace(' ', 'T')).getTime() || 0;
-          cmp = timeA - timeB;
-        } else if (taskSortBy === 'name') {
-          cmp = (a.filename || '').localeCompare(b.filename || '', undefined, {numeric: true, sensitivity: 'base'}); 
-        } else if (taskSortBy === 'size') {
-          cmp = a.total_size - b.total_size; 
-        } else if (taskSortBy === 'progress') {
-          cmp = a.progress - b.progress; 
-        }
-        return taskSortDesc ? -cmp : cmp; 
-      });
+      document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active')); if(el) el.classList.add('active');
+      if(id==='settings') loadConfig();
+      if(id==='openlist' && olFiles.length===0) loadOpenList();
+      closeMobileMenu();
+    }
+
+    // --- 双模高级参数编辑器 ---
+    let currentEditEngineId = 0;
+    let isRawConfigMode = false;
+    const aria2ConfigMap = [
+      { key: 'dir', label: '📂 默认下载路径', desc: '文件保存的绝对路径 (如: /downloads)' },
+      { key: 'max-concurrent-downloads', label: '🚦 最大并行任务数', desc: '同时允许下载的任务数量 (建议 3-5)' },
+      { key: 'split', label: '🔪 单文件最大线程', desc: '下载单个文件时使用的最大连接数 (最高 16)' },
+      { key: 'max-connection-per-server', label: '🌐 单服务器最大连接', desc: '每个服务器允许的最大连接数 (最高 16)' },
+      { key: 'min-split-size', label: '🧩 最小分片大小', desc: '文件分块大小 (如: 10M, 20M)' },
+      { key: 'max-overall-download-limit', label: '⬇️ 全局下载限速', desc: '0 为不限速 (如: 0, 5M, 500K)' },
+      { key: 'max-overall-upload-limit', label: '⬆️ 全局上传限速', desc: '0 为不限速 (如: 0, 2M, 100K)' },
+      { key: 'seed-time', label: '🌱 做种时间 (分钟)', desc: 'BT 完成后的最小做种时间 (0 为不做种)' }
+    ];
+
+    function toggleConfigMode() {
+      isRawConfigMode = !isRawConfigMode;
+      document.getElementById('engine-config-visual').style.display = isRawConfigMode ? 'none' : 'grid';
+      document.getElementById('engine-config-raw').style.display = isRawConfigMode ? 'flex' : 'none';
+      document.getElementById('btn-toggle-cfg').innerHTML = isRawConfigMode ? '🎨 切换至可视化模式' : '💻 切换至源码模式';
       
-      updateTaskToolbar();
-      
-      if (filteredTasks.length === 0) { 
-        list.innerHTML = '<div style="text-align: center; padding: 80px 20px; color: var(--text-muted);"><div style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;">📭</div><p>暂无任务</p></div>'; 
-        return; 
-      }
-      if (list.querySelector('.text-muted')) list.innerHTML = '';
-
-      const currentIds = new Set(filteredTasks.map(t => String(t.id)));
-      Array.from(list.children).forEach(child => {
-        if (child.id && child.id.startsWith('task-') && !currentIds.has(child.id.replace('task-', ''))) {
-          child.remove();
-        }
-      });
-
-      const statusText = { 'downloading': '下载中', 'waiting': '等待中', 'paused': '已暂停', 'complete': '已完成', 'error': '发生错误' };
-
-      filteredTasks.forEach((t, i) => {
-        let eta = t.speed > 0 ? (t.total_size - t.downloaded_size) / t.speed : 0; 
-        let progress = t.progress ? parseFloat(t.progress).toFixed(2) : 0; 
-        if(t.status === 'complete') progress = 100;
-        
-        let engineTag = t.engine; let engineClass = 'aria2'; 
-        if(t.engine === 'qbit') { engineTag = 'QBIT'; engineClass = 'qbit'; } 
-        else if(t.engine.startsWith('aria2_')) { const idx = parseInt(t.engine.split('_')[1]); if(sysConfig.aria2 && sysConfig.aria2[idx]) engineTag = 'A2: ' + sysConfig.aria2[idx].name; }
-        const isChecked = selectedTasks.has(t.id) ? 'checked' : '';
-
-        let card = document.getElementById('task-' + t.id);
-        
-        if (!card) {
-          const div = document.createElement('div');
-          div.innerHTML = `
-          <div class="task-card ${t.status}" id="task-${t.id}">
-            <div class="task-header">
-              <div class="task-title" title="${t.filename}">
-                <input type="checkbox" class="custom-checkbox cb-task" value="${t.id}" ${isChecked} onclick="toggleTask('${t.id}', this.checked)">
-                <span class="t-name"></span>
-              </div>
-              <div class="task-actions"></div>
-            </div>
-            <div class="task-body">
-              <div class="progress-wrapper"><div class="progress-bar" style="width: ${progress}%"></div><div class="progress-text" style="position:absolute;width:100%;text-align:center;font-size:10px;font-weight:bold;color:#333; z-index:1;">${progress}%</div></div>
-              <div class="task-meta">
-                <div class="meta-left"><span><span class="tag ${engineClass}" title="${t.engine}">${engineTag}</span></span><span class="s-text"></span><span style="color:var(--border-color);">|</span><span class="s-size"></span></div>
-                <div class="meta-right"></div>
-              </div>
-            </div>
-          </div>`;
-          card = div.firstElementChild;
-        }
-        
-        card.className = `task-card ${t.status}`;
-        card.querySelector('.progress-bar').style.width = `${progress}%`;
-        card.querySelector('.progress-text').textContent = `${progress}%`;
-        
-        // 🌟 修复未知命名：持续将后端的真实名称刷进来
-        card.querySelector('.t-name').textContent = t.filename || '获取信息中...';
-        
-        card.querySelector('.s-text').textContent = statusText[t.status] || t.status;
-        card.querySelector('.s-size').textContent = `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`;
-        card.querySelector('.meta-right').innerHTML = ['downloading'].includes(t.status) ? `<span style="color:var(--primary);">⬇️ ${formatSize(t.speed)}/s</span> <span style="color:var(--text-muted); font-weight:normal;">⏳ ${formatTime(eta)}</span>` : '';
-        card.querySelector('.cb-task').checked = selectedTasks.has(t.id);
-
-        let actionsHtml = '';
-        actionsHtml += `<button class="btn btn-info btn-sm" onclick="showTaskDetails('${t.id}')">详情</button>`;
-        // 🌟 修复：摒弃全局 event，直接在按钮内部通过 this 传参并增加 1秒延迟
-        if(t.status !== 'paused' && t.status !== 'complete' && t.status !== 'error') actionsHtml += `<button class="btn btn-warning btn-sm" onclick="singleAction('${t.id}', 'pause', this)">暂停</button>`;
-        if(t.status === 'paused' || t.status === 'error') actionsHtml += `<button class="btn btn-success btn-sm" onclick="singleAction('${t.id}', 'resume', this)">继续</button>`;
-        actionsHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}', 'delete', this)"><span style="color:var(--danger);">删除</span></button>`;
-        card.querySelector('.task-actions').innerHTML = actionsHtml;
-
-        if (list.children[i] !== card) {
-          list.insertBefore(card, list.children[i]);
-        }
-      });
-    }
-    
-    // 🌟 新增：任务底层详情展示
-    async function showTaskDetails(id) {
-        document.getElementById('task-detail-content').innerHTML = '<div style="text-align:center; padding: 20px; color: var(--primary);">正在从引擎内存读取数据...</div>';
-        showModal('task-detail-modal');
-        const res = await api(`/api/tasks/${id}/details`);
-        
-        if (res.success) {
-            let html = '';
-            if (res.engine === 'Aria2') {
-                const d = res.data;
-                html += `<div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${d.dir}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">当前连接数</div><div class="detail-value">${d.connections}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">分块切片</div><div class="detail-value">${d.numPieces} 块</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">InfoHash</div><div class="detail-value" style="font-size:11px;">${d.infoHash || '无'}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">引擎状态码</div><div class="detail-value">${d.errorCode === '0' ? '<span style="color:var(--success)">0 (运行正常)</span>' : '<span style="color:var(--danger)">'+d.errorMessage+'</span>'}</div></div>`;
-            } else {
-                const d = res.data;
-                html += `<div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${d.save_path}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">已做种时间</div><div class="detail-value">${Math.floor(d.seeding_time/60)} 分钟</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">Peers 连接</div><div class="detail-value">${d.peers} / ${d.peers_total}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">Seeds 连接</div><div class="detail-value">${d.seeds} / ${d.seeds_total}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">当前分享率</div><div class="detail-value" style="color:var(--primary); font-weight:bold;">${(d.share_ratio||0).toFixed(2)}</div></div>`;
-                html += `<div class="detail-row"><div class="detail-label">Tracker</div><div class="detail-value">${res.trackers && res.trackers.length > 0 ? res.trackers[0].url : '无记录'}</div></div>`;
-            }
-            document.getElementById('task-detail-content').innerHTML = html;
-        } else {
-            document.getElementById('task-detail-content').innerHTML = `<div style="text-align:center; padding: 20px; color: var(--danger);">获取失败: ${res.error || '任务可能已在引擎中销毁'}</div>`;
-        }
-    }
-
-    // 🌟 修复：安全传参 btn，避免 undefined event，且添加 1000ms 强制延时
-    async function singleAction(id, type, btn) { 
-      if (type === 'delete' && !confirm('确定要删除此任务吗？')) return; 
-      if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; } 
-      await api(`/api/tasks/${id}/${type}`, { method: 'POST' }); 
-      setTimeout(refreshTasks, 1000); 
-    }
-
-    function getCurrentOlIdx() { const val = document.getElementById('ol-account-select').value; return val === "" ? 0 : parseInt(val); }
-    function switchOlAccount() { currentOpenListPath = '/'; loadOpenList(); }
-    async function loadOpenList(path = currentOpenListPath) {
-      const container = document.getElementById('openlist-content'); const olIdx = getCurrentOlIdx();
-      if (!sysConfig.openlist || sysConfig.openlist.length === 0) { container.innerHTML = '<div style="padding: 60px; text-align: center; color: var(--text-muted);">暂无 OpenList 账号，请在全局设置中添加</div>'; return; }
-      container.innerHTML = '<div style="padding: 60px; text-align: center; color: var(--primary);">正在加载文件列表...</div>'; olSelected.clear(); updateOlToolbar();
-      const res = await api('/api/openlist/list', { method: 'POST', body: JSON.stringify({ path, olIdx }) });
-      if (res.error || res.code !== 200) { container.innerHTML = `<div style="color:var(--danger); padding: 40px; text-align:center;"><strong>连接失败：</strong>${res.error || res.message}</div>`; return; }
-      currentOpenListPath = path; document.getElementById('openlist-path').value = path; olFiles = res.data.content || []; const savedSort = localStorage.getItem('dm_ol_sort_' + currentOpenListPath); if (savedSort) { const parts = savedSort.split('_'); olSortBy = parts[0]; olSortDesc = parts[1] === 'true'; } else { olSortBy = 'name'; olSortDesc = false; } renderOpenList();
-    }
-    function sortOpenList(field) { if (olSortBy === field) { olSortDesc = !olSortDesc; } else { olSortBy = field; olSortDesc = false; } localStorage.setItem('dm_ol_sort_' + currentOpenListPath, olSortBy + '_' + olSortDesc); renderOpenList(); }
-    function renderOpenList() {
-      const container = document.getElementById('openlist-content'); if (olFiles.length === 0) { container.innerHTML = '<div style="padding: 80px; text-align: center; color: var(--text-muted); font-size:14px;">此文件夹为空</div>'; return; }
-      olFiles.sort((a, b) => { if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1; let cmp = 0; if (olSortBy === 'name') cmp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }); else if (olSortBy === 'size') cmp = a.size - b.size; else if (olSortBy === 'time') cmp = new Date(a.modified) - new Date(b.modified); return olSortDesc ? -cmp : cmp; });
-      const getIcon = (f) => f === olSortBy ? (olSortDesc ? '▼' : '▲') : ''; const allChecked = olFiles.length > 0 && olSelected.size === olFiles.length ? 'checked' : '';
-      let html = `<table class="ol-table"><thead><tr><th style="width: 40px; text-align:center; border-radius: 6px 0 0 0;"><input type="checkbox" class="custom-checkbox" ${allChecked} onclick="toggleAllOlFiles(this.checked)"></th><th onclick="sortOpenList('name')">文件名称 <span class="sort-icon">${getIcon('name')}</span></th><th style="width: 120px;" onclick="sortOpenList('size')">文件大小 <span class="sort-icon">${getIcon('size')}</span></th><th style="width: 180px; border-radius: 0 6px 0 0;" onclick="sortOpenList('time')">修改时间 <span class="sort-icon">${getIcon('time')}</span></th></tr></thead><tbody>`;
-      olFiles.forEach(f => { const isChecked = olSelected.has(f.name) ? 'checked' : ''; const icon = f.is_dir ? '📁' : '📄'; const size = f.is_dir ? '-' : formatSize(f.size); const time = new Date(f.modified).toLocaleString(); const action = f.is_dir ? `loadOpenList('${currentOpenListPath === '/' ? '' : currentOpenListPath}/${f.name}')` : `toggleOlFile('${f.name}', !${isChecked})`; html += `<tr><td style="text-align:center;"><input type="checkbox" class="custom-checkbox" value="${f.name}" ${isChecked} onclick="toggleOlFile('${f.name}', this.checked)"></td><td><div class="ol-filename-cell" onclick="${action}"><span style="font-size: 18px; margin-right: 12px;">${icon}</span><span title="${f.name}">${f.name}</span></div></td><td style="color: var(--text-muted);">${size}</td><td style="color: var(--text-muted); font-size:12px;">${time}</td></tr>`; });
-      html += `</tbody></table>`; container.innerHTML = html; updateOlToolbar();
-    }
-    function toggleOlFile(name, isChecked) { if (isChecked) olSelected.add(name); else olSelected.delete(name); renderOpenList(); }
-    function toggleAllOlFiles(isChecked) { if (isChecked) { olSelected = new Set(olFiles.map(f => f.name)); } else { olSelected.clear(); } renderOpenList(); }
-    function updateOlToolbar() { const show = olSelected.size > 0; document.getElementById('btn-ol-download').style.display = show ? 'inline-flex' : 'none'; document.getElementById('btn-ol-rename').style.display = show ? 'inline-flex' : 'none'; document.getElementById('btn-ol-delete').style.display = show ? 'inline-flex' : 'none'; }
-    function openListGoUp() { if (currentOpenListPath === '/') return; const parts = currentOpenListPath.split('/'); parts.pop(); loadOpenList(parts.join('/') || '/'); }
-    async function executeOlDownload() {
-      const engine = document.getElementById('ol-engine-select').value; const olIdx = getCurrentOlIdx(); hideModal('engine-select-modal'); const filesToDownload = Array.from(olSelected); if(filesToDownload.length === 0) return;
-      showToast(`开始处理 ${filesToDownload.length} 个文件...`, 'success'); let successCount = 0;
-      for(const name of filesToDownload) {
-        const path = currentOpenListPath === '/' ? `/${name}` : `${currentOpenListPath}/${name}`;
-        const res = await api('/api/openlist/get', { method: 'POST', body: JSON.stringify({ path, olIdx }) });
-        if (res.code === 200 && res.data) {
-          const headers = res.data.header || {}; let targetUrl = res.data.raw_url;
-          if (Object.keys(headers).length === 0 && res.data.sign) { const baseUrl = sysConfig.openlist[olIdx].url.replace(/\/$/, ''); const encodePath = path.split('/').map(encodeURIComponent).join('/'); targetUrl = `${baseUrl}/d${encodePath}?sign=${res.data.sign}`; }
-          const dlRes = await api('/api/download', { method: 'POST', body: JSON.stringify({ url: targetUrl, engine, headers }) });
-          if(dlRes.success) successCount++;
-        }
-      }
-      showToast(`已成功将 ${successCount} 个任务添加至下载队列`, 'success'); refreshTasks();
-    }
-    function toggleBatchMode() { const mode = document.querySelector('input[name="batch-rename-mode"]:checked').value; document.getElementById('batch-mode-replace').style.display = mode === 'replace' ? 'block' : 'none'; document.getElementById('batch-mode-sequence').style.display = mode === 'sequence' ? 'block' : 'none'; generateRenamePreview(); }
-    function calculateNewName(oldName, mode) { if (mode === 'replace') { const searchStr = document.getElementById('rename-batch-search').value; const replaceStr = document.getElementById('rename-batch-replace').value; if (!searchStr) return oldName; return oldName.split(searchStr).join(replaceStr); } else if (mode === 'sequence') { const formatStr = document.getElementById('rename-batch-format').value; let num = window._seqCurrentNum++; if (!formatStr) return oldName; const dotIdx = oldName.lastIndexOf('.'); const ext = dotIdx > -1 ? oldName.substring(dotIdx) : ''; let newName = formatStr.replace(/\{ext\}/g, ext); if (newName.includes('{number}')) { newName = newName.replace(/\{number\}/g, num); } else { newName = newName + num; } return newName; } return oldName; }
-    function generateRenamePreview() { const box = document.getElementById('rename-preview-box'); if (olSelected.size === 0) { box.innerHTML = ''; return; } const mode = document.querySelector('input[name="batch-rename-mode"]:checked').value; const selectedNames = Array.from(olSelected).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); window._seqCurrentNum = parseInt(document.getElementById('rename-batch-start').value) || 1; let html = ''; selectedNames.forEach(oldName => { let newName = calculateNewName(oldName, mode); if (oldName !== newName) { html += `<div class="preview-item"><del>${oldName}</del><br>➜ <span>${newName}</span></div>`; } else { html += `<div class="preview-item" style="opacity:0.5;">${oldName} (未修改)</div>`; } }); box.innerHTML = html || '请输入规则...'; }
-    function showRenameModal() { if (olSelected.size === 0) return; const isSingle = olSelected.size === 1; document.getElementById('rename-title').textContent = isSingle ? '✏️ 单体文件重命名' : `✏️ 批量重命名 (${olSelected.size} 个文件)`; document.querySelector('input[name="batch-rename-mode"][value="replace"]').checked = true; if(isSingle) { document.getElementById('rename-batch-search').value = Array.from(olSelected)[0]; document.getElementById('rename-mode-selector').style.display = 'none'; } else { document.getElementById('rename-batch-search').value = ''; document.getElementById('rename-mode-selector').style.display = 'flex'; } document.getElementById('rename-batch-replace').value = ''; document.getElementById('rename-batch-format').value = '{number}{ext}'; document.getElementById('rename-batch-start').value = '1'; toggleBatchMode(); showModal('rename-modal'); generateRenamePreview(); }
-    async function submitRename() { const btn = document.getElementById('btn-submit-rename'); btn.textContent = '处理中...'; btn.disabled = true; const mode = document.querySelector('input[name="batch-rename-mode"]:checked').value; const selectedNames = Array.from(olSelected).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); window._seqCurrentNum = parseInt(document.getElementById('rename-batch-start').value) || 1; let successCount = 0; const olIdx = getCurrentOlIdx(); for (const oldName of selectedNames) { const newName = calculateNewName(oldName, mode); if (newName !== oldName) { const path = currentOpenListPath === '/' ? `/${oldName}` : `${currentOpenListPath}/${oldName}`; const res = await api('/api/openlist/rename', { method: 'POST', body: JSON.stringify({ name: newName, path, olIdx }) }); if(res.code === 200) successCount++; } } btn.innerHTML = '保存修改'; btn.disabled = false; hideModal('rename-modal'); showToast(`操作完成，成功重命名 ${successCount} 个文件`); loadOpenList(currentOpenListPath); }
-    async function deleteSelectedFiles() { if (!confirm(`确定要删除这 ${olSelected.size} 个文件吗？此操作无法恢复！`)) return; showToast('正在删除...', 'warning'); const names = Array.from(olSelected); const olIdx = getCurrentOlIdx(); const res = await api('/api/openlist/remove', { method: 'POST', body: JSON.stringify({ dir: currentOpenListPath, names, olIdx }) }); if (res.code === 200) { showToast('文件已删除', 'success'); loadOpenList(currentOpenListPath); } else { showToast('删除失败: ' + res.message, 'error'); } }
-    
-    async function loadConfigToSettingsView() { 
-      try {
-        const config = await api('/api/config'); 
-        if (config.error) throw new Error(config.error); 
-        sysConfig = config; 
-        aria2Nodes = config.aria2 || []; renderAria2Nodes(); 
-        olAccounts = config.openlist || []; renderOlAccounts(); updateOlDropdown(); 
-        document.getElementById('panel-user').value = config.auth?.username || 'admin'; 
-        document.getElementById('panel-pass').value = ''; 
-        document.getElementById('qbit-url').value = config.qbit?.baseUrl || ''; 
-        document.getElementById('qbit-user').value = config.qbit?.username || ''; 
-        document.getElementById('qbit-pass').value = config.qbit?.password || ''; 
-      } catch (e) {
-        showToast('配置读取失败', 'error');
-      }
-    }
-    
-    function renderAria2Nodes() { 
-      const container = document.getElementById('aria2-nodes-container'); container.innerHTML = ''; 
-      aria2Nodes.forEach((node, idx) => { 
-        container.innerHTML += `
-        <div class="config-card">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center;">
-            <strong style="color: var(--primary);">节点 ${idx + 1} [${node.name}]</strong>
-            <div>
-              <button class="btn btn-default btn-sm" onclick="openEngineConfigView('aria2', ${idx})" style="margin-right: 8px; border-color: #722ed1; color: #722ed1; font-weight:bold;">⚙️ 高级参数设置</button>
-              <button class="remove-btn" style="position:static;" onclick="removeAria2Node(${idx})" title="删除节点">✖</button>
-            </div>
-          </div>
-          <div class="form-group"><label>节点名称</label><input type="text" id="a2-name-${idx}" class="form-control" value="${node.name}"></div>
-          <div class="form-group"><label>RPC 地址</label><input type="text" id="a2-url-${idx}" class="form-control" value="${node.url}"></div>
-          <div class="form-group"><label>RPC 密钥</label><input type="password" id="a2-sec-${idx}" class="form-control" value="${node.secret}"></div>
-        </div>`; 
-      }); 
-      if(aria2Nodes.length === 0) container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding: 20px; font-size:13px; border: 1px dashed var(--border-color); border-radius: var(--radius-md);">未配置 Aria2 节点</div>'; 
-    }
-    
-    function addAria2NodeForm() { aria2Nodes.push({ name: '新节点', url: '', secret: '' }); renderAria2Nodes(); } function removeAria2Node(idx) { if(confirm('确认删除此节点吗？')) { aria2Nodes.splice(idx, 1); renderAria2Nodes(); } }
-    function renderOlAccounts() { const container = document.getElementById('ol-accounts-container'); container.innerHTML = ''; olAccounts.forEach((acc, idx) => { container.innerHTML += `<div class="config-card" style="border-left: 3px solid var(--primary);"><button class="remove-btn" onclick="removeOlAccount(${idx})">✖</button><div class="form-group"><label>名称</label><input type="text" id="ol-name-${idx}" class="form-control" value="${acc.name || '默认云盘'}"></div><div class="form-group"><label>URL</label><input type="text" id="ol-url-${idx}" class="form-control" value="${acc.url}"></div><div class="form-group"><label>Token</label><input type="password" id="ol-token-${idx}" class="form-control" value="${acc.token}"></div></div>`; }); if(olAccounts.length === 0) container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding: 20px; font-size:13px; border: 1px dashed var(--border-color); border-radius: var(--radius-md);">未配置 OpenList 账号</div>'; }
-    function addOlAccount() { olAccounts.push({ name: '新网盘', url: '', token: '' }); renderOlAccounts(); } function removeOlAccount(idx) { if(confirm('确认删除此网盘吗？')) { olAccounts.splice(idx, 1); renderOlAccounts(); } }
-    function updateOlDropdown() { const sel = document.getElementById('ol-account-select'); sel.innerHTML = ''; if(!sysConfig.openlist || sysConfig.openlist.length === 0) { sel.innerHTML = '<option value="">无可用网盘</option>'; return; } sysConfig.openlist.forEach((acc, idx) => { sel.innerHTML += `<option value="${idx}">☁️ ${acc.name || '默认云盘'}</option>`; }); }
-    
-    async function saveSettings() { 
-      for(let i=0; i<aria2Nodes.length; i++) { aria2Nodes[i].name = document.getElementById(`a2-name-${i}`).value; aria2Nodes[i].url = document.getElementById(`a2-url-${i}`).value; aria2Nodes[i].secret = document.getElementById(`a2-sec-${i}`).value; } 
-      for(let i=0; i<olAccounts.length; i++) { olAccounts[i].name = document.getElementById(`ol-name-${i}`).value; olAccounts[i].url = document.getElementById(`ol-url-${i}`).value; olAccounts[i].token = document.getElementById(`ol-token-${i}`).value; } 
-      const pUser = document.getElementById('panel-user').value; const pPass = document.getElementById('panel-pass').value || sysConfig.auth.password; 
-      const config = { auth: { username: pUser, password: pPass }, aria2: aria2Nodes, openlist: olAccounts, qbit: { baseUrl: document.getElementById('qbit-url').value, username: document.getElementById('qbit-user').value, password: document.getElementById('qbit-pass').value } }; 
-      const res = await api('/api/config', { method: 'POST', body: JSON.stringify(config) }); 
-      if (res.success) { 
-        showToast('设置已保存', 'success'); 
-        authToken = btoa(pUser + ':' + pPass); localStorage.setItem('manager_auth_token', authToken); 
-        sysConfig = config; document.getElementById('panel-pass').value = ''; 
-        updateOlDropdown(); refreshTasks(); 
-        if(ws) { ws.onclose = null; ws.close(); } connectWS(); 
-      } 
-    }
-
-    let currentEditEngine = null;
-    let engineRawConfig = {};
-    let activeConfigTab = 'gui';
-    
-    const aria2Meta = {
-      'dir': { label: '下载路径', desc: '服务器物理保存路径 (如 /opt/downloads)' },
-      'max-concurrent-downloads': { label: '最大同时下载任务数', desc: '同时进行下载的任务数量限制' },
-      'max-connection-per-server': { label: '单服务器最大连接数', desc: '单任务从同一个服务器下载使用的线程数 (建议 16)' },
-      'split': { label: '单任务分块数', desc: '多线程下载时的文件切片数量' },
-      'min-split-size': { label: '最小分块大小', desc: '单分块的最小体积 (如 1M, 5M)' },
-      'max-overall-download-limit': { label: '全局下载限速', desc: '0 为不限速，支持单位 K/M (如 10M)' },
-      'max-overall-upload-limit': { label: '全局上传限速', desc: '0 为不限速，支持单位 K/M' },
-      'seed-time': { label: '做种时间 (分钟)', desc: '下载完成后继续做种的时间，0 为下载完成立即停止做种' },
-      'listen-port': { label: 'BT 监听端口', desc: '用于接收网络连接的 TCP 端口 (如 6881-6999)' }
-    };
-    
-    const qbitMeta = {
-      'save_path': { label: '下载路径', desc: '服务器物理保存路径 (如 /opt/downloads/qbit)' },
-      'dl_limit': { label: '全局下载限速', desc: '限制所有任务的总下载速度 (Byte/s)，0 为不限速' },
-      'up_limit': { label: '全局上传限速', desc: '限制所有任务的总上传速度 (Byte/s)，0 为不限速' },
-      'max_connec': { label: '全局最大连接数', desc: '所有 BT 任务连接节点数的总和限制' },
-      'max_connec_per_torrent': { label: '单任务最大连接数', desc: '单个 BT 任务所能连接的节点数上限' },
-      'max_ratio': { label: '最大分享率', desc: '上传/下载达到该比例自动停止做种，-1 为不限制' },
-      'listen_port': { label: '监听端口', desc: '用于接收网络连接的端口号' }
-    };
-
-    function switchConfigTab(tab) {
-      activeConfigTab = tab;
-      document.getElementById('tab-btn-gui').classList.remove('active');
-      document.getElementById('tab-btn-json').classList.remove('active');
-      document.getElementById('tab-btn-' + tab).classList.add('active');
-      
-      if (tab === 'gui') {
-        document.getElementById('engine-config-gui').style.display = 'block';
-        document.getElementById('engine-config-json-wrapper').style.display = 'none';
+      if (isRawConfigMode) {
         try {
-          const currentJson = JSON.parse(document.getElementById('engine-config-json-input').value);
-          const meta = currentEditEngine.type === 'qbit' ? qbitMeta : aria2Meta;
-          for (const key of Object.keys(meta)) {
-            const el = document.getElementById(`gui-input-${key}`);
-            if (el && currentJson[key] !== undefined) { el.value = currentJson[key]; }
-          }
-        } catch(e) {}
-      } else {
-        document.getElementById('engine-config-gui').style.display = 'none';
-        document.getElementById('engine-config-json-wrapper').style.display = 'flex';
-        try {
-          let currentJson = JSON.parse(document.getElementById('engine-config-json-input').value || '{}');
-          const meta = currentEditEngine.type === 'qbit' ? qbitMeta : aria2Meta;
-          for (const key of Object.keys(meta)) {
-            const el = document.getElementById(`gui-input-${key}`);
-            if (el) {
-              let val = el.value.trim();
-              if (val !== '' && !isNaN(val) && currentEditEngine.type === 'qbit') val = Number(val);
-              currentJson[key] = val;
-            }
-          }
-          document.getElementById('engine-config-json-input').value = JSON.stringify(currentJson, null, 2);
+          let payload = JSON.parse(document.getElementById('engine-config-json-input').value || '{}');
+          aria2ConfigMap.forEach(item => {
+            const el = document.getElementById(`cfg-${item.key}`);
+            if(el) payload[item.key] = el.value;
+          });
+          document.getElementById('engine-config-json-input').value = JSON.stringify(payload, null, 2);
         } catch(e) {}
       }
     }
 
-    async function openEngineConfigView(type, id = '') {
-      currentEditEngine = { type, id };
+    async function openEngineConfigView(idx) {
+      currentEditEngineId = idx;
+      isRawConfigMode = false; 
+      document.getElementById('engine-config-visual').style.display = 'grid';
+      document.getElementById('engine-config-raw').style.display = 'none';
+      document.getElementById('btn-toggle-cfg').innerHTML = '💻 切换至源码模式';
       
-      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active')); 
-      document.getElementById('section-engine-config').classList.add('active');
+      switchTab('engine-config');
+      document.getElementById('engine-config-title').textContent = `⚙️ 参数调优 (节点 ${idx+1})`;
       
-      const title = type === 'qbit' ? '⚙️ qBittorrent 高级参数设置' : `⚙️ Aria2 高级参数设置 (节点 ${id+1})`;
-      document.getElementById('engine-config-title').textContent = title;
+      const vContainer = document.getElementById('engine-config-visual');
+      vContainer.innerHTML = '<div style="color:var(--primary); padding:20px; font-weight:bold; font-size:16px;">正在拉取引擎底层配置...</div>';
+      document.getElementById('engine-config-json-input').value = '拉取中...';
       
-      const url = type === 'qbit' ? '/api/engine/qbit/config' : `/api/engine/aria2/${id}/config`;
-      document.getElementById('engine-config-gui').innerHTML = '<div style="text-align:center; padding: 100px 40px; color: var(--primary); font-size: 16px;">正在读取配置，请稍候...</div>';
-      document.getElementById('engine-config-json-input').value = 'Loading...';
-      
-      switchConfigTab('gui');
-      
-      const res = await api(url);
-      if (res.success) {
-        engineRawConfig = res.data;
-        document.getElementById('engine-config-json-input').value = JSON.stringify(engineRawConfig, null, 2);
-        
-        const meta = type === 'qbit' ? qbitMeta : aria2Meta;
-        let guiHtml = '';
-        for (const [key, info] of Object.entries(meta)) {
-          const val = engineRawConfig[key] !== undefined ? engineRawConfig[key] : '';
-          guiHtml += `
-            <div class="config-item">
-              <div class="config-label-row">
-                <span class="config-label">${info.label}</span>
-                <span style="font-family: monospace; font-size:11px; background:var(--bg-body); padding:2px 6px; border-radius:4px; color:var(--text-muted); border: 1px solid var(--border-color);">${key}</span>
-              </div>
-              <input type="text" id="gui-input-${key}" class="form-control" value="${val}" placeholder="留空则使用系统默认值">
-              <div class="config-desc">${info.desc}</div>
+      const r = await api(`/api/engine/aria2/${idx}/config`);
+      if(r.success) {
+        document.getElementById('engine-config-json-input').value = JSON.stringify(r.data, null, 2);
+        let formHtml = '';
+        aria2ConfigMap.forEach(item => {
+          const val = r.data[item.key] !== undefined ? r.data[item.key] : '';
+          formHtml += `
+            <div class="config-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:center; box-shadow:var(--shadow-sm); border-top:3px solid var(--primary-light);">
+              <label style="font-weight:bold; color:var(--text-main); margin-bottom:6px; font-size:14px;">${item.label}</label>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; min-height:36px;">${item.desc}</div>
+              <input type="text" id="cfg-${item.key}" class="form-control" value="${val}" style="border-color:#d9d9d9; font-family:monospace; color:var(--primary); font-weight:600;">
             </div>
           `;
-        }
-        document.getElementById('engine-config-gui').innerHTML = guiHtml;
+        });
+        vContainer.innerHTML = formHtml;
       } else {
-        document.getElementById('engine-config-gui').innerHTML = `<div style="color:var(--danger); padding:100px 40px; text-align:center; font-size: 16px;">读取失败: ${res.error || '无法连接到下载器'}</div>`;
-        document.getElementById('engine-config-json-input').value = '{}';
+        vContainer.innerHTML = `<div style="color:var(--danger); padding:20px;">拉取失败: ${r.error}</div>`;
       }
-    }
-    
-    function closeEngineConfigView() {
-      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active')); 
-      document.getElementById('section-settings').classList.add('active');
     }
 
     async function saveEngineConfig() {
       let payload = {};
-      const meta = currentEditEngine.type === 'qbit' ? qbitMeta : aria2Meta;
-      
-      if (activeConfigTab === 'gui') {
-        try {
-          payload = JSON.parse(document.getElementById('engine-config-json-input').value || '{}');
-          for (const key of Object.keys(meta)) {
-            const el = document.getElementById(`gui-input-${key}`);
-            if (el) {
-              let val = el.value.trim();
-              if (val !== '' && !isNaN(val) && currentEditEngine.type === 'qbit') val = Number(val);
-              payload[key] = val;
-            }
-          }
-        } catch(e) {}
+      if (isRawConfigMode) {
+        try { payload = JSON.parse(document.getElementById('engine-config-json-input').value); } 
+        catch(e) { return showToast('JSON 格式错误，请检查语法', 'error'); }
       } else {
-        const val = document.getElementById('engine-config-json-input').value;
-        try { payload = JSON.parse(val); } catch(e) { return showToast('JSON 格式错误，请检查语法！', 'error'); }
+        try { payload = JSON.parse(document.getElementById('engine-config-json-input').value || '{}'); } catch(e) { payload = {}; }
+        aria2ConfigMap.forEach(item => { const el = document.getElementById(`cfg-${item.key}`); if(el) payload[item.key] = el.value; });
       }
-
-      const { type, id } = currentEditEngine;
-      const url = type === 'qbit' ? '/api/engine/qbit/config' : `/api/engine/aria2/${id}/config`;
       
-      const btn = document.getElementById('btn-save-engine-config');
-      btn.disabled = true; btn.textContent = '正在保存...';
+      const btn = event.currentTarget; const orgText = btn.innerHTML;
+      btn.innerHTML = '🔄 应用中...'; btn.disabled = true;
+      const r = await api(`/api/engine/aria2/${currentEditEngineId}/config`, {method:'POST', body:JSON.stringify(payload)});
+      btn.innerHTML = orgText; btn.disabled = false;
       
-      const res = await api(url, { method: 'POST', body: JSON.stringify(payload) });
-      btn.disabled = false; btn.innerHTML = '💾 保存并应用配置';
-      
-      if (res.success) { showToast('参数已更新', 'success'); closeEngineConfigView(); } else { showToast('保存失败: ' + (res.error || '未知错误'), 'error'); }
+      if(r.success) { showToast('Aria2 参数已应用生效！'); switchTab('settings'); }
+      else showToast('保存失败: ' + r.error, 'error');
     }
 
-    // 🔗 🌟 种子直传与多任务支持 
-    async function addDownload() { 
-      const engine = document.getElementById('task-engine-select').value; 
-      const type = document.querySelector('input[name="task_type"]:checked').value;
-      
-      if (type === 'url') {
-        const url = document.getElementById('url-input').value.trim(); 
-        if (!url) return showToast('链接不能为空', 'warning'); 
-        const res = await api('/api/download', { method: 'POST', body: JSON.stringify({ url, engine }) }); 
-        if (res.success) { hideModal('new-task-modal'); showToast(res.message); refreshTasks(); } 
-        else showToast('添加任务失败: ' + (res.error || ''), 'error');
-      } else {
-        const file = document.getElementById('torrent-file').files[0];
-        if (!file) return showToast('请选择种子文件', 'warning');
-        
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const base64 = e.target.result.split(',')[1];
-          const res = await api('/api/upload', { method: 'POST', body: JSON.stringify({ engine, fileBase64: base64, filename: file.name }) });
-          if (res.success) { hideModal('new-task-modal'); showToast('种子提交成功', 'success'); refreshTasks(); }
-          else { showToast('种子提交失败: ' + res.error, 'error'); }
-        };
-        reader.readAsDataURL(file);
-      }
+    function toggleTaskType(){
+      const t = document.querySelector('input[name="task_type"]:checked').value;
+      document.getElementById('box-url').style.display = t==='url'?'block':'none';
+      document.getElementById('box-torrent').style.display = t==='torrent'?'block':'none';
     }
     
-    async function refreshTasks() { 
-      tasks = await api('/api/tasks'); if (tasks.error) return; 
+    function showNewTaskModal() {
+        if(document.getElementById('url-input')) document.getElementById('url-input').value = '';
+        if(document.getElementById('torrent-file')) document.getElementById('torrent-file').value = '';
+        if(document.getElementById('t-name')) document.getElementById('t-name').textContent = '未选择文件';
+        if(document.querySelector('input[name="task_type"][value="url"]')) document.querySelector('input[name="task_type"][value="url"]').checked = true;
+        toggleTaskType(); populateSelects(); showModal('new-task-modal');
+    }
+
+    function changeTaskSort() { 
+      const val = document.getElementById('task-sort-select').value; localStorage.setItem('dm_task_sort', val); 
+      const parts = val.split('_'); taskSortDesc = parts.pop() === 'desc'; taskSortBy = parts.join('_'); renderTasks(); 
+    }
+
+    async function loadConfig(){
+      const r = await api('/api/config'); if(r.error) return; sysConfig = r;
+      document.getElementById('panel-user').value = r.auth?.username || 'admin';
       
+      const a2 = document.getElementById('aria2-nodes-container'); a2.innerHTML = '';
+      (r.aria2||[]).forEach((n,i)=>{
+        a2.innerHTML += `<div class="config-card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">
+            <span style="font-weight:bold; color:var(--text-main);">节点 ${i+1}</span>
+            <div>
+              <button class="btn btn-default btn-sm" onclick="openEngineConfigView(${i})">⚙️ 参数</button>
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" style="border:none;background:none;font-size:16px;cursor:pointer;color:var(--text-muted);margin-left:10px;">✖</button>
+            </div>
+          </div>
+          <input type="text" class="form-control a2-name" value="${n.name}" style="margin-bottom:8px;" placeholder="节点名称">
+          <input type="text" class="form-control a2-url" value="${n.url}" style="margin-bottom:8px;" placeholder="http://ip:6800/jsonrpc">
+          <input type="password" class="form-control a2-sec" value="${n.secret}" placeholder="RPC 密钥">
+        </div>`;
+      });
+      const ol = document.getElementById('ol-accounts-container'); ol.innerHTML = '';
+      (r.openlist||[]).forEach((n,i)=>{
+        ol.innerHTML += `<div class="config-card"><button onclick="this.parentElement.remove()" style="position:absolute;top:10px;right:10px;border:none;background:none;font-size:16px;cursor:pointer;color:var(--text-muted);">✖</button>
+          <input type="text" class="form-control ol-name" value="${n.name}" style="margin-bottom:8px;" placeholder="云盘名称">
+          <input type="text" class="form-control ol-url" value="${n.url}" style="margin-bottom:8px;" placeholder="API 地址">
+          <input type="password" class="form-control ol-token" value="${n.token}" placeholder="Token">
+        </div>`;
+      });
+    }
+
+    function addAria2NodeForm(){ document.getElementById('aria2-nodes-container').innerHTML += `<div class="config-card"><button onclick="this.parentElement.remove()" style="position:absolute;top:10px;right:10px;border:none;background:none;font-size:16px;cursor:pointer;">✖</button><input type="text" class="form-control a2-name" value="新Aria2节点" style="margin-bottom:8px;"><input type="text" class="form-control a2-url" placeholder="http://ip:6800/jsonrpc" style="margin-bottom:8px;"><input type="password" class="form-control a2-sec" placeholder="RPC 密钥"></div>`; }
+    function addOlAccount(){ document.getElementById('ol-accounts-container').innerHTML += `<div class="config-card"><button onclick="this.parentElement.remove()" style="position:absolute;top:10px;right:10px;border:none;background:none;font-size:16px;cursor:pointer;">✖</button><input type="text" class="form-control ol-name" value="新网盘" style="margin-bottom:8px;"><input type="text" class="form-control ol-url" placeholder="http://..." style="margin-bottom:8px;"><input type="password" class="form-control ol-token" placeholder="Token"></div>`; }
+
+    async function saveSettings(){
+      const aria2 = []; document.querySelectorAll('#aria2-nodes-container .config-card').forEach(c=>{ aria2.push({name:c.querySelector('.a2-name').value, url:c.querySelector('.a2-url').value, secret:c.querySelector('.a2-sec').value}); });
+      const openlist = []; document.querySelectorAll('#ol-accounts-container .config-card').forEach(c=>{ openlist.push({name:c.querySelector('.ol-name').value, url:c.querySelector('.ol-url').value, token:c.querySelector('.ol-token').value}); });
+      const u = document.getElementById('panel-user').value; const p = document.getElementById('panel-pass').value || sysConfig.auth.password;
+      
+      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, auth:{username:u, password:p}})});
+      showToast('核心配置保存成功！');
+      authToken = btoa(u+':'+p); localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
+      sysConfig = await api('/api/config'); populateSelects(); refreshTasks();
+    }
+
+    function populateSelects(){
+      let h = '<option value="auto">✨ 智能引擎投递</option>';
+      (sysConfig.aria2||[]).forEach((n,i)=> h+=`<option value="aria2_${i}">🟣 Aria2: ${n.name}</option>`);
+      if(document.getElementById('task-engine-select')) document.getElementById('task-engine-select').innerHTML = h;
+      if(document.getElementById('ol-engine-select')) document.getElementById('ol-engine-select').innerHTML = h;
+      
+      let o = ''; (sysConfig.openlist||[]).forEach((n,i)=> o+=`<option value="${i}">☁️ ${n.name}</option>`);
+      if(document.getElementById('ol-account-select')) document.getElementById('ol-account-select').innerHTML = o || '<option value="">请先添加云盘</option>';
+    }
+
+    async function refreshTasks(){
+      const s = await api('/api/global-stats');
+      if (document.getElementById('global-speed')) {
+        document.getElementById('global-speed').innerHTML = `⬇️ ${formatSize(s.globalDlSpeed)}/s <span style="color:var(--border-color);margin:0 5px;">|</span> ⬆️ ${formatSize(s.globalUpSpeed)}/s`;
+      }
+      
+      let html = '';
+      (s.aria2Nodes||[]).forEach((n,i) => {
+        if (n.online) {
+           html += `<div style="margin-bottom:16px; background:var(--bg-body); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                      <div style="font-weight:600; color:var(--text-main); font-size:13px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🟣 ${n.name}</span> <span style="color:var(--success); font-size:11px; background:#f6ffed; border:1px solid #b7eb8f; padding:2px 6px; border-radius:10px;">在线</span>
+                      </div>
+                      <div style="font-size:12px; color:var(--text-muted); line-height:1.8; margin-top:8px; border-top:1px dashed var(--border-color); padding-top:8px;">
+                         <div style="display:flex; justify-content:space-between;"><span>下载速度</span><span style="color:var(--primary); font-weight:600;">${formatSize(n.dlSpeed)}/s</span></div>
+                         <div style="display:flex; justify-content:space-between;"><span>上传速度</span><span style="color:var(--warning); font-weight:600;">${formatSize(n.upSpeed)}/s</span></div>
+                         <div style="display:flex; justify-content:space-between;"><span>总下载量</span><span>${formatSize(n.totalDl)}</span></div>
+                         <div style="display:flex; justify-content:space-between;"><span>总上传量</span><span>${formatSize(n.totalUp)}</span></div>
+                      </div>
+                    </div>`;
+        } else {
+           html += `<div style="margin-bottom:16px; background:var(--bg-body); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); opacity:0.6;">
+                      <div style="font-weight:600; color:var(--text-main); font-size:13px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🟣 ${n.name}</span> <span style="color:var(--danger); font-size:11px; background:#fff2f0; border:1px solid #ffccc7; padding:2px 6px; border-radius:10px;">离线</span>
+                      </div>
+                    </div>`;
+        }
+      });
+      if (document.getElementById('sidebar-engines-status')) {
+        document.getElementById('sidebar-engines-status').innerHTML = html || '<div style="text-align:center; padding:20px; color:var(--warning); border:1px dashed var(--warning); border-radius:var(--radius-sm);">未配置任何引擎节点</div>';
+      }
+    }
+
+    function filterTasks(f, el){ document.querySelectorAll('.sub-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); currentTaskFilter = f; selectedTasks.clear(); renderTasks(); switchTab('downloads', document.querySelector('.sidebar-menu .nav-item')); closeMobileMenu(); }
+    function toggleTask(id, c) { if(c) selectedTasks.add(id); else selectedTasks.delete(id); document.getElementById('task-select-all').checked = getFilteredTasks().length>0 && selectedTasks.size===getFilteredTasks().length;}
+    function toggleAllTasks(c) { const f = getFilteredTasks(); if(c) f.forEach(t=>selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
+    function getFilteredTasks() { return tasks.filter(t => currentTaskFilter==='all' || (currentTaskFilter==='downloading' && t.status==='downloading') || (currentTaskFilter==='waiting' && (t.status==='waiting'||t.status==='paused')) || (currentTaskFilter==='complete' && (t.status==='complete'||t.status==='error'))); }
+
+    async function batchTaskAction(act){
+      if(selectedTasks.size===0) return showToast('请先选择任务', 'error');
+      if(act==='delete' && !confirm(`确定删除选中的 ${selectedTasks.size} 个任务吗？`)) return;
+      await api('/api/tasks/batch', {method:'POST', body:JSON.stringify({ids:Array.from(selectedTasks), action:act})});
+      selectedTasks.clear(); showToast('指令已下发');
+    }
+    
+    async function singleAction(id, act, btn){ 
+        if(act==='delete' && !confirm('确认彻底删除该任务及其记录吗？')) return; 
+        if(btn) { btn.style.opacity='0.5'; btn.disabled=true; }
+        await api(`/api/tasks/${id}/${act}`, {method:'POST'}); 
+    }
+
+    function renderTasks(){
       const dl = tasks.filter(t => t.status === 'downloading').length;
       const wt = tasks.filter(t => t.status === 'waiting' || t.status === 'paused').length;
       const cp = tasks.filter(t => t.status === 'complete' || t.status === 'error').length;
-      document.getElementById('cnt-all').textContent = tasks.length > 0 ? `(${tasks.length})` : '';
-      document.getElementById('cnt-dl').textContent = dl > 0 ? `(${dl})` : '';
-      document.getElementById('cnt-wt').textContent = wt > 0 ? `(${wt})` : '';
-      document.getElementById('cnt-cp').textContent = cp > 0 ? `(${cp})` : '';
+      if(document.getElementById('cnt-all')) document.getElementById('cnt-all').textContent = tasks.length > 0 ? `(${tasks.length})` : '';
+      if(document.getElementById('cnt-dl')) document.getElementById('cnt-dl').textContent = dl > 0 ? `(${dl})` : '';
+      if(document.getElementById('cnt-wt')) document.getElementById('cnt-wt').textContent = wt > 0 ? `(${wt})` : '';
+      if(document.getElementById('cnt-cp')) document.getElementById('cnt-cp').textContent = cp > 0 ? `(${cp})` : '';
+
+      const list = document.getElementById('task-list');
+      let filtered = getFilteredTasks();
       
-      renderTasks(); 
+      filtered.sort((a,b)=>{
+        let c=0;
+        if(taskSortBy==='created_at') c = new Date(a.created_at.replace(' ','T')).getTime() - new Date(b.created_at.replace(' ','T')).getTime();
+        else if(taskSortBy==='name') c = (a.filename||'').localeCompare(b.filename||'');
+        else if(taskSortBy==='size') c = a.total_size - b.total_size;
+        else if(taskSortBy==='progress') c = a.progress - b.progress;
+        return taskSortDesc ? -c : c;
+      });
+
+      const cIds = new Set(filtered.map(t=>t.id));
+      Array.from(list.children).forEach(c=>{ if(!cIds.has(c.id.replace('t-',''))) c.remove(); });
       
-      const stats = await api('/api/global-stats'); document.getElementById('global-speed').textContent = `⬇️ ${formatSize((stats.aria2Speed || 0) + (stats.qbitSpeed || 0))}/s`; let sbHtml = `qBittorrent: <span style="color: ${stats.qbit ? 'var(--success)' : 'var(--danger)'}">${stats.qbit ? '在线' : '离线'}</span><br>`; if(sysConfig.aria2 && Array.isArray(sysConfig.aria2)) { sysConfig.aria2.forEach((node, i) => { const isOnline = stats.aria2Nodes && stats.aria2Nodes[i]; sbHtml += `${node.name}: <span style="color: ${isOnline ? 'var(--success)' : 'var(--danger)'}">${isOnline ? '在线' : '离线'}</span><br>`; }); } document.getElementById('sidebar-engines-status').innerHTML = sbHtml; 
+      const selectAllCb = document.getElementById('task-select-all');
+      if(selectAllCb) selectAllCb.checked = filtered.length > 0 && selectedTasks.size === filtered.length;
+
+      // 🌟 场景化动态 Empty State
+      if(filtered.length===0) {
+        let eIco = '📭', eTxt = '任务列表空空如也', eSub = '去【云端文件】挑选一些资源推送过来吧 ~';
+        if (currentTaskFilter === 'downloading') { eIco = '🚀'; eTxt = '当前没有正在狂飙的任务'; eSub = '去新建任务添加几个下载链接吧！'; }
+        else if (currentTaskFilter === 'waiting') { eIco = '⏸️'; eTxt = '没有被暂停或等待中的任务'; eSub = '所有任务都在顺利进行中 ~'; }
+        else if (currentTaskFilter === 'complete') { eIco = '✅'; eTxt = '还没有已完成的任务'; eSub = '耐心等待一下，美好的事物即将降临 ~'; }
+        
+        list.innerHTML = `<div style="text-align:center;padding:120px 20px;color:var(--text-muted);animation: fadeIn 0.4s ease;">
+          <div style="font-size:65px;margin-bottom:20px;display:inline-block;animation: float 3s ease-in-out infinite;">${eIco}</div>
+          <div style="font-size:17px;font-weight:600;color:var(--text-main);letter-spacing:1px;">${eTxt}</div>
+          <div style="font-size:13px;margin-top:12px;opacity:0.7;">${eSub}</div>
+        </div>`;
+        return;
+      }
+      
+      if(list.querySelector('.text-muted')) list.innerHTML = '';
+
+      filtered.forEach((t, i) => {
+        let card = document.getElementById('t-'+t.id);
+        const prog = t.progress ? parseFloat(t.progress).toFixed(2) : 0;
+        const eTag = t.engine.startsWith('aria2_') && sysConfig.aria2 ? '🟣 '+sysConfig.aria2[t.engine.split('_')[1]]?.name : t.engine;
+        const eta = t.speed > 0 ? (t.total_size - t.downloaded_size)/t.speed : 0;
+        
+        if(!card){
+          card = document.createElement('div'); card.id = 't-'+t.id;
+          card.innerHTML = `<div class="task-header">
+            <div class="task-title" style="flex:1; display:flex; align-items:flex-start;"><input type="checkbox" style="margin-right:12px; margin-top:4px;" class="cb"> <span class="nm" style="word-break:break-all;"></span></div>
+            <div class="task-actions"></div>
+          </div>
+          <div class="progress-wrapper"><div class="progress-bar" style="width:0%;"></div><div class="progress-text" style="position:absolute;width:100%;text-align:center;font-size:10px;font-weight:bold;color:#333;z-index:1;"></div></div>
+          <div class="task-meta" style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted);">
+            <div class="meta-left"><span style="background:var(--bg-body);padding:2px 8px;border-radius:10px;font-size:11px;border:1px solid var(--border-color);" class="tg"></span> <span class="st" style="font-weight:600;margin-left:8px;"></span> <span style="color:var(--border-color);margin:0 8px;">|</span> <span class="inf"></span></div>
+            <div class="meta-right"></div>
+          </div>`;
+        }
+        card.className = `task-card ${t.status}`;
+        card.querySelector('.cb').checked = selectedTasks.has(t.id);
+        card.querySelector('.cb').onchange = (e) => toggleTask(t.id, e.target.checked);
+        card.querySelector('.nm').textContent = t.filename || '解析中...';
+        card.querySelector('.progress-bar').style.width = prog+'%';
+        card.querySelector('.progress-text').textContent = prog+'%';
+        card.querySelector('.tg').textContent = eTag;
+        card.querySelector('.inf').textContent = `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`;
+        card.querySelector('.meta-right').innerHTML = t.status==='downloading' ? `<span style="color:var(--primary);">⬇️ ${formatSize(t.speed)}/s</span> <span style="font-weight:normal;color:var(--text-muted); margin-left:10px;">⏳ ${formatTime(eta)}</span>` : '';
+        
+        // 🌟 状态动态图标与色彩
+        let stHtml = '';
+        if(t.status==='downloading') stHtml = '<span style="display:inline-block;animation:spin-slow 2.5s linear infinite;margin-right:4px;">⚙️</span><span style="color:var(--primary);">下载中</span>';
+        else if(t.status==='waiting') stHtml = '<span style="display:inline-block;animation:float 2s ease-in-out infinite;margin-right:4px;">⏳</span><span style="color:var(--warning);">等待中</span>';
+        else if(t.status==='paused') stHtml = '<span style="display:inline-block;animation:blink 1.5s infinite;margin-right:4px;">⏸️</span><span style="color:var(--warning);">已暂停</span>';
+        else if(t.status==='complete') stHtml = '<span style="margin-right:4px;">✅</span><span style="color:var(--success);">已完成</span>';
+        else stHtml = '<span style="margin-right:4px;">❌</span><span style="color:var(--danger);">节点异常</span>';
+        card.querySelector('.st').innerHTML = stHtml;
+        
+        let opHtml = `<button class="btn btn-info btn-sm" onclick="showTaskDetails('${t.id}')">详情</button>`;
+        if(t.status==='downloading' || t.status==='waiting') opHtml += `<button class="btn btn-warning btn-sm" onclick="singleAction('${t.id}','pause',this)">暂停</button>`;
+        if(t.status==='paused' || t.status==='error') opHtml += `<button class="btn btn-success btn-sm" onclick="singleAction('${t.id}','resume',this)">继续</button>`;
+        opHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}','delete',this)"><span style="color:var(--danger);">删除</span></button>`;
+        card.querySelector('.task-actions').innerHTML = opHtml;
+        
+        if(list.children[i] !== card) list.insertBefore(card, list.children[i]);
+      });
     }
 
-    function connectWS() { 
-      if (ws) { ws.onclose = null; ws.close(); } 
-      ws = new WebSocket(`ws://${location.hostname}:28080/tasks?token=${authToken}`); 
-      const wsStatus = document.getElementById('ws-status'); 
-      ws.onopen = () => { wsStatus.textContent = '🟢 已连接'; wsStatus.style.color = 'var(--success)'; }; 
-      ws.onclose = () => { wsStatus.textContent = '🔴 已断开，重连中...'; wsStatus.style.color = 'var(--danger)'; setTimeout(connectWS, 3000); }; 
-      ws.onmessage = (e) => { 
-        try { 
-          const data = JSON.parse(e.data); 
-          const idx = tasks.findIndex(t => t.id === data.id); 
-          if (idx > -1) { 
-            tasks[idx] = { ...tasks[idx], ...data }; 
-          } else {
-            tasks.unshift(data);
-          }
-          renderTasks(); 
-        } catch {} 
-      }; 
+    async function showTaskDetails(id){
+      document.getElementById('task-detail-content').innerHTML = '<div style="text-align:center; padding: 20px; color: var(--primary);">正在抓取底层数据...</div>';
+      showModal('task-detail-modal');
+      const r = await api(`/api/tasks/${id}/details`);
+      const c = document.getElementById('task-detail-content');
+      if(r.success && r.data){
+        let h = `<div class="detail-row"><div class="detail-label">物理引擎</div><div class="detail-value">🟣 ${r.engine}</div></div><div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${r.data.dir}</div></div><div class="detail-row"><div class="detail-label">并发连接数</div><div class="detail-value">${r.data.connections} 个线程</div></div><div class="detail-row"><div class="detail-label">文件切片数</div><div class="detail-value">${r.data.numPieces} 块</div></div><div class="detail-row"><div class="detail-label">InfoHash</div><div class="detail-value" style="font-size:11px;">${r.data.infoHash||'无'}</div></div>`;
+        h += `<div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;"><strong style="color:var(--text-main);">📁 包含的文件列表：</strong></div><div style="max-height:200px; overflow-y:auto; background:var(--bg-body); padding:10px; margin-top:10px; border-radius:var(--radius-sm); border:1px solid var(--input-border);">`;
+        if(!r.files || r.files.length===0) h+=`<div style="text-align:center; color:var(--text-muted);">暂无文件信息</div>`;
+        (r.files||[]).forEach(f => h+=`<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="word-break:break-all;">${f.name}</span><span style="color:var(--text-muted); flex-shrink:0; margin-left:10px;">${formatSize(f.size)}</span></div>`);
+        c.innerHTML = h + `</div>`;
+      } else { c.innerHTML = `<div style="color:var(--danger);text-align:center;padding:20px;">无法获取详情: ${r.error||'任务已被彻底抹除'}</div>`; }
+    }
+
+    async function addDownload(){
+      const eng = document.getElementById('task-engine-select').value;
+      const type = document.querySelector('input[name="task_type"]:checked').value;
+      const btn = event.currentTarget; btn.disabled = true; btn.textContent = '投递中...';
+      
+      if(type==='url'){
+        const url = document.getElementById('url-input').value;
+        const r = await api('/api/download', {method:'POST', body:JSON.stringify({url, engine:eng})});
+        if(r.success) { hideModal('new-task-modal'); showToast(r.message); refreshTasks(); }
+        else showToast(r.error||'添加任务失败', 'error');
+      } else {
+        const file = document.getElementById('torrent-file').files[0];
+        if(!file) { showToast('请先选择种子文件', 'warning'); btn.disabled=false; btn.textContent='🚀 开始投递'; return; }
+        const reader = new FileReader();
+        reader.onload = async(e)=>{
+          const r = await api('/api/upload', {method:'POST', body:JSON.stringify({engine:eng, filename:file.name, fileBase64:e.target.result.split(',')[1]})});
+          if(r.success) { hideModal('new-task-modal'); showToast(r.message); refreshTasks(); }
+          else showToast(r.error||'种子解析失败', 'error');
+        };
+        reader.readAsDataURL(file);
+      }
+      setTimeout(()=>{ btn.disabled=false; btn.textContent='🚀 开始投递'; }, 1000);
+    }
+
+    async function loadOpenList(path=currentOpenListPath){
+      const idx = document.getElementById('ol-account-select').value; if(idx==="") return;
+      const c = document.getElementById('openlist-content'); c.innerHTML = '<div style="text-align:center;padding:60px;color:var(--primary);">正在穿透缓存拉取最新目录...</div>';
+      const r = await api('/api/openlist/list', {method:'POST', body:JSON.stringify({olIdx:parseInt(idx), path})});
+      if(r.code===200){
+        currentOpenListPath = path; document.getElementById('openlist-path').value = path; olFiles = r.data.content||[]; olSelected.clear();
+        const ss = localStorage.getItem('dm_ol_sort_'+path);
+        if(ss){ const p=ss.split('_'); olSortBy=p[0]; olSortDesc=p[1]==='true'; } else { olSortBy='name'; olSortDesc=false; }
+        renderOpenList();
+      } else { c.innerHTML = `<div style="text-align:center;padding:60px;color:var(--danger);">拉取失败: ${r.error || r.message || '网络异常'}</div>`; }
+    }
+    function openListGoUp(){ if(currentOpenListPath==='/') return; const p=currentOpenListPath.split('/'); p.pop(); loadOpenList(p.join('/')||'/'); }
+    
+    function sortOpenList(f){
+      if(olSortBy===f) olSortDesc=!olSortDesc; else {olSortBy=f; olSortDesc=false;}
+      localStorage.setItem('dm_ol_sort_'+currentOpenListPath, `${olSortBy}_${olSortDesc}`);
+      renderOpenList();
+    }
+
+    function renderOpenList(){
+      olFiles.sort((a,b)=>{
+        if(a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+        let c=0; if(olSortBy==='name') c=a.name.localeCompare(b.name); else if(olSortBy==='size') c=a.size-b.size; else c=new Date(a.modified)-new Date(b.modified);
+        return olSortDesc?-c:c;
+      });
+      const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : '';
+      const allC = olFiles.length>0 && olSelected.size===olFiles.length ? 'checked' : '';
+      let html = `<table class="ol-table"><tr><th style="width:40px;"><input type="checkbox" class="custom-checkbox" ${allC} onclick="olFiles.forEach(f=>olSelected[this.checked?'add':'delete'](f.name));renderOpenList();"></th><th onclick="sortOpenList('name')">文件名称 <span style="font-size:10px;">${getIco('name')}</span></th><th onclick="sortOpenList('size')" style="width:120px;">大小 <span style="font-size:10px;">${getIco('size')}</span></th><th onclick="sortOpenList('time')" style="width:180px;">修改时间 <span style="font-size:10px;">${getIco('time')}</span></th></tr>`;
+      olFiles.forEach(f=>{
+        const chk = olSelected.has(f.name)?'checked':'';
+        const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${f.name}')` : `olSelected.has('${f.name}')?olSelected.delete('${f.name}'):olSelected.add('${f.name}');renderOpenList();`;
+        html += `<tr><td><input type="checkbox" class="custom-checkbox" ${chk} onclick="if(this.checked)olSelected.add('${f.name}');else olSelected.delete('${f.name}');renderOpenList();"></td>
+        <td style="cursor:pointer; color:var(--text-main);" onclick="${act}"><span style="font-size:16px; margin-right:8px;">${f.is_dir?'📁':'📄'}</span> <span style="word-break:break-all;">${f.name}</span></td>
+        <td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
+      });
+      document.getElementById('openlist-content').innerHTML = html+'</table>';
+      document.getElementById('btn-ol-download').style.display = olSelected.size>0?'inline-block':'none';
+      document.getElementById('btn-ol-rename').style.display = olSelected.size>0?'inline-block':'none';
+      document.getElementById('btn-ol-delete').style.display = olSelected.size>0?'inline-block':'none';
+    }
+
+    function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateSelects(); showModal('engine-select-modal'); }
+
+    // 🌟 灵动岛进度条
+    // 🌟 全局推送队列状态机
+    let globalPushQueue = [];
+    let isPushing = false;
+    let pushStats = { total: 0, current: 0, success: 0, fail: 0 };
+
+    async function executeOlDownload() {
+      const eng = document.getElementById('ol-engine-select').value;
+      const idx = document.getElementById('ol-account-select').value;
+      const tasksToProcess = Array.from(olSelected);
+      const parentPath = currentOpenListPath;
+
+      if(tasksToProcess.length === 0) return;
+      hideModal('engine-select-modal');
+      switchTab('downloads', document.querySelector('.sidebar-menu .nav-item'));
+
+      // 1. 将本次选中的任务统一打包，丢进全局 "传送带"
+      tasksToProcess.forEach(n => {
+        globalPushQueue.push({
+          name: n,
+          fullPath: parentPath === '/' ? `/${n}` : `${parentPath}/${n}`,
+          idx: idx,
+          eng: eng
+        });
+      });
+
+      // 2. 动态扩充总任务容量 (进度条分母会自动变大)
+      pushStats.total += tasksToProcess.length;
+
+      // 3. 瞬间清空选中状态，你可以立刻去选下一批！
+      olSelected.clear();
+      renderOpenList();
+
+      // 4. 唤醒后台队列处理器
+      processPushQueue();
+    }
+
+    async function processPushQueue() {
+      // 🌟 核心锁：如果工人已经在搬砖了，不要打断他，新任务已经在传送带上了
+      if (isPushing) return; 
+      isPushing = true;
+      
+      const qContainer = document.getElementById('push-queue-container');
+      
+      // 如果灵动岛不存在，则生成一个
+      if (!document.getElementById('push-capsule')) {
+        const cardHtml = `
+          <div id="push-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
+             <span style="font-size:13px; font-weight:bold; color:var(--primary); white-space:nowrap;">🚀 推送 <span id="txt-push-prog">0/0</span></span>
+             <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
+                <div id="bar-push-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #1890ff, #722ed1); transition:width 0.3s ease;"></div>
+             </div>
+             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;">
+                <span style="color:var(--success);">✅<span id="suc-push-prog">0</span></span>
+                <span style="color:var(--danger);">❌<span id="fail-push-prog">0</span></span>
+             </span>
+             <span id="st-push-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="队列启动中...">启动中</span>
+          </div>
+        `;
+        qContainer.innerHTML = cardHtml;
+      }
+
+      // 只要传送带上还有文件，就一直循环拿取
+      while (globalPushQueue.length > 0) {
+        const task = globalPushQueue.shift(); // 拿走第一个
+        pushStats.current++;
+
+        const stProg = document.getElementById('st-push-prog');
+        if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
+
+        try {
+          const r = await api('/api/openlist/get', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), path:task.fullPath})});
+          if(r.code === 200 && r.data){
+            let target = r.data.raw_url;
+            if(!r.data.header && r.data.sign) {
+               target = sysConfig.openlist[task.idx].url.replace(/\/$/, '') + '/d' + task.fullPath.split('/').map(encodeURIComponent).join('/') + '?sign=' + r.data.sign;
+            }
+            const dr = await api('/api/download', {method:'POST', body:JSON.stringify({url:target, engine:task.eng, headers:r.data.header})});
+            if(dr.success) pushStats.success++; else pushStats.fail++;
+          } else { pushStats.fail++; }
+        } catch (e) { pushStats.fail++; }
+        
+        // 动态计算进度，完美兼容中途加塞！
+        const percent = Math.round((pushStats.current / pushStats.total) * 100);
+        const bar = document.getElementById('bar-push-prog'); if(bar) bar.style.width = percent + '%';
+        const txt = document.getElementById('txt-push-prog'); if(txt) txt.textContent = `${pushStats.current}/${pushStats.total}`;
+        const suc = document.getElementById('suc-push-prog'); if(suc) suc.textContent = pushStats.success;
+        const fail = document.getElementById('fail-push-prog'); if(fail) fail.textContent = pushStats.fail;
+      }
+
+      // 传送带彻底空了，准备下班
+      const stFinal = document.getElementById('st-push-prog');
+      if(stFinal) { stFinal.textContent = '队列已清空'; stFinal.style.color = 'var(--success)'; }
+      const barFinal = document.getElementById('bar-push-prog');
+      if(barFinal) barFinal.style.background = 'var(--success)';
+      
+      refreshTasks();
+      
+      // 延迟 4 秒销毁 UI。如果这 4 秒内用户又塞了新任务，销毁动作会被取消！
+      setTimeout(() => {
+        const el = document.getElementById('push-capsule');
+        if(el && globalPushQueue.length === 0) { 
+           el.style.opacity = '0';
+           el.style.transform = 'translateY(-10px)';
+           el.style.transition = 'all 0.4s ease';
+           setTimeout(() => {
+             // 彻底销毁前的最后一次防并发检查
+             if(globalPushQueue.length === 0) {
+               el.remove();
+               // 重置状态机
+               pushStats = { total: 0, current: 0, success: 0, fail: 0 };
+             }
+           }, 400); 
+        }
+        // 工人下班，释放锁
+        isPushing = false; 
+      }, 4000);
     }
     
-    async function initApp() { document.getElementById('task-sort-select').value = localStorage.getItem('dm_task_sort') || 'created_at_desc'; if (!authToken) { document.getElementById('login-screen').style.display = 'flex'; return; } const cfg = await api('/api/config'); if (cfg.error) return; document.getElementById('login-screen').style.display = 'none'; sysConfig = cfg; updateOlDropdown(); refreshTasks(); connectWS(); if (refreshInterval) clearInterval(refreshInterval); refreshInterval = setInterval(refreshTasks, 2000); }
+    function showRenameModal() { 
+      if(olSelected.size===0) return; 
+      document.getElementById('rename-title').innerHTML = olSelected.size===1?'✏️ 单文件重命名':`✏️ 批量重命名 (${olSelected.size}项)`;
+      document.getElementById('rename-mode-selector').style.display = olSelected.size===1?'none':'flex';
+      document.getElementById('rn-search').value = olSelected.size===1?Array.from(olSelected)[0]:'';
+      document.getElementById('rn-replace').value = '';
+      showModal('rename-modal'); 
+    }
+    
+    async function submitRename() {
+      const idx = document.getElementById('ol-account-select').value;
+      const mode = document.querySelector('input[name="rn_type"]:checked').value;
+      const search = document.getElementById('rn-search').value; const replace = document.getElementById('rn-replace').value;
+      const fmt = document.getElementById('rn-format').value; let startNum = parseInt(document.getElementById('rn-start').value)||1;
+      
+      let sc = 0; hideModal('rename-modal'); showToast('开始处理...');
+      for (const n of Array.from(olSelected).sort()) {
+        let newName = n;
+        if(olSelected.size===1) newName = replace || search;
+        else if(mode==='replace' && search) newName = n.split(search).join(replace);
+        else if(mode==='seq' && fmt) {
+          const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : '';
+          newName = fmt.replace('{ext}', ext).replace('{n}', startNum++);
+        }
+        if(newName !== n) {
+          const path = currentOpenListPath==='/'?`/${n}`:`${currentOpenListPath}/${n}`;
+          const r = await api('/api/openlist/rename', {method:'POST', body:JSON.stringify({olIdx:parseInt(idx), path, name:newName})});
+          if(r.code===200) sc++;
+        }
+      }
+      showToast(`重命名完成，共修改 ${sc} 项`); loadOpenList();
+    }
+
+    // 🌟 全局删除队列状态机
+    let globalDeleteQueue = [];
+    let isDeleting = false;
+    let deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
+
+    async function deleteSelectedFiles(){
+      const tasksToProcess = Array.from(olSelected);
+      if(tasksToProcess.length === 0) return;
+      if(!confirm(`危险操作：确定要彻底删除云端的 ${tasksToProcess.length} 个文件吗？此操作不可逆！`)) return;
+
+      const idx = document.getElementById('ol-account-select').value;
+      const parentPath = currentOpenListPath;
+
+      // 打包丢进删除传送带
+      tasksToProcess.forEach(n => {
+        globalDeleteQueue.push({ name: n, fullPath: parentPath, idx: idx });
+      });
+
+      deleteStats.total += tasksToProcess.length;
+      olSelected.clear();
+      renderOpenList(); // 瞬间从界面移除选中状态，让你继续操作
+
+      processDeleteQueue();
+    }
+
+    async function processDeleteQueue() {
+      // 核心锁：已经在清理就不要重复启动
+      if (isDeleting) return; 
+      isDeleting = true;
+      
+      const qContainer = document.getElementById('push-queue-container');
+      
+      // 生成红色的专属删除胶囊
+      if (!document.getElementById('delete-capsule')) {
+        const cardHtml = `
+          <div id="delete-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
+             <span style="font-size:13px; font-weight:bold; color:var(--danger); white-space:nowrap;">🗑️ 删除 <span id="txt-del-prog">0/0</span></span>
+             <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
+                <div id="bar-del-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #ff4d4f, #cf1322); transition:width 0.3s ease;"></div>
+             </div>
+             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;">
+                <span style="color:var(--success);">✅<span id="suc-del-prog">0</span></span>
+                <span style="color:var(--danger);">❌<span id="fail-del-prog">0</span></span>
+             </span>
+             <span id="st-del-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="清理中...">启动中</span>
+          </div>
+        `;
+        // 追加到导航栏容器里，如果推送也在，就可以左右并排显示！
+        qContainer.insertAdjacentHTML('beforeend', cardHtml);
+      }
+
+      // 开始逐个清理
+      while (globalDeleteQueue.length > 0) {
+        const task = globalDeleteQueue.shift(); 
+        deleteStats.current++;
+
+        const stProg = document.getElementById('st-del-prog');
+        if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
+
+        try {
+          const r = await api('/api/openlist/remove', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), dir:task.fullPath, names:[task.name]})});
+          if(r.code === 200) deleteStats.success++; else deleteStats.fail++;
+        } catch (e) { deleteStats.fail++; }
+        
+        const percent = Math.round((deleteStats.current / deleteStats.total) * 100);
+        const bar = document.getElementById('bar-del-prog'); if(bar) bar.style.width = percent + '%';
+        const txt = document.getElementById('txt-del-prog'); if(txt) txt.textContent = `${deleteStats.current}/${deleteStats.total}`;
+        const suc = document.getElementById('suc-del-prog'); if(suc) suc.textContent = deleteStats.success;
+        const fail = document.getElementById('fail-del-prog'); if(fail) fail.textContent = deleteStats.fail;
+      }
+
+      const stFinal = document.getElementById('st-del-prog');
+      if(stFinal) { stFinal.textContent = '清理完成'; stFinal.style.color = 'var(--success)'; }
+      const barFinal = document.getElementById('bar-del-prog');
+      if(barFinal) barFinal.style.background = 'var(--success)';
+      
+      // 队列全部清空后，刷新当前的云盘列表
+      loadOpenList();
+      
+      // 4秒后淡出销毁。如果期间又加了新任务，销毁动作撤销
+      setTimeout(() => {
+        const el = document.getElementById('delete-capsule');
+        if(el && globalDeleteQueue.length === 0) { 
+           el.style.opacity = '0';
+           el.style.transform = 'translateY(-10px)';
+           el.style.transition = 'all 0.4s ease';
+           setTimeout(() => {
+             if(globalDeleteQueue.length === 0) {
+               el.remove();
+               deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
+             }
+           }, 400); 
+        }
+        isDeleting = false; 
+      }, 4000);
+    }
+
+    function connectWS(){
+      if(ws) ws.close(); ws = new WebSocket(`ws://${location.hostname}:28080/tasks?token=${authToken}`);
+      const st = document.getElementById('ws-status');
+      ws.onopen = () => { st.textContent = '🟢 引擎通讯中'; st.style.color = 'var(--success)'; };
+      ws.onmessage = (e) => { tasks = JSON.parse(e.data); renderTasks(); };
+      ws.onclose = () => { st.textContent = '🔴 引擎失联'; st.style.color = 'var(--danger)'; setTimeout(connectWS, 3000); };
+    }
+
+    async function initApp(){ 
+      document.getElementById('task-sort-select').value = savedSort;
+      if(!authToken) { document.getElementById('login-screen').style.display='flex'; return; } 
+      sysConfig = await api('/api/config'); populateSelects();
+      refreshTasks(); connectWS(); setInterval(refreshTasks, 3000); 
+    }
     initApp();
   </script>
 </body>
