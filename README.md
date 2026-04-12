@@ -20,27 +20,9 @@
 请在具有 `root` 权限的 Linux 终端执行：
 
 ```bash
-bash <(curl -sL [https://raw.githubusercontent.com/MechanicF/Download-Manager/main/install.sh](https://raw.githubusercontent.com/MechanicF/Download-Manager/main/install.sh))
+bash <(curl -sL [https://raw.githubusercontent.com/MechanicF/Download-Manager/main/manager.sh](https://raw.githubusercontent.com/MechanicF/Download-Manager/main/manager.sh))
 🛠️ CLI 控制台用法
 安装完成后，可在服务器终端任意路径输入以下命令唤出交互式管理菜单：
-
-Bash
-dm
-控制台包含以下功能：
-
-启动面板服务
-
-停止面板服务
-
-重启面板服务
-
-查看实时运行日志 (报错排查)
-
-设置开机自动启动
-
-一键更新至最新版本 (拉取 Git 最新代码)
-
-彻底卸载本面板
 
 📦 手动安装步骤
 如果您希望手动安装，请确保系统已安装 Node.js (v16+) 和 PM2。
@@ -63,7 +45,7 @@ pm2 start app.js --name DownloadManager
 pm2 save
 pm2 startup
 🔐 初始访问
-默认访问地址：http://服务器IP:28080
+默认访问地址：http://服务器IP:1111
 
 默认登录账号：admin
 
