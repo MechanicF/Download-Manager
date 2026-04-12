@@ -425,7 +425,7 @@
     function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('mobile-overlay').classList.toggle('show'); }
     function closeMobileMenu() { document.querySelector('.sidebar').classList.remove('open'); document.getElementById('mobile-overlay').classList.remove('show'); }
     let authToken = localStorage.getItem('manager_auth_token') || ''; if (!authToken) document.getElementById('login-screen').style.display = 'flex';
-    let currentTaskFilter = 'all'; let taskSortBy = 'created_at'; let taskSortDesc = true; let selectedTasks = new Set();
+    let currentTaskFilter = 'all'; let savedSort = localStorage.getItem('dm_task_sort') || 'created_at_desc'; let sortParts = savedSort.split('_'); let taskSortDesc = sortParts.pop() === 'desc'; let taskSortBy = sortParts.join('_'); let selectedTasks = new Set();
     let currentOpenListPath = '/'; let olFiles = []; let olSelected = new Set(); let olSortBy = 'name'; let olSortDesc = false;
 
     async function api(url, options = {}) {
@@ -478,7 +478,7 @@
     function formatTime(seconds) { if (!seconds || seconds === Infinity || seconds <= 0) return '--:--:--'; const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = Math.floor(seconds % 60); return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`; }
     function toggleSubMenu(menuId, el) { switchTab('downloads', el); }
     function filterTasks(filterType, el) { document.querySelectorAll('.sub-item').forEach(li => li.classList.remove('active')); el.classList.add('active'); currentTaskFilter = filterType; selectedTasks.clear(); renderTasks(); closeMobileMenu(); }
-    function changeTaskSort() { const val = document.getElementById('task-sort-select').value; const parts = val.split('_'); taskSortDesc = parts.pop() === 'desc'; taskSortBy = parts.join('_'); renderTasks(); }
+    function changeTaskSort() { const val = document.getElementById('task-sort-select').value; localStorage.setItem('dm_task_sort', val); const parts = val.split('_'); taskSortDesc = parts.pop() === 'desc'; taskSortBy = parts.join('_'); renderTasks(); }
     function toggleTask(taskId, isChecked) { if (isChecked) selectedTasks.add(taskId); else selectedTasks.delete(taskId); updateTaskToolbar(); }
     function toggleAllTasks(isChecked) { const visibleTasks = getFilteredTasks(); if (isChecked) visibleTasks.forEach(t => selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
     function updateTaskToolbar() { document.getElementById('task-selected-count').textContent = `已选 ${selectedTasks.size} 项`; const visibleTasks = getFilteredTasks(); document.getElementById('task-select-all').checked = visibleTasks.length > 0 && selectedTasks.size === visibleTasks.length; }
@@ -644,9 +644,9 @@
       container.innerHTML = '<div style="padding: 60px; text-align: center; color: var(--primary);">正在加载文件列表...</div>'; olSelected.clear(); updateOlToolbar();
       const res = await api('/api/openlist/list', { method: 'POST', body: JSON.stringify({ path, olIdx }) });
       if (res.error || res.code !== 200) { container.innerHTML = `<div style="color:var(--danger); padding: 40px; text-align:center;"><strong>连接失败：</strong>${res.error || res.message}</div>`; return; }
-      currentOpenListPath = path; document.getElementById('openlist-path').value = path; olFiles = res.data.content || []; renderOpenList();
+      currentOpenListPath = path; document.getElementById('openlist-path').value = path; olFiles = res.data.content || []; const savedSort = localStorage.getItem('dm_ol_sort_' + currentOpenListPath); if (savedSort) { const parts = savedSort.split('_'); olSortBy = parts[0]; olSortDesc = parts[1] === 'true'; } else { olSortBy = 'name'; olSortDesc = false; } renderOpenList();
     }
-    function sortOpenList(field) { if (olSortBy === field) { olSortDesc = !olSortDesc; } else { olSortBy = field; olSortDesc = false; } renderOpenList(); }
+    function sortOpenList(field) { if (olSortBy === field) { olSortDesc = !olSortDesc; } else { olSortBy = field; olSortDesc = false; } localStorage.setItem('dm_ol_sort_' + currentOpenListPath, olSortBy + '_' + olSortDesc); renderOpenList(); }
     function renderOpenList() {
       const container = document.getElementById('openlist-content'); if (olFiles.length === 0) { container.innerHTML = '<div style="padding: 80px; text-align: center; color: var(--text-muted); font-size:14px;">此文件夹为空</div>'; return; }
       olFiles.sort((a, b) => { if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1; let cmp = 0; if (olSortBy === 'name') cmp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }); else if (olSortBy === 'size') cmp = a.size - b.size; else if (olSortBy === 'time') cmp = new Date(a.modified) - new Date(b.modified); return olSortDesc ? -cmp : cmp; });
@@ -942,7 +942,7 @@
       }; 
     }
     
-    async function initApp() { if (!authToken) { document.getElementById('login-screen').style.display = 'flex'; return; } const cfg = await api('/api/config'); if (cfg.error) return; document.getElementById('login-screen').style.display = 'none'; sysConfig = cfg; updateOlDropdown(); refreshTasks(); connectWS(); if (refreshInterval) clearInterval(refreshInterval); refreshInterval = setInterval(refreshTasks, 2000); }
+    async function initApp() { document.getElementById('task-sort-select').value = localStorage.getItem('dm_task_sort') || 'created_at_desc'; if (!authToken) { document.getElementById('login-screen').style.display = 'flex'; return; } const cfg = await api('/api/config'); if (cfg.error) return; document.getElementById('login-screen').style.display = 'none'; sysConfig = cfg; updateOlDropdown(); refreshTasks(); connectWS(); if (refreshInterval) clearInterval(refreshInterval); refreshInterval = setInterval(refreshTasks, 2000); }
     initApp();
   </script>
 </body>
