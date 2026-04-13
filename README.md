@@ -1,54 +1,66 @@
 # Download Manager Pro
 
-一款轻量级、响应式的 Aria2 与云盘协同下载管理面板。
+一个轻量、高性能的下载管理面板，支持多节点 Aria2 集群管理与云盘（OpenList）集成。本项目采用 Node.js 作为后端服务，前端基于原生原生技术栈（HTML/CSS/JS）构建，具有极低的资源占用和极佳的响应速度。
 
-## ✨ 核心功能
+## ✨ 核心特性
 
-- **多节点 Aria2 支持**：允许绑定多个 Aria2 RPC 节点，自动隔离多节点环境下的任务冲突，侧边栏实时汇总全局网速与流量统计。
-- **异步任务队列**：在顶部导航栏提供全局的“推送”与“删除”异步进度条。支持多批次任务无缝排队，不阻塞当前页面的其他操作。
-- **高级参数配置**：提供可视化的 Aria2 核心参数表单，同时保留底层的 JSON 源码编辑模式，修改后支持服务热重载。
-- **移动端深度适配**：无第三方 UI 库依赖，基于原生 CSS 弹性布局，全方位适配移动端屏幕尺寸。
-- **OpenList 云盘集成**：支持多账号云盘挂载。可直接在面板内进行文件浏览、批量重命名、彻底删除，以及抓取直链发送至指定的 Aria2 下载节点。
-- **CLI 控制台**：自带全局终端管理脚本 (`dm`)，方便进行服务的状态监控、启停、日志排查与版本更新。
+- **多节点 Aria2 集群管理**
+  - 支持绑定并管理多个独立的 Aria2 RPC 节点。
+  - 提供可视化与 JSON 源码双模式的引擎参数调优界面。
+- **云盘深度集成 (OpenList)**
+  - 支持绑定云盘 API，直接在面板内浏览云端目录。
+  - 支持将云端文件批量推送至指定的 Aria2 节点进行下载，内置推入/删除队列状态机。
+- **高级文件操作**
+  - 列表默认采用自然数字排序算法（如 `1, 2, 10` 而非 `1, 10, 2`）。
+  - 支持批量重命名，提供“查找替换”与“序列化”模式，并附带实时变更预览窗口。
+- **高性能与高可靠性**
+  - **无感刷新**：前端采用定制的 DOM Diff 局部热更新算法，结合 WebSocket 实时通信，页面状态每秒刷新亦无任何闪烁。
+  - **数据一致性**：底层优化了与 Aria2 的同步时序，采用独立组合键（UID）防止多节点 GID 冲突，彻底解决任务删除不彻底（诈尸）的隐患。
+  - **大文件支持**：优化后端负载上限，支持超大 BT 种子（Torrent）文件解析与上传。
+- **现代化 UI 与体验**
+  - 响应式布局，完美兼容桌面端与移动端。
+  - 原生支持深色/浅色（Dark/Light）主题切换。
+  - 内置极客开发者工具（Debug Panel），实时监控 API 瀑布流与通信状态。
 
----
+## 🛠️ 技术栈
 
-## 🚀 快速部署 (推荐)
+- **前端**: HTML5 / CSS3 / Vanilla JavaScript (无外部重型框架依赖)
+- **后端**: Node.js / Express (API路由) / ws (WebSocket) / axios / better-sqlite3 (持久化存储)
 
-推荐使用一键安装脚本。该脚本会自动检测环境、安装 Node.js、配置 PM2 进程守护以及设置开机自启。
+## 📦 安装与部署
 
-请在具有 `root` 权限的 Linux 终端执行：
+**环境要求**: Node.js (v16 或以上版本)
 
-```bash
-bash <(curl -sL [https://raw.githubusercontent.com/MechanicF/Download-Manager/main/manager.sh](https://raw.githubusercontent.com/MechanicF/Download-Manager/main/manager.sh))
-🛠️ CLI 控制台用法
-安装完成后，可在服务器终端任意路径输入以下命令唤出交互式管理菜单：
-
-📦 手动安装步骤
-如果您希望手动安装，请确保系统已安装 Node.js (v16+) 和 PM2。
+1. **克隆项目到本地**
+   ```bash
+   git clone [https://github.com/你的用户名/你的仓库名.git](https://github.com/你的用户名/你的仓库名.git)
+   cd 你的仓库名
+安装依赖
 
 Bash
-# 1. 克隆代码
-cd /opt
-git clone [https://github.com/MechanicF/Download-Manager.git](https://github.com/MechanicF/Download-Manager.git)
-cd Download-Manager
+npm install express cors axios ws better-sqlite3
+启动服务
 
-# 2. 安装依赖
-npm install
+Bash
+node app.js
+服务默认运行在 http://服务器IP:1111，WebSocket 端口为 28080。建议使用 pm2 等进程守护工具进行生产环境部署。
 
-# 3. 注册全局控制台命令 (可选)
-chmod +x manager.sh
-ln -sf /opt/Download-Manager/manager.sh /usr/local/bin/dm
+⚙️ 初始配置
+首次访问面板，默认账号密码为：
 
-# 4. 启动服务并配置守护
-pm2 start app.js --name DownloadManager
-pm2 save
-pm2 startup
-🔐 初始访问
-默认访问地址：http://服务器IP:1111
+账号: admin
 
-默认登录账号：admin
+密码: password
 
-默认登录密码：请在首次登录后于【全局设置】中自行修改，如遗忘请查看后端日志记录。
+登录后，请立即前往侧边栏的 “全局设置” 中修改登录密码，并配置你的 Aria2 RPC 节点和云盘信息。
 
-License: MIT
+📝 目录结构简述
+Plaintext
+.
+├── app.js               # Node.js 后端主程序 (API, 数据库, 同步逻辑)
+├── public/
+│   └── index.html       # 前端 UI 与核心业务逻辑
+├── config.json          # 系统配置文件 (账号、节点、云盘信息)
+└── downloads.db         # SQLite 数据库文件 (运行时自动生成)
+📄 开源协议
+本项目采用 MIT License 开源协议。
