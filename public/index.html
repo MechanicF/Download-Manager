@@ -225,6 +225,7 @@
           <input type="text" id="openlist-path" class="form-control" style="flex:1; min-width:100px; background:var(--bg-body);" value="/" readonly>
           <button class="btn btn-primary" onclick="loadOpenList()">🔄 刷新</button>
           <div style="border-left:1px solid var(--border-color); height:20px; margin:0 5px;"></div>
+          <span id="ol-selected-count" style="display:none; font-size:13px; font-weight:600; color:var(--primary); margin:0 10px; animation: fadeIn 0.2s ease;">已选择 0 项</span>
           <button class="btn btn-success" id="btn-ol-download" style="display:none;" onclick="showEngineSelectModalForOL()">发送至引擎</button>
           <button class="btn btn-warning" id="btn-ol-rename" style="display:none;" onclick="showRenameModal()">重命名</button>
           <button class="btn btn-danger" id="btn-ol-delete" style="display:none;" onclick="deleteSelectedFiles()">删除</button>
@@ -827,6 +828,11 @@
         <td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
       });
       document.getElementById('openlist-content').innerHTML = html+'</table>';
+      const cntSpan = document.getElementById('ol-selected-count');
+      if (cntSpan) {
+        cntSpan.style.display = olSelected.size > 0 ? 'inline-block' : 'none';
+        cntSpan.textContent = `已选择 ${olSelected.size} 项`;
+      }
       document.getElementById('btn-ol-download').style.display = olSelected.size>0?'inline-block':'none';
       document.getElementById('btn-ol-rename').style.display = olSelected.size>0?'inline-block':'none';
       document.getElementById('btn-ol-delete').style.display = olSelected.size>0?'inline-block':'none';
