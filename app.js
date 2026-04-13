@@ -76,14 +76,29 @@ app.post('/api/openlist/get', async (req, res) => { const c = getOlConf(req.body
 app.post('/api/openlist/rename', async (req, res) => { const c=getOlConf(req.body.olIdx); try{res.json((await axios.post(`${c.url}/api/fs/rename`,{name:req.body.name,path:req.body.path},{headers:{'Authorization':c.token||''}})).data);}catch(e){res.status(500).json({error:e.message});} });
 app.post('/api/openlist/remove', async (req, res) => { const c=getOlConf(req.body.olIdx); try{res.json((await axios.post(`${c.url}/api/fs/remove`,{dir:req.body.dir,names:req.body.names},{headers:{'Authorization':c.token||''}})).data);}catch(e){res.status(500).json({error:e.message});} });
 
-// --- 任务操作 API ---
-app.get('/api/tasks/:id/details', async (req, res) => {
-  const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(req.params.id); if(!t) return res.json({success:false, error:'记录不存在'});
-  try {
-    const idx = parseInt(t.engine.split('_')[1]);
-    const r = await aria2.call(idx, 'tellStatus', [t.gid]);
-    res.json({success:true, engine:'Aria2', data:r, files:(r.files||[]).map(f=>({name:f.path.split(/[\\/]/).pop(), size:parseInt(f.length)}))});
-  } catch(e){ res.json({success:false, error:'引擎连接失败'}); }
+
+app.post('/api/moviepilot/recognize', async (req, res) => {
+    const { filename } = req.body;
+    const mpUrl = config.moviepilot_url;
+    const mpToken = config.moviepilot_token;
+    if (!mpUrl || !mpToken) return res.json({ success: false, error: '请配置MP参数' });
+    try {
+        const r = await axios.get(mpUrl.replace(/\/$/, '') + '/api/v1/media/recognize2', {
+            params: { title: filename, token: mpToken },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36' }
+        });
+        const d = r.data;
+        if (d && d.media_info) {
+            let name = d.media_info.title || d.meta_info?.title || '';
+            name = name.replace(/\s+/g, '.'); // 将剧名中的空格替换为点号
+            if (d.media_info.year) name += '.' + d.media_info.year;
+            if (d.meta_info && d.meta_info.begin_season != null) name += '.S' + String(d.meta_info.begin_season).padStart(2,'0');
+            if (d.meta_info && d.meta_info.begin_episode != null) name += '.E' + String(d.meta_info.begin_episode).padStart(2,'0');
+            res.json({ success: true, cleanName: name });
+        } else { res.json({ success: false, error: '未能识别出媒体信息' }); }
+    } catch (e) {
+        res.json({ success: false, error: e.response?.status ? 'MP报错(' + e.response.status + ')' : '请求失败' });
+    }
 });
 
 app.post('/api/tasks/:id/:act', async (req, res) => {

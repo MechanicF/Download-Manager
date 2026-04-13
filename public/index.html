@@ -252,7 +252,7 @@
             </div>
             <div id="ol-accounts-container"></div>
             
-            <h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
+            <h4 style='margin-top:30px; margin-bottom:15px; color:#ff9c6e;'>🎬 MoviePilot 联动配置</h4><div class='config-card'><label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>MP API 地址 (包含端口)</label><input type='text' id='mp-url' class='form-control' style='margin-bottom:12px;' placeholder='http://ip:port'><label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>MP API Token</label><input type='password' id='mp-token' class='form-control' placeholder='API Token'></div><h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
             <div class="config-card">
               <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录账号</label>
               <input type="text" id="panel-user" class="form-control" style="margin-bottom:12px;">
@@ -322,7 +322,7 @@
   <div class="modal-overlay" id="rename-modal">
     <div class="modal" style="width: 500px;">
       <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;" id="rename-title">✏️ 重命名</h3><button class="btn btn-default btn-sm" onclick="hideModal('rename-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
-      <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector">
+      <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector"><button class='btn btn-default btn-sm' id='btn-ai-recognize' onclick='aiSmartRecognize()' style='border-color:#ff9c6e; color:#ff9c6e; font-weight:bold; margin-left:10px;'>✨ AI 智能识别</button>
           <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; updateRenamePreview();"> 查找替换</label>
           <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 序列化</label>
       </div>
@@ -505,6 +505,8 @@
     async function loadConfig(){
       const r = await api('/api/config'); if(r.error) return; sysConfig = r;
       document.getElementById('panel-user').value = r.auth?.username || 'admin';
+      document.getElementById('mp-url').value = r.moviepilot_url || '';
+      document.getElementById('mp-token').value = r.moviepilot_token || '';
       
       const a2 = document.getElementById('aria2-nodes-container'); a2.innerHTML = '';
       (r.aria2||[]).forEach((n,i)=>{
@@ -537,9 +539,11 @@
     async function saveSettings(){
       const aria2 = []; document.querySelectorAll('#aria2-nodes-container .config-card').forEach(c=>{ aria2.push({name:c.querySelector('.a2-name').value, url:c.querySelector('.a2-url').value, secret:c.querySelector('.a2-sec').value}); });
       const openlist = []; document.querySelectorAll('#ol-accounts-container .config-card').forEach(c=>{ openlist.push({name:c.querySelector('.ol-name').value, url:c.querySelector('.ol-url').value, token:c.querySelector('.ol-token').value}); });
+      const mpUrl = document.getElementById('mp-url').value;
+      const mpToken = document.getElementById('mp-token').value;
       const u = document.getElementById('panel-user').value; const p = document.getElementById('panel-pass').value || sysConfig.auth.password;
       
-      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, auth:{username:u, password:p}})});
+      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, auth:{username:u, password:p}})});
       showToast('核心配置保存成功！');
       authToken = btoa(u+':'+p); localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
       sysConfig = await api('/api/config'); populateSelects(); refreshTasks();
@@ -1049,7 +1053,30 @@
     }
 
     // 🌟 加入后端宕机拦截机制
-    async function initApp(){ 
+    
+async function aiSmartRecognize() {
+    const btn = document.getElementById('btn-ai-recognize');
+    const oldText = btn.textContent;
+    const selected = Array.from(olSelected);
+    if (selected.length === 0) return;
+    btn.disabled = true; btn.textContent = '🕵️ 识别中...';
+    try {
+        const r = await api('/api/moviepilot/recognize', { method: 'POST', body: JSON.stringify({ filename: selected[0] }) });
+        if (r.success) {
+            const mode = document.querySelector('input[name="rn_type"]:checked').value;
+            let ext = selected.length === 1 && selected[0].includes('.') ? selected[0].substring(selected[0].lastIndexOf('.')) : '';
+            if (mode === 'replace') {
+                document.getElementById('rn-replace').value = r.cleanName + ext;
+            } else if (mode === 'seq') {
+                let seqBase = r.cleanName.replace(/\.?E\d+$/, '');
+                document.getElementById('rn-format').value = seqBase + '.E{n}{ext}';
+            }
+            showToast('识别完成！已填入'); updateRenamePreview();
+        } else { showToast(r.error, 'error'); }
+    } catch (e) { showToast('识别引擎异常', 'error'); } finally { btn.disabled = false; btn.textContent = oldText; }
+}
+
+async function initApp(){ 
       document.getElementById('task-sort-select').value = savedSort;
       if(!authToken) { document.getElementById('login-screen').style.display='flex'; return; } 
       try {
