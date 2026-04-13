@@ -20,13 +20,30 @@ fi
 # ================= 1. 环境安装模块 =================
 install_env() {
     echo -e "${YELLOW}>> 正在检查并安装基础组件 (Node.js / Git / PM2)...${RESET}"
+    
+    # 智能识别包管理器并安装 Git
     if ! command -v git &> /dev/null; then
-        apt-get update && apt-get install -y git || yum install -y git
+        if command -v apt-get &> /dev/null; then
+            apt-get update && apt-get install -y git
+        elif command -v yum &> /dev/null; then
+            yum install -y git
+        fi
     fi
+    
+    # 严格区分 apt 和 yum 的 Node.js 20.x 源
     if ! command -v node &> /dev/null; then
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-        apt-get install -y nodejs || yum install -y nodejs
+        if command -v apt-get &> /dev/null; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+        elif command -v yum &> /dev/null; then
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+            yum install -y nodejs
+        else
+            echo -e "${RED}[错误] 无法识别包管理器，请手动安装 Node.js 20+${RESET}"
+            exit 1
+        fi
     fi
+    
     if ! command -v pm2 &> /dev/null; then
         npm install -g pm2
     fi
@@ -65,9 +82,15 @@ install_app() {
 
     echo -e "${YELLOW}>> 正在启动服务并配置开机自启...${RESET}"
     chmod +x manager.sh 2>/dev/null || true
+    
+    # 注入全局快捷命令 `dm`
+    if [ -f "$INSTALL_DIR/manager.sh" ]; then
+        ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
+        chmod +x /usr/local/bin/dm
+    fi
+
     pm2 start app.js --name "$APP_NAME"
     pm2 save
-    # 彻底修复了烦人的视觉报错，采用静默注入
     env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1
 
     IP=$(curl -s ifconfig.me)
@@ -76,10 +99,12 @@ install_app() {
     echo -e "🔗 访问地址: ${YELLOW}http://${IP}:${HTTP_PORT}${RESET}"
     echo -e "👤 默认账号: ${YELLOW}admin${RESET}"
     echo -e "🔑 默认密码: ${YELLOW}password${RESET}"
-    echo -e "\n⚙️  管理面板: 以后随时在终端输入 ${CYAN}bash $INSTALL_DIR/manager.sh${RESET} 呼出菜单。"
+    echo -e "\n⚙️  管理面板: 以后随时在任意目录输入 ${CYAN}dm${RESET} 即可呼出菜单！"
     echo -e "⚠️  为了安全，请务必在登录后前往【全局设置】修改默认密码！"
     echo -e "${GREEN}==================================================${RESET}"
-    exit 0
+    
+    # 移除 exit 0，让用户安装完能直接看到菜单
+    read -p "按回车键进入管理菜单..."
 }
 
 # ================= 3. 更新模块 =================
@@ -103,6 +128,12 @@ update_app() {
     fi
     
     chmod +x manager.sh 2>/dev/null || true
+    # 更新快捷命令以防丢失
+    if [ -f "$INSTALL_DIR/manager.sh" ]; then
+        ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
+        chmod +x /usr/local/bin/dm
+    fi
+
     echo -e "${YELLOW}>> 更新可能存在的新依赖...${RESET}"
     npm install
     
@@ -120,7 +151,8 @@ uninstall_app() {
         pm2 delete "$APP_NAME" &>/dev/null
         pm2 save --force
         
-        echo -e "${YELLOW}>> 正在删除项目文件夹...${RESET}"
+        echo -e "${YELLOW}>> 正在清理全局命令和项目文件夹...${RESET}"
+        rm -f /usr/local/bin/dm
         rm -rf "$INSTALL_DIR"
         
         echo -e "${GREEN}✅ 卸载完成！江湖再见！${RESET}"
