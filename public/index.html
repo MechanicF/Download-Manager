@@ -685,6 +685,8 @@
         return;
       }
       list.dataset.emptyFilter = '';
+      const emptyView = document.getElementById('empty-state-view');
+      if(emptyView) emptyView.remove(); // 🔥 核心修复：有任务来时，立刻销毁空状态占位符！
 
       filtered.forEach((t, i) => {
         let card = document.getElementById('t-'+t.id);
