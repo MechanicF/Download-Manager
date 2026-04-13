@@ -54,6 +54,8 @@
     .section.active { display: flex; }
     
     /* === 动画补丁 === */
+    @keyframes slideFadeIn { 0% { opacity: 0; transform: translateY(15px); filter: blur(2px); } 100% { opacity: 1; transform: translateY(0); filter: blur(0); } }
+    @keyframes scaleIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
     @keyframes spin-slow { 100% { transform: rotate(360deg); } }
@@ -790,7 +792,7 @@
 
     async function loadOpenList(path=currentOpenListPath){
       const idx = document.getElementById('ol-account-select').value; if(idx==="") return;
-      const c = document.getElementById('openlist-content'); c.innerHTML = '<div style="text-align:center;padding:60px;color:var(--primary);">正在穿透缓存拉取最新目录...</div>';
+      const c = document.getElementById('openlist-content'); c.innerHTML = '<div style="text-align:center;padding:80px;color:var(--primary);animation: scaleIn 0.3s ease-out;"><div style="font-size:40px;margin-bottom:15px;display:inline-block;animation:spin-slow 2s linear infinite;">💫</div><div style="font-weight:bold;letter-spacing:1px;animation:blink 1.5s infinite;">正在穿透云端拉取目录...</div></div>';
       const r = await api('/api/openlist/list', {method:'POST', body:JSON.stringify({olIdx:parseInt(idx), path})});
       if(r.code===200){
         currentOpenListPath = path; document.getElementById('openlist-path').value = path; olFiles = r.data.content||[]; olSelected.clear();
@@ -820,10 +822,10 @@
       const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : '';
       const allC = olFiles.length>0 && olSelected.size===olFiles.length ? 'checked' : '';
       let html = `<table class="ol-table"><tr><th style="width:40px;"><input type="checkbox" class="custom-checkbox" ${allC} onclick="olFiles.forEach(f=>olSelected[this.checked?'add':'delete'](f.name));renderOpenList();"></th><th onclick="sortOpenList('name')">文件名称 <span style="font-size:10px;">${getIco('name')}</span></th><th onclick="sortOpenList('size')" style="width:120px;">大小 <span style="font-size:10px;">${getIco('size')}</span></th><th onclick="sortOpenList('time')" style="width:180px;">修改时间 <span style="font-size:10px;">${getIco('time')}</span></th></tr>`;
-      olFiles.forEach(f=>{
+      olFiles.forEach((f, i)=>{
         const chk = olSelected.has(f.name)?'checked':'';
         const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${f.name}')` : `olSelected.has('${f.name}')?olSelected.delete('${f.name}'):olSelected.add('${f.name}');renderOpenList();`;
-        html += `<tr><td><input type="checkbox" class="custom-checkbox" ${chk} onclick="if(this.checked)olSelected.add('${f.name}');else olSelected.delete('${f.name}');renderOpenList();"></td>
+        html += `<tr style="animation: slideFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: ${Math.min(i * 0.025, 0.5)}s; opacity: 0;"><td><input type="checkbox" class="custom-checkbox" ${chk} onclick="if(this.checked)olSelected.add('${f.name}');else olSelected.delete('${f.name}');renderOpenList();"></td>
         <td style="cursor:pointer; color:var(--text-main);" onclick="${act}"><span style="font-size:16px; margin-right:8px;">${f.is_dir?'📁':'📄'}</span> <span style="word-break:break-all;">${f.name}</span></td>
         <td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
       });
