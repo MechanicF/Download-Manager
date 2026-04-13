@@ -11,7 +11,7 @@
   - 支持绑定云盘 API，直接在面板内浏览云端目录。
   - 支持将云端文件批量推送至指定的 Aria2 节点进行下载，内置推入/删除队列状态机。
 - **高级文件操作**
-  - 列表默认采用自然数字排序算法（如 `1, 2, 10` 而非 `1, 10, 2`）。
+  - 列表默认采用自然数字排序算法（如 \`1, 2, 10\` 而非 \`1, 10, 2\`）。
   - 支持批量重命名，提供“查找替换”与“序列化”模式，并附带实时变更预览窗口。
 - **高性能与高可靠性**
   - **无感刷新**：前端采用定制的 DOM Diff 局部热更新算法，结合 WebSocket 实时通信，页面状态每秒刷新亦无任何闪烁。
@@ -32,35 +32,40 @@
 **环境要求**: Node.js (v16 或以上版本)
 
 1. **克隆项目到本地**
-   ```bash
-   git clone [https://github.com/你的用户名/你的仓库名.git](https://github.com/你的用户名/你的仓库名.git)
+   \`\`\`bash
+   git clone https://github.com/你的用户名/你的仓库名.git
    cd 你的仓库名
-安装依赖
+   \`\`\`
 
-Bash
-npm install express cors axios ws better-sqlite3
-启动服务
+2. **安装依赖**
+   \`\`\`bash
+   npm install express cors axios ws better-sqlite3
+   \`\`\`
 
-Bash
-node app.js
-服务默认运行在 http://服务器IP:1111，WebSocket 端口为 28080。建议使用 pm2 等进程守护工具进行生产环境部署。
+3. **启动服务**
+   \`\`\`bash
+   node app.js
+   \`\`\`
+   *服务默认运行在 \`http://服务器IP:1111\`，WebSocket 端口为 \`28080\`。建议使用 \`pm2\` 等进程守护工具进行生产环境部署。*
 
-⚙️ 初始配置
-首次访问面板，默认账号密码为：
+## ⚙️ 初始配置
 
-账号: admin
+- 首次访问面板，默认账号密码为：
+  - **账号**: \`admin\`
+  - **密码**: \`password\`
+- 登录后，请立即前往侧边栏的 **“全局设置”** 中修改登录密码，并配置你的 Aria2 RPC 节点和云盘信息。
 
-密码: password
+## 📝 目录结构简述
 
-登录后，请立即前往侧边栏的 “全局设置” 中修改登录密码，并配置你的 Aria2 RPC 节点和云盘信息。
-
-📝 目录结构简述
-Plaintext
+\`\`\`text
 .
 ├── app.js               # Node.js 后端主程序 (API, 数据库, 同步逻辑)
 ├── public/
 │   └── index.html       # 前端 UI 与核心业务逻辑
 ├── config.json          # 系统配置文件 (账号、节点、云盘信息)
 └── downloads.db         # SQLite 数据库文件 (运行时自动生成)
-📄 开源协议
-本项目采用 MIT License 开源协议。
+\`\`\`
+
+## 📄 开源协议
+
+本项目采用 [MIT License](LICENSE) 开源协议。
