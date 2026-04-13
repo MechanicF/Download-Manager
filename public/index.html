@@ -170,6 +170,7 @@
     <div class="global-stats">
       <div class="stat-item" id="global-speed">⬇️ 0 B/s</div>
       <div class="stat-item" id="ws-status" style="border-color:transparent;">🟡 连接中</div>
+      <button class="btn btn-default btn-sm" onclick="toggleDebugPanel()" style="color:#faad14; border-color:#faad14; font-weight:bold;">🐞 调试</button>
       <button class="btn btn-default btn-sm" onclick="toggleTheme()">🌙 主题</button>
       <button class="btn btn-default btn-sm" onclick="doLogout()"><span style="color:var(--danger)">退出</span></button>
     </div>
@@ -201,7 +202,7 @@
             <select id="task-sort-select" class="form-control" style="width:140px; padding:6px;" onchange="changeTaskSort()">
               <option value="created_at_desc">按时间倒序</option>
               <option value="created_at_asc">按时间正序</option>
-              <option value="name_asc">按名称 (A-Z)</option>
+              <option value="name_asc">按名称 (自然序)</option>
               <option value="size_desc">按文件大小</option>
             </select>
           </div>
@@ -319,18 +320,19 @@
     <div class="modal" style="width: 500px;">
       <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;" id="rename-title">✏️ 重命名</h3><button class="btn btn-default btn-sm" onclick="hideModal('rename-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
       <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector">
-          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none';"> 查找替换</label>
-          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block';"> 序列化</label>
+          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; updateRenamePreview();"> 查找替换</label>
+          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 序列化</label>
       </div>
       <div id="rn-replace-box">
-          <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;">
-          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除)">
+          <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;" oninput="updateRenamePreview()">
+          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除)" oninput="updateRenamePreview()">
       </div>
       <div id="rn-seq-box" style="display:none;">
           <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; background:var(--hover-bg); padding:8px; border-radius:4px;">变量: <code>{n}</code> 代表递增数字，<code>{ext}</code> 代表原后缀</div>
-          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集_S01E{n}{ext}" style="margin-bottom:10px;">
-          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字">
+          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集_S01E{n}{ext}" style="margin-bottom:10px;" oninput="updateRenamePreview()">
+          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字" oninput="updateRenamePreview()">
       </div>
+      <div id="rn-preview-box" style="margin-top:15px; max-height:180px; overflow-y:auto; background:var(--bg-body); border-radius:4px; padding:10px; border:1px solid var(--input-border); font-size:12px; display:none;"></div>
       <div style="text-align:right; margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;">
           <button class="btn btn-default" onclick="hideModal('rename-modal')" style="margin-right:10px;">取消</button>
           <button class="btn btn-primary" onclick="submitRename()">保存修改</button>
@@ -342,7 +344,7 @@
 
   <script>
     let authToken = localStorage.getItem('manager_auth_token') || '';
-    let tasks = []; let sysConfig = {}; let ws = null;
+    let tasks = []; let deadTasks = new Set(); let sysConfig = {}; let ws = null;
     let currentTaskFilter = 'all'; let selectedTasks = new Set();
     let currentOpenListPath = '/'; let olFiles = []; let olSelected = new Set(); 
     let olSortBy = 'name'; let olSortDesc = false;
@@ -375,14 +377,22 @@
     function doLogout(){ localStorage.removeItem('manager_auth_token'); location.reload(); }
 
     function switchTab(id, el){
-      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); 
+      // 🔥 暴力镇压：绝对隐藏所有无关界面
+      document.querySelectorAll('.section').forEach(s => {
+          s.classList.remove('active');
+          s.style.display = 'none'; 
+      });
+      
       const targetSec = document.getElementById('section-'+id);
-      if(targetSec) { targetSec.classList.add('active'); if(id==='engine-config') targetSec.style.display='flex'; }
+      if(targetSec) { 
+          targetSec.classList.add('active'); 
+          targetSec.style.display = 'flex'; // 绝对显示当前界面
+      }
       
       document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active')); if(el) el.classList.add('active');
       if(id==='settings') loadConfig();
-      if(id==='openlist' && olFiles.length===0) loadOpenList();
-      closeMobileMenu();
+      if(id==='openlist' && (typeof olFiles === 'undefined' || olFiles.length===0)) loadOpenList();
+      if(typeof closeMobileMenu === 'function') closeMobileMenu();
     }
 
     // --- 双模高级参数编辑器 ---
@@ -533,13 +543,22 @@
     }
 
     function populateSelects(){
+      const curTask = document.getElementById('task-engine-select') ? document.getElementById('task-engine-select').value : null;
+      const curOlEng = document.getElementById('ol-engine-select') ? document.getElementById('ol-engine-select').value : null;
+      const curOlAcc = document.getElementById('ol-account-select') ? document.getElementById('ol-account-select').value : null;
+
       let h = '<option value="auto">✨ 智能引擎投递</option>';
       (sysConfig.aria2||[]).forEach((n,i)=> h+=`<option value="aria2_${i}">🟣 Aria2: ${n.name}</option>`);
-      if(document.getElementById('task-engine-select')) document.getElementById('task-engine-select').innerHTML = h;
-      if(document.getElementById('ol-engine-select')) document.getElementById('ol-engine-select').innerHTML = h;
+      if(document.getElementById('task-engine-select')) { document.getElementById('task-engine-select').innerHTML = h; if(curTask) document.getElementById('task-engine-select').value = curTask; }
+      if(document.getElementById('ol-engine-select')) { document.getElementById('ol-engine-select').innerHTML = h; if(curOlEng) document.getElementById('ol-engine-select').value = curOlEng; }
       
       let o = ''; (sysConfig.openlist||[]).forEach((n,i)=> o+=`<option value="${i}">☁️ ${n.name}</option>`);
-      if(document.getElementById('ol-account-select')) document.getElementById('ol-account-select').innerHTML = o || '<option value="">请先添加云盘</option>';
+      if(document.getElementById('ol-account-select')) { 
+          document.getElementById('ol-account-select').innerHTML = o || '<option value="">请先添加云盘</option>';
+          if(curOlAcc && sysConfig.openlist && sysConfig.openlist.length > curOlAcc) {
+              document.getElementById('ol-account-select').value = curOlAcc;
+          }
+      }
     }
 
     async function refreshTasks(){
@@ -583,59 +602,89 @@
     async function batchTaskAction(act){
       if(selectedTasks.size===0) return showToast('请先选择任务', 'error');
       if(act==='delete' && !confirm(`确定删除选中的 ${selectedTasks.size} 个任务吗？`)) return;
-      await api('/api/tasks/batch', {method:'POST', body:JSON.stringify({ids:Array.from(selectedTasks), action:act})});
-      selectedTasks.clear(); showToast('指令已下发');
+      
+      if(act === 'delete') {
+          for(let id of selectedTasks) {
+              const parts = id.split('_'); const eIdx = parseInt(parts[0].replace('aria2', ''), 10) || 0; const gid = parts[1];
+              const config = sysConfig.aria2[eIdx];
+              if(config) {
+                  await api('/api/force_kill_task', {method:'POST', body:JSON.stringify({url: config.url, secret: config.secret, gid: gid})});
+                  document.getElementById('t-'+id)?.remove(); deadTasks.add(id); 
+              }
+          }
+      } else {
+          await api('/api/tasks/batch', {method:'POST', body:JSON.stringify({ids:Array.from(selectedTasks), action:act})});
+      }
+      selectedTasks.clear(); showToast('指令已下发'); refreshTasks();
     }
     
     async function singleAction(id, act, btn){ 
         if(act==='delete' && !confirm('确认彻底删除该任务及其记录吗？')) return; 
         if(btn) { btn.style.opacity='0.5'; btn.disabled=true; }
-        await api(`/api/tasks/${id}/${act}`, {method:'POST'}); 
+        
+        if(act === 'delete') {
+            const parts = id.split('_'); const eIdx = parseInt(parts[0].replace('aria2', ''), 10) || 0; const gid = parts[1];
+            const config = sysConfig.aria2[eIdx];
+            if(config) {
+                await api('/api/force_kill_task', {method:'POST', body:JSON.stringify({url: config.url, secret: config.secret, gid: gid})});
+                document.getElementById('t-'+id)?.remove(); deadTasks.add(id); 
+                showToast('任务已彻底抹杀');
+            }
+        } else {
+            await api(`/api/tasks/${id}/${act}`, {method:'POST'}); 
+        }
     }
 
     function renderTasks(){
       const dl = tasks.filter(t => t.status === 'downloading').length;
       const wt = tasks.filter(t => t.status === 'waiting' || t.status === 'paused').length;
       const cp = tasks.filter(t => t.status === 'complete' || t.status === 'error').length;
-      if(document.getElementById('cnt-all')) document.getElementById('cnt-all').textContent = tasks.length > 0 ? `(${tasks.length})` : '';
-      if(document.getElementById('cnt-dl')) document.getElementById('cnt-dl').textContent = dl > 0 ? `(${dl})` : '';
-      if(document.getElementById('cnt-wt')) document.getElementById('cnt-wt').textContent = wt > 0 ? `(${wt})` : '';
-      if(document.getElementById('cnt-cp')) document.getElementById('cnt-cp').textContent = cp > 0 ? `(${cp})` : '';
+      
+      const updateTxt = (id, txt) => { const el = document.getElementById(id); if(el && el.textContent !== String(txt)) el.textContent = txt; };
+      updateTxt('cnt-all', tasks.length > 0 ? `(${tasks.length})` : '');
+      updateTxt('cnt-dl', dl > 0 ? `(${dl})` : '');
+      updateTxt('cnt-wt', wt > 0 ? `(${wt})` : '');
+      updateTxt('cnt-cp', cp > 0 ? `(${cp})` : '');
 
       const list = document.getElementById('task-list');
       let filtered = getFilteredTasks();
       
+      // 🌟 自然排序算法引入
       filtered.sort((a,b)=>{
         let c=0;
         if(taskSortBy==='created_at') c = new Date(a.created_at.replace(' ','T')).getTime() - new Date(b.created_at.replace(' ','T')).getTime();
-        else if(taskSortBy==='name') c = (a.filename||'').localeCompare(b.filename||'');
+        else if(taskSortBy==='name') c = (a.filename||'').localeCompare(b.filename||'', undefined, {numeric: true, sensitivity: 'base'});
         else if(taskSortBy==='size') c = a.total_size - b.total_size;
         else if(taskSortBy==='progress') c = a.progress - b.progress;
         return taskSortDesc ? -c : c;
       });
 
       const cIds = new Set(filtered.map(t=>t.id));
-      Array.from(list.children).forEach(c=>{ if(!cIds.has(c.id.replace('t-',''))) c.remove(); });
+      Array.from(list.children).forEach(c=>{ 
+          if(c.id === 'empty-state-view') return; 
+          if(!cIds.has(c.id.replace('t-',''))) c.remove(); 
+      });
       
       const selectAllCb = document.getElementById('task-select-all');
       if(selectAllCb) selectAllCb.checked = filtered.length > 0 && selectedTasks.size === filtered.length;
 
-      // 🌟 场景化动态 Empty State
       if(filtered.length===0) {
+        if(list.dataset.emptyFilter === currentTaskFilter) return; 
+        list.dataset.emptyFilter = currentTaskFilter;
+        
         let eIco = '📭', eTxt = '任务列表空空如也', eSub = '去【云端文件】挑选一些资源推送过来吧 ~';
         if (currentTaskFilter === 'downloading') { eIco = '🚀'; eTxt = '当前没有正在狂飙的任务'; eSub = '去新建任务添加几个下载链接吧！'; }
         else if (currentTaskFilter === 'waiting') { eIco = '⏸️'; eTxt = '没有被暂停或等待中的任务'; eSub = '所有任务都在顺利进行中 ~'; }
         else if (currentTaskFilter === 'complete') { eIco = '✅'; eTxt = '还没有已完成的任务'; eSub = '耐心等待一下，美好的事物即将降临 ~'; }
         
-        list.innerHTML = `<div style="text-align:center;padding:120px 20px;color:var(--text-muted);animation: fadeIn 0.4s ease;">
+        list.innerHTML = `<div id="empty-state-view" style="text-align:center;padding:120px 20px;color:var(--text-muted);animation: fadeIn 0.15s ease-out;">
           <div style="font-size:65px;margin-bottom:20px;display:inline-block;animation: float 3s ease-in-out infinite;">${eIco}</div>
           <div style="font-size:17px;font-weight:600;color:var(--text-main);letter-spacing:1px;">${eTxt}</div>
           <div style="font-size:13px;margin-top:12px;opacity:0.7;">${eSub}</div>
         </div>`;
         return;
       }
-      
-      if(list.querySelector('.text-muted')) list.innerHTML = '';
+      list.dataset.emptyFilter = '';
 
       filtered.forEach((t, i) => {
         let card = document.getElementById('t-'+t.id);
@@ -646,7 +695,7 @@
         if(!card){
           card = document.createElement('div'); card.id = 't-'+t.id;
           card.innerHTML = `<div class="task-header">
-            <div class="task-title" style="flex:1; display:flex; align-items:flex-start;"><input type="checkbox" style="margin-right:12px; margin-top:4px;" class="cb"> <span class="nm" style="word-break:break-all;"></span></div>
+            <div class="task-title" style="flex:1; display:flex; align-items:flex-start;"><input type="checkbox" style="margin-right:12px; margin-top:4px;" class="cb"> <span class="nm" style="word-break:break-all; font-weight:600;"></span></div>
             <div class="task-actions"></div>
           </div>
           <div class="progress-wrapper"><div class="progress-bar" style="width:0%;"></div><div class="progress-text" style="position:absolute;width:100%;text-align:center;font-size:10px;font-weight:bold;color:#333;z-index:1;"></div></div>
@@ -655,30 +704,44 @@
             <div class="meta-right"></div>
           </div>`;
         }
-        card.className = `task-card ${t.status}`;
-        card.querySelector('.cb').checked = selectedTasks.has(t.id);
-        card.querySelector('.cb').onchange = (e) => toggleTask(t.id, e.target.checked);
-        card.querySelector('.nm').textContent = t.filename || '解析中...';
-        card.querySelector('.progress-bar').style.width = prog+'%';
-        card.querySelector('.progress-text').textContent = prog+'%';
-        card.querySelector('.tg').textContent = eTag;
-        card.querySelector('.inf').textContent = `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`;
-        card.querySelector('.meta-right').innerHTML = t.status==='downloading' ? `<span style="color:var(--primary);">⬇️ ${formatSize(t.speed)}/s</span> <span style="font-weight:normal;color:var(--text-muted); margin-left:10px;">⏳ ${formatTime(eta)}</span>` : '';
         
-        // 🌟 状态动态图标与色彩
-        let stHtml = '';
-        if(t.status==='downloading') stHtml = '<span style="display:inline-block;animation:spin-slow 2.5s linear infinite;margin-right:4px;">⚙️</span><span style="color:var(--primary);">下载中</span>';
-        else if(t.status==='waiting') stHtml = '<span style="display:inline-block;animation:float 2s ease-in-out infinite;margin-right:4px;">⏳</span><span style="color:var(--warning);">等待中</span>';
-        else if(t.status==='paused') stHtml = '<span style="display:inline-block;animation:blink 1.5s infinite;margin-right:4px;">⏸️</span><span style="color:var(--warning);">已暂停</span>';
-        else if(t.status==='complete') stHtml = '<span style="margin-right:4px;">✅</span><span style="color:var(--success);">已完成</span>';
-        else stHtml = '<span style="margin-right:4px;">❌</span><span style="color:var(--danger);">节点异常</span>';
-        card.querySelector('.st').innerHTML = stHtml;
+        if (card.className !== `task-card ${t.status}`) card.className = `task-card ${t.status}`;
         
-        let opHtml = `<button class="btn btn-info btn-sm" onclick="showTaskDetails('${t.id}')">详情</button>`;
-        if(t.status==='downloading' || t.status==='waiting') opHtml += `<button class="btn btn-warning btn-sm" onclick="singleAction('${t.id}','pause',this)">暂停</button>`;
-        if(t.status==='paused' || t.status==='error') opHtml += `<button class="btn btn-success btn-sm" onclick="singleAction('${t.id}','resume',this)">继续</button>`;
-        opHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}','delete',this)"><span style="color:var(--danger);">删除</span></button>`;
-        card.querySelector('.task-actions').innerHTML = opHtml;
+        const cb = card.querySelector('.cb');
+        if (cb.checked !== selectedTasks.has(t.id)) cb.checked = selectedTasks.has(t.id);
+        cb.onchange = (e) => toggleTask(t.id, e.target.checked);
+        
+        const safeTxt = (cls, val) => { const el = card.querySelector(cls); if(el && el.textContent !== String(val)) el.textContent = val; };
+        safeTxt('.nm', t.filename || '解析中...');
+        safeTxt('.progress-text', prog+'%');
+        safeTxt('.tg', eTag);
+        safeTxt('.inf', `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`);
+        
+        const pb = card.querySelector('.progress-bar');
+        if (pb.style.width !== prog+'%') pb.style.width = prog+'%';
+        
+        const rightHtml = t.status==='downloading' ? `<span style="color:var(--primary);">⬇️ ${formatSize(t.speed)}/s</span> <span style="font-weight:normal;color:var(--text-muted); margin-left:10px;">⏳ ${formatTime(eta)}</span>` : '';
+        if (card.dataset.lastRight !== rightHtml) {
+            card.querySelector('.meta-right').innerHTML = rightHtml;
+            card.dataset.lastRight = rightHtml;
+        }
+        
+        if (card.dataset.status !== t.status) {
+            card.dataset.status = t.status;
+            let stHtml = '';
+            if(t.status==='downloading') stHtml = '<span style="display:inline-block;animation:spin-slow 2.5s linear infinite;margin-right:4px;">⚙️</span><span style="color:var(--primary);">下载中</span>';
+            else if(t.status==='waiting') stHtml = '<span style="display:inline-block;animation:float 2s ease-in-out infinite;margin-right:4px;">⏳</span><span style="color:var(--warning);">等待中</span>';
+            else if(t.status==='paused') stHtml = '<span style="display:inline-block;animation:blink 1.5s infinite;margin-right:4px;">⏸️</span><span style="color:var(--warning);">已暂停</span>';
+            else if(t.status==='complete') stHtml = '<span style="margin-right:4px;">✅</span><span style="color:var(--success);">已完成</span>';
+            else stHtml = '<span style="margin-right:4px;">❌</span><span style="color:var(--danger);">节点异常</span>';
+            card.querySelector('.st').innerHTML = stHtml;
+            
+            let opHtml = `<button class="btn btn-info btn-sm" onclick="showTaskDetails('${t.id}')">详情</button>`;
+            if(t.status==='downloading' || t.status==='waiting') opHtml += `<button class="btn btn-warning btn-sm" onclick="singleAction('${t.id}','pause',this)">暂停</button>`;
+            if(t.status==='paused' || t.status==='error') opHtml += `<button class="btn btn-success btn-sm" onclick="singleAction('${t.id}','resume',this)">继续</button>`;
+            opHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}','delete',this)"><span style="color:var(--danger);">删除</span></button>`;
+            card.querySelector('.task-actions').innerHTML = opHtml;
+        }
         
         if(list.children[i] !== card) list.insertBefore(card, list.children[i]);
       });
@@ -742,9 +805,13 @@
     }
 
     function renderOpenList(){
+      // 🌟 自然排序算法引入
       olFiles.sort((a,b)=>{
         if(a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-        let c=0; if(olSortBy==='name') c=a.name.localeCompare(b.name); else if(olSortBy==='size') c=a.size-b.size; else c=new Date(a.modified)-new Date(b.modified);
+        let c=0; 
+        if(olSortBy==='name') c=a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}); 
+        else if(olSortBy==='size') c=a.size-b.size; 
+        else c=new Date(a.modified)-new Date(b.modified);
         return olSortDesc?-c:c;
       });
       const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : '';
@@ -765,11 +832,7 @@
 
     function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateSelects(); showModal('engine-select-modal'); }
 
-    // 🌟 灵动岛进度条
-    // 🌟 全局推送队列状态机
-    let globalPushQueue = [];
-    let isPushing = false;
-    let pushStats = { total: 0, current: 0, success: 0, fail: 0 };
+    let globalPushQueue = []; let isPushing = false; let pushStats = { total: 0, current: 0, success: 0, fail: 0 };
 
     async function executeOlDownload() {
       const eng = document.getElementById('ol-engine-select').value;
@@ -781,73 +844,41 @@
       hideModal('engine-select-modal');
       switchTab('downloads', document.querySelector('.sidebar-menu .nav-item'));
 
-      // 1. 将本次选中的任务统一打包，丢进全局 "传送带"
-      tasksToProcess.forEach(n => {
-        globalPushQueue.push({
-          name: n,
-          fullPath: parentPath === '/' ? `/${n}` : `${parentPath}/${n}`,
-          idx: idx,
-          eng: eng
-        });
-      });
-
-      // 2. 动态扩充总任务容量 (进度条分母会自动变大)
+      tasksToProcess.forEach(n => { globalPushQueue.push({ name: n, fullPath: parentPath === '/' ? `/${n}` : `${parentPath}/${n}`, idx: idx, eng: eng }); });
       pushStats.total += tasksToProcess.length;
-
-      // 3. 瞬间清空选中状态，你可以立刻去选下一批！
-      olSelected.clear();
-      renderOpenList();
-
-      // 4. 唤醒后台队列处理器
+      olSelected.clear(); renderOpenList();
       processPushQueue();
     }
 
     async function processPushQueue() {
-      // 🌟 核心锁：如果工人已经在搬砖了，不要打断他，新任务已经在传送带上了
-      if (isPushing) return; 
-      isPushing = true;
-      
+      if (isPushing) return; isPushing = true;
       const qContainer = document.getElementById('push-queue-container');
       
-      // 如果灵动岛不存在，则生成一个
       if (!document.getElementById('push-capsule')) {
-        const cardHtml = `
-          <div id="push-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
+        qContainer.innerHTML = `<div id="push-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
              <span style="font-size:13px; font-weight:bold; color:var(--primary); white-space:nowrap;">🚀 推送 <span id="txt-push-prog">0/0</span></span>
              <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
                 <div id="bar-push-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #1890ff, #722ed1); transition:width 0.3s ease;"></div>
              </div>
-             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;">
-                <span style="color:var(--success);">✅<span id="suc-push-prog">0</span></span>
-                <span style="color:var(--danger);">❌<span id="fail-push-prog">0</span></span>
-             </span>
-             <span id="st-push-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="队列启动中...">启动中</span>
-          </div>
-        `;
-        qContainer.innerHTML = cardHtml;
+             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;"><span style="color:var(--success);">✅<span id="suc-push-prog">0</span></span><span style="color:var(--danger);">❌<span id="fail-push-prog">0</span></span></span>
+             <span id="st-push-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">启动中</span>
+          </div>`;
       }
 
-      // 只要传送带上还有文件，就一直循环拿取
       while (globalPushQueue.length > 0) {
-        const task = globalPushQueue.shift(); // 拿走第一个
-        pushStats.current++;
-
-        const stProg = document.getElementById('st-push-prog');
-        if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
+        const task = globalPushQueue.shift(); pushStats.current++;
+        const stProg = document.getElementById('st-push-prog'); if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
 
         try {
           const r = await api('/api/openlist/get', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), path:task.fullPath})});
           if(r.code === 200 && r.data){
             let target = r.data.raw_url;
-            if(!r.data.header && r.data.sign) {
-               target = sysConfig.openlist[task.idx].url.replace(/\/$/, '') + '/d' + task.fullPath.split('/').map(encodeURIComponent).join('/') + '?sign=' + r.data.sign;
-            }
+            if(!r.data.header && r.data.sign) { target = sysConfig.openlist[task.idx].url.replace(/\/$/, '') + '/d' + task.fullPath.split('/').map(encodeURIComponent).join('/') + '?sign=' + r.data.sign; }
             const dr = await api('/api/download', {method:'POST', body:JSON.stringify({url:target, engine:task.eng, headers:r.data.header})});
             if(dr.success) pushStats.success++; else pushStats.fail++;
           } else { pushStats.fail++; }
         } catch (e) { pushStats.fail++; }
         
-        // 动态计算进度，完美兼容中途加塞！
         const percent = Math.round((pushStats.current / pushStats.total) * 100);
         const bar = document.getElementById('bar-push-prog'); if(bar) bar.style.width = percent + '%';
         const txt = document.getElementById('txt-push-prog'); if(txt) txt.textContent = `${pushStats.current}/${pushStats.total}`;
@@ -855,35 +886,21 @@
         const fail = document.getElementById('fail-push-prog'); if(fail) fail.textContent = pushStats.fail;
       }
 
-      // 传送带彻底空了，准备下班
-      const stFinal = document.getElementById('st-push-prog');
-      if(stFinal) { stFinal.textContent = '队列已清空'; stFinal.style.color = 'var(--success)'; }
-      const barFinal = document.getElementById('bar-push-prog');
-      if(barFinal) barFinal.style.background = 'var(--success)';
-      
+      const stFinal = document.getElementById('st-push-prog'); if(stFinal) { stFinal.textContent = '队列已清空'; stFinal.style.color = 'var(--success)'; }
+      const barFinal = document.getElementById('bar-push-prog'); if(barFinal) barFinal.style.background = 'var(--success)';
       refreshTasks();
       
-      // 延迟 4 秒销毁 UI。如果这 4 秒内用户又塞了新任务，销毁动作会被取消！
       setTimeout(() => {
         const el = document.getElementById('push-capsule');
         if(el && globalPushQueue.length === 0) { 
-           el.style.opacity = '0';
-           el.style.transform = 'translateY(-10px)';
-           el.style.transition = 'all 0.4s ease';
-           setTimeout(() => {
-             // 彻底销毁前的最后一次防并发检查
-             if(globalPushQueue.length === 0) {
-               el.remove();
-               // 重置状态机
-               pushStats = { total: 0, current: 0, success: 0, fail: 0 };
-             }
-           }, 400); 
+           el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease';
+           setTimeout(() => { if(globalPushQueue.length === 0) { el.remove(); pushStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); 
         }
-        // 工人下班，释放锁
         isPushing = false; 
       }, 4000);
     }
     
+    // 🌟 全新加入：重命名实时预览
     function showRenameModal() { 
       if(olSelected.size===0) return; 
       document.getElementById('rename-title').innerHTML = olSelected.size===1?'✏️ 单文件重命名':`✏️ 批量重命名 (${olSelected.size}项)`;
@@ -891,6 +908,38 @@
       document.getElementById('rn-search').value = olSelected.size===1?Array.from(olSelected)[0]:'';
       document.getElementById('rn-replace').value = '';
       showModal('rename-modal'); 
+      updateRenamePreview();
+    }
+
+    function updateRenamePreview() {
+      const mode = document.querySelector('input[name="rn_type"]:checked').value;
+      const search = document.getElementById('rn-search').value; 
+      const replace = document.getElementById('rn-replace').value;
+      const fmt = document.getElementById('rn-format').value; 
+      let startNum = parseInt(document.getElementById('rn-start').value)||1;
+      
+      const box = document.getElementById('rn-preview-box');
+      if(!box) return;
+      if (olSelected.size <= 1) { box.style.display = 'none'; return; } 
+      box.style.display = 'block';
+      
+      let pHtml = '<div style="font-weight:bold; margin-bottom:8px; color:var(--text-muted);">👀 变更预览 (滑动查看)：</div>';
+      const sortedNames = Array.from(olSelected).sort((a,b)=>a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+      sortedNames.forEach(n => {
+        let newName = n;
+        if(mode==='replace' && search) newName = n.split(search).join(replace);
+        else if(mode==='seq' && fmt) {
+          const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : '';
+          newName = fmt.replace('{ext}', ext).replace('{n}', startNum++);
+        }
+        
+        if (newName !== n) {
+            pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--danger); text-decoration:line-through; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;" title="${n}">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--success); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%; font-weight:bold;" title="${newName}">${newName}</span></div>`;
+        } else {
+            pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">(无变化)</span></div>`;
+        }
+      });
+      box.innerHTML = pHtml;
     }
     
     async function submitRename() {
@@ -900,7 +949,10 @@
       const fmt = document.getElementById('rn-format').value; let startNum = parseInt(document.getElementById('rn-start').value)||1;
       
       let sc = 0; hideModal('rename-modal'); showToast('开始处理...');
-      for (const n of Array.from(olSelected).sort()) {
+      
+      // 🚀 必须自然排序提交，防止集数打乱
+      const sortedNames = Array.from(olSelected).sort((a,b)=>a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+      for (const n of sortedNames) {
         let newName = n;
         if(olSelected.size===1) newName = replace || search;
         else if(mode==='replace' && search) newName = n.split(search).join(replace);
@@ -917,10 +969,7 @@
       showToast(`重命名完成，共修改 ${sc} 项`); loadOpenList();
     }
 
-    // 🌟 全局删除队列状态机
-    let globalDeleteQueue = [];
-    let isDeleting = false;
-    let deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
+    let globalDeleteQueue = []; let isDeleting = false; let deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
 
     async function deleteSelectedFiles(){
       const tasksToProcess = Array.from(olSelected);
@@ -930,51 +979,30 @@
       const idx = document.getElementById('ol-account-select').value;
       const parentPath = currentOpenListPath;
 
-      // 打包丢进删除传送带
-      tasksToProcess.forEach(n => {
-        globalDeleteQueue.push({ name: n, fullPath: parentPath, idx: idx });
-      });
-
+      tasksToProcess.forEach(n => { globalDeleteQueue.push({ name: n, fullPath: parentPath, idx: idx }); });
       deleteStats.total += tasksToProcess.length;
-      olSelected.clear();
-      renderOpenList(); // 瞬间从界面移除选中状态，让你继续操作
-
+      olSelected.clear(); renderOpenList(); 
       processDeleteQueue();
     }
 
     async function processDeleteQueue() {
-      // 核心锁：已经在清理就不要重复启动
-      if (isDeleting) return; 
-      isDeleting = true;
-      
+      if (isDeleting) return; isDeleting = true;
       const qContainer = document.getElementById('push-queue-container');
       
-      // 生成红色的专属删除胶囊
       if (!document.getElementById('delete-capsule')) {
-        const cardHtml = `
-          <div id="delete-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
+        qContainer.insertAdjacentHTML('beforeend', `<div id="delete-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
              <span style="font-size:13px; font-weight:bold; color:var(--danger); white-space:nowrap;">🗑️ 删除 <span id="txt-del-prog">0/0</span></span>
              <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
                 <div id="bar-del-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #ff4d4f, #cf1322); transition:width 0.3s ease;"></div>
              </div>
-             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;">
-                <span style="color:var(--success);">✅<span id="suc-del-prog">0</span></span>
-                <span style="color:var(--danger);">❌<span id="fail-del-prog">0</span></span>
-             </span>
-             <span id="st-del-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="清理中...">启动中</span>
-          </div>
-        `;
-        // 追加到导航栏容器里，如果推送也在，就可以左右并排显示！
-        qContainer.insertAdjacentHTML('beforeend', cardHtml);
+             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;"><span style="color:var(--success);">✅<span id="suc-del-prog">0</span></span><span style="color:var(--danger);">❌<span id="fail-del-prog">0</span></span></span>
+             <span id="st-del-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">启动中</span>
+          </div>`);
       }
 
-      // 开始逐个清理
       while (globalDeleteQueue.length > 0) {
-        const task = globalDeleteQueue.shift(); 
-        deleteStats.current++;
-
-        const stProg = document.getElementById('st-del-prog');
-        if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
+        const task = globalDeleteQueue.shift(); deleteStats.current++;
+        const stProg = document.getElementById('st-del-prog'); if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
 
         try {
           const r = await api('/api/openlist/remove', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), dir:task.fullPath, names:[task.name]})});
@@ -988,27 +1016,15 @@
         const fail = document.getElementById('fail-del-prog'); if(fail) fail.textContent = deleteStats.fail;
       }
 
-      const stFinal = document.getElementById('st-del-prog');
-      if(stFinal) { stFinal.textContent = '清理完成'; stFinal.style.color = 'var(--success)'; }
-      const barFinal = document.getElementById('bar-del-prog');
-      if(barFinal) barFinal.style.background = 'var(--success)';
-      
-      // 队列全部清空后，刷新当前的云盘列表
+      const stFinal = document.getElementById('st-del-prog'); if(stFinal) { stFinal.textContent = '清理完成'; stFinal.style.color = 'var(--success)'; }
+      const barFinal = document.getElementById('bar-del-prog'); if(barFinal) barFinal.style.background = 'var(--success)';
       loadOpenList();
       
-      // 4秒后淡出销毁。如果期间又加了新任务，销毁动作撤销
       setTimeout(() => {
         const el = document.getElementById('delete-capsule');
         if(el && globalDeleteQueue.length === 0) { 
-           el.style.opacity = '0';
-           el.style.transform = 'translateY(-10px)';
-           el.style.transition = 'all 0.4s ease';
-           setTimeout(() => {
-             if(globalDeleteQueue.length === 0) {
-               el.remove();
-               deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
-             }
-           }, 400); 
+           el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease';
+           setTimeout(() => { if(globalDeleteQueue.length === 0) { el.remove(); deleteStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); 
         }
         isDeleting = false; 
       }, 4000);
@@ -1018,17 +1034,86 @@
       if(ws) ws.close(); ws = new WebSocket(`ws://${location.hostname}:28080/tasks?token=${authToken}`);
       const st = document.getElementById('ws-status');
       ws.onopen = () => { st.textContent = '🟢 引擎通讯中'; st.style.color = 'var(--success)'; };
-      ws.onmessage = (e) => { tasks = JSON.parse(e.data); renderTasks(); };
+      ws.onmessage = (e) => { const raw = JSON.parse(e.data); tasks = raw.filter(t => !deadTasks.has(t.id)); renderTasks(); };
       ws.onclose = () => { st.textContent = '🔴 引擎失联'; st.style.color = 'var(--danger)'; setTimeout(connectWS, 3000); };
     }
 
+    // 🌟 加入后端宕机拦截机制
     async function initApp(){ 
       document.getElementById('task-sort-select').value = savedSort;
       if(!authToken) { document.getElementById('login-screen').style.display='flex'; return; } 
-      sysConfig = await api('/api/config'); populateSelects();
-      refreshTasks(); connectWS(); setInterval(refreshTasks, 3000); 
+      try {
+          sysConfig = await api('/api/config'); 
+          populateSelects();
+          refreshTasks(); 
+          connectWS(); 
+          setInterval(refreshTasks, 3000); 
+      } catch(e) {
+          showToast('无法连接后端服务，请检查 app.js 是否宕机！', 'error');
+          document.getElementById('ws-status').textContent = '🔴 服务宕机';
+          document.getElementById('ws-status').style.color = 'var(--danger)';
+      }
     }
+    
+    let isDebugOpen = false;
+    function toggleDebugPanel() {
+      isDebugOpen = !isDebugOpen;
+      document.getElementById('debug-panel').style.display = isDebugOpen ? 'flex' : 'none';
+      if(isDebugOpen) addDebugLog('SYS', 'Debug 面板已激活，通信拦截正常运行中...');
+    }
+    window.isDebugPaused = false;
+    function addDebugLog(type, msg, isErr=false) {
+      if(window.isDebugPaused) return; 
+      if(document.getElementById('ignore-stats')?.checked && typeof msg === 'string' && msg.includes('global-stats')) return; 
+
+      const c = document.getElementById('debug-content');
+      if(!c) return;
+      const t = new Date().toLocaleTimeString('en-US', {hour12:false}) + '.' + new Date().getMilliseconds().toString().padStart(3,'0');
+      const color = isErr ? '#f14c4c' : (type==='REQ' ? '#c586c0' : (type==='RES' ? '#4ec9b0' : '#dcdcaa'));
+      const div = document.createElement('div');
+      div.style.borderBottom = '1px dashed #333'; div.style.paddingBottom = '4px'; div.style.marginBottom = '4px'; div.style.wordBreak = 'break-all';
+      let msgStr = typeof msg === 'object' ? JSON.stringify(msg) : msg;
+      if(msgStr && msgStr.length > 600) msgStr = msgStr.substring(0, 600) + ' ... [已截断]';
+      div.innerHTML = `<span style="color:#858585">[${t}]</span> <span style="color:${color};font-weight:bold;width:50px;display:inline-block;">[${type}]</span> ${msgStr}`;
+      c.appendChild(div);
+      c.scrollTop = c.scrollHeight;
+    }
+    
+    const _originalApi = api;
+    api = async function(u, o={}) {
+      addDebugLog('REQ', `${o.method||'GET'} ${u} ${o.body ? '| '+o.body : ''}`);
+      try {
+        const res = await _originalApi(u, o);
+        addDebugLog('RES', `${u} | ${JSON.stringify(res)}`, res.error || (res.code !== undefined && res.code !== 200));
+        return res;
+      } catch(e) {
+        addDebugLog('ERR', `${u} | ${e.message}`, true);
+        throw e;
+      }
+    };
+    window.addEventListener('error', function(e) { addDebugLog('BUG', `${e.message}`, true); });
+    window.addEventListener('unhandledrejection', function(e) { addDebugLog('BUG', `Promise: ${e.reason}`, true); });
+
     initApp();
   </script>
+
+  <div id="debug-panel" style="display:none; position:fixed; bottom:0; left:0; right:0; height:35vh; background:#1e1e1e; border-top:3px solid var(--primary); z-index:12000; flex-direction:column; box-shadow:0 -10px 30px rgba(0,0,0,0.3);">
+    <div style="padding:8px 16px; background:#2d2d2d; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #000;">
+      <span style="font-weight:bold; color:#4fc1ff; font-family:monospace; font-size:13px;">🐞 开发者控制台 (全链路监控)</span>
+      <div style="display:flex; gap:10px;">
+        
+        <label style="display:flex; align-items:center; gap:4px; color:#ccc; font-size:12px; cursor:pointer; margin:0;">
+          <input type="checkbox" id="ignore-stats" checked> 过滤心跳包
+        </label>
+        <button id="btn-pause" class="btn btn-warning btn-sm" onclick="window.isDebugPaused=!window.isDebugPaused; this.innerText=window.isDebugPaused?'▶️ 继续记录':'⏸️ 暂停拦截'" style="color:#000; font-weight:bold;">⏸️ 暂停拦截</button>
+        <button class="btn btn-success btn-sm" onclick="const txt = document.getElementById('debug-content').innerText; if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(txt); } else { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } alert('✅ 日志已成功复制！');" style="color:#fff; font-weight:bold;">📋 一键复制</button>
+        <button class="btn btn-danger btn-sm" onclick="document.getElementById('debug-content').innerHTML=''">清空</button>
+
+        <button class="btn btn-danger btn-sm" onclick="toggleDebugPanel()">关闭面板</button>
+      </div>
+    </div>
+    <div id="debug-content" style="flex:1; overflow-y:auto; padding:10px; font-family:monospace; font-size:12px; line-height:1.6; color:#d4d4d4;"></div>
+  </div>
+
 </body>
 </html>

@@ -244,4 +244,53 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => clearInterval(timer));
 });
 
+
+// 🔪 降维杀手 API：无视原有逻辑，直接代理强杀 Aria2
+app.post('/api/force_kill_task', async (req, res) => {
+    const { url, secret, gid } = req.body;
+    if (!url || !gid) return res.json({success: false, error: '缺少参数'});
+    
+    const http = require('http'); const https = require('https');
+    
+    const makeReq = (method, params=[]) => new Promise(resolve => {
+        try {
+            // 将 JSON 转为 Buffer，精确计算字节长度！这是破局的核心！
+            const payloadBuffer = Buffer.from(JSON.stringify({ 
+                jsonrpc: '2.0', id: 'kill_'+Date.now(), method, 
+                params: secret ? [`token:${secret}`, ...params] : params 
+            }), 'utf8');
+            
+            const { URL } = require('url'); const u = new URL(url);
+            const client = u.protocol === 'https:' ? https : http;
+            
+            const request = client.request(url, { 
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': payloadBuffer.length // 强制告诉 Aria2 长度，拒绝分块传输！
+                }, 
+                timeout: 3000 
+            }, (response) => {
+                let data = '';
+                response.on('data', (chunk) => data += chunk);
+                response.on('end', () => { try { resolve(JSON.parse(data)); } catch(e){ resolve({error: '解析失败'}); } });
+            });
+            request.on('error', (e) => resolve({error: e.message})); 
+            request.write(payloadBuffer); // 发送精确的 Buffer
+            request.end();
+        } catch(e) { resolve({error: e.message}); }
+    });
+
+    // 真正的二连击绝杀：
+    await makeReq('aria2.forceRemove', [gid]); // 强杀
+    await new Promise(r => setTimeout(r, 600)); // 等 Aria2 反应半秒钟
+    const removeRes = await makeReq('aria2.removeDownloadResult', [gid]); // 扬骨灰
+    
+    // 超度本地数据库
+    try { if(typeof db !== 'undefined') { db.run('DELETE FROM downloads WHERE gid=?', [gid]); db.run('DELETE FROM tasks WHERE gid=?', [gid]); } } catch(e){}
+    
+    // 为了防止还有幺蛾子，我们把第二次清理的返回结果打印在日志里
+    res.json({success: true, message: '任务已彻底删除', debug_res: removeRes});
+});
+
 app.listen(PORT, () => console.log('🚀 API Running on ' + PORT));
