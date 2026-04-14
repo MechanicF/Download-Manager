@@ -920,21 +920,72 @@ function renderTasks(){
     
     function sortOpenList(f){ if(olSortBy===f) olSortDesc=!olSortDesc; else {olSortBy=f; olSortDesc=false;} localStorage.setItem('dm_ol_sort_'+currentOpenListPath, `${olSortBy}_${olSortDesc}`); renderOpenList(); }
 
+    
+    function updateOlUI() {
+      const allC = document.getElementById('cb-ol-all');
+      if(allC) allC.checked = olFiles.length > 0 && olSelected.size === olFiles.length;
+      
+      const cntSpan = document.getElementById('ol-selected-count'); 
+      if (cntSpan) { 
+          cntSpan.style.display = olSelected.size > 0 ? 'inline-block' : 'none'; 
+          cntSpan.textContent = `已选择 ${olSelected.size} 项`; 
+      }
+      
+      const displayState = olSelected.size > 0 ? 'inline-block' : 'none';
+      document.getElementById('btn-ol-download').style.display = displayState; 
+      document.getElementById('btn-ol-rename').style.display = displayState; 
+      document.getElementById('btn-ol-delete').style.display = displayState;
+    }
+
+    function toggleOlItem(name, cbId, e) {
+      if(e) e.stopPropagation(); // 阻止事件冒泡，防止点击复选框时触发行的点击
+      
+      if(olSelected.has(name)) olSelected.delete(name); 
+      else olSelected.add(name);
+      
+      const cb = document.getElementById(cbId);
+      if(cb) cb.checked = olSelected.has(name);
+      
+      updateOlUI(); // 只更新按钮状态，不重绘表格！
+    }
+
+    function toggleOlAll(checked) {
+      olFiles.forEach(f => olSelected[checked ? 'add' : 'delete'](f.name));
+      document.querySelectorAll('.ol-row-cb').forEach(cb => cb.checked = checked);
+      updateOlUI();
+    }
+
     function renderOpenList(){
       olFiles.sort((a,b)=>{
         if(a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-        let c=0; if(olSortBy==='name') c=a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}); else if(olSortBy==='size') c=a.size-b.size; else c=new Date(a.modified)-new Date(b.modified); return olSortDesc?-c:c;
+        let c=0; 
+        if(olSortBy==='name') c=a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}); 
+        else if(olSortBy==='size') c=a.size-b.size; 
+        else c=new Date(a.modified)-new Date(b.modified); 
+        return olSortDesc?-c:c;
       });
-      const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : ''; const allC = olFiles.length>0 && olSelected.size===olFiles.length ? 'checked' : '';
-      let html = `<table class="ol-table"><tr><th style="width:40px;"><input type="checkbox" class="custom-checkbox" ${allC} onclick="olFiles.forEach(f=>olSelected[this.checked?'add':'delete'](f.name));renderOpenList();"></th><th onclick="sortOpenList('name')">文件名称 <span style="font-size:10px;">${getIco('name')}</span></th><th onclick="sortOpenList('size')" style="width:120px;">大小 <span style="font-size:10px;">${getIco('size')}</span></th><th onclick="sortOpenList('time')" style="width:180px;">修改时间 <span style="font-size:10px;">${getIco('time')}</span></th></tr>`;
+      
+      const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : ''; 
+      const allC = olFiles.length>0 && olSelected.size===olFiles.length ? 'checked' : '';
+      
+      let html = `<table class="ol-table"><tr><th style="width:40px;"><input type="checkbox" id="cb-ol-all" class="custom-checkbox" ${allC} onclick="toggleOlAll(this.checked)"></th><th onclick="sortOpenList('name')">文件名称 <span style="font-size:10px;">${getIco('name')}</span></th><th onclick="sortOpenList('size')" style="width:120px;">大小 <span style="font-size:10px;">${getIco('size')}</span></th><th onclick="sortOpenList('time')" style="width:180px;">修改时间 <span style="font-size:10px;">${getIco('time')}</span></th></tr>`;
+      
       olFiles.forEach((f, i)=>{
-        const chk = olSelected.has(f.name)?'checked':''; const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${f.name}')` : `olSelected.has('${f.name}')?olSelected.delete('${f.name}'):olSelected.add('${f.name}');renderOpenList();`;
-        const renameBtn = f.is_dir ? "" : `<span onclick="event.stopPropagation(); renameFile('${f.name}')" style="margin-left:8px; cursor:pointer; opacity:0.5;" title="重命名">✏️</span>`;
-        html += `<tr style="animation: slideFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: ${Math.min(i * 0.025, 0.5)}s; opacity: 0;"><td><input type="checkbox" class="custom-checkbox" ${chk} onclick="if(this.checked)olSelected.add('${f.name}');else olSelected.delete('${f.name}');renderOpenList();"></td><td style="cursor:pointer; color:var(--text-main);" onclick="${act}"><span style="font-size:16px; margin-right:8px;">${f.is_dir?'📁':'📄'}</span> <span style="word-break:break-all;">${f.name}</span>${renameBtn}</td><td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
+        const chk = olSelected.has(f.name) ? 'checked' : ''; 
+        const cbId = 'cb-ol-row-' + i; // 给每个复选框分配唯一 ID
+        const safeName = f.name.replace(/'/g, "\\'");
+        
+        const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${safeName}')` : `toggleOlItem('${safeName}', '${cbId}', event)`;
+        const renameBtn = f.is_dir ? "" : `<span onclick="event.stopPropagation(); renameFile('${safeName}')" style="margin-left:8px; cursor:pointer; opacity:0.5;" title="重命名">✏️</span>`;
+        
+        html += `<tr style="animation: slideFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: ${Math.min(i * 0.025, 0.5)}s; opacity: 0;">
+        <td><input type="checkbox" id="${cbId}" class="custom-checkbox ol-row-cb" ${chk} onclick="toggleOlItem('${safeName}', '${cbId}', event)"></td>
+        <td style="cursor:pointer; color:var(--text-main);" onclick="${act}"><span style="font-size:16px; margin-right:8px;">${f.is_dir?'📁':'📄'}</span> <span style="word-break:break-all;">${f.name}</span>${renameBtn}</td>
+        <td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
       });
+      
       document.getElementById('openlist-content').innerHTML = html+'</table>';
-      const cntSpan = document.getElementById('ol-selected-count'); if (cntSpan) { cntSpan.style.display = olSelected.size > 0 ? 'inline-block' : 'none'; cntSpan.textContent = `已选择 ${olSelected.size} 项`; }
-      document.getElementById('btn-ol-download').style.display = olSelected.size>0?'inline-block':'none'; document.getElementById('btn-ol-rename').style.display = olSelected.size>0?'inline-block':'none'; document.getElementById('btn-ol-delete').style.display = olSelected.size>0?'inline-block':'none';
+      updateOlUI(); // 初次渲染完毕后，同步一次顶部按钮状态
     }
 
     function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateSelects(); showModal('engine-select-modal'); }
