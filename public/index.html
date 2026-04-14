@@ -174,6 +174,40 @@
     }
 </style>
 
+
+<style id="mobile-sidebar-fix-css">
+    @media screen and (max-width: 768px) {
+        /* 1. 修复遮罩层：从屏幕最顶部开始，并彻底盖住导航栏 */
+        .mobile-overlay {
+            top: 0 !important;
+            height: 100vh !important;
+            z-index: 10004 !important;
+        }
+        
+        /* 2. 修复侧边栏：全屏高度，处于世界最顶层，彻底解决穿透问题 */
+        .sidebar {
+            top: 0 !important;
+            height: 100vh !important;
+            z-index: 10005 !important;
+            padding-top: 15px !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.2) !important;
+        }
+        
+        /* 3. 视觉优化：给侧边栏加个专属的顶部标题，弥补盖住 Navbar 后的空白，原生 App 质感拉满 */
+        .sidebar::before {
+            content: '🚀 Manager Pro';
+            display: block;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+            padding: 10px 20px 20px 20px;
+            border-bottom: 1px dashed var(--border-color);
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+    }
+</style>
+
 </head>
 <body>
   <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-body);z-index:10000;display:none;align-items:center;justify-content:center;">
