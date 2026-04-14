@@ -47,6 +47,21 @@ db.pragma('journal_mode = WAL');
 db.exec(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, gid TEXT, url TEXT, filename TEXT, total_size INTEGER, downloaded_size INTEGER, speed INTEGER, progress REAL, status TEXT, engine TEXT, hash TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
 try { db.exec('ALTER TABLE tasks ADD COLUMN url TEXT'); } catch(e){}
 
+// 核心：安全删除并在咽气前记账
+function safeDeleteTask(field, value) {
+  try {
+    const t = db.prepare(`SELECT * FROM tasks WHERE ${field}=?`).get(value);
+    if(t) {
+        const dl = t.downloaded_size || 0; const up = t.uploaded_size || 0;
+        db.prepare(`INSERT INTO global_stats (engine, historical_dl, historical_up) VALUES (?, ?, ?) ON CONFLICT(engine) DO UPDATE SET historical_dl=historical_dl+?, historical_up=historical_up+?`).run(t.engine, dl, up, dl, up);
+        db.prepare(`DELETE FROM tasks WHERE ${field}=?`).run(value);
+    }
+  } catch(e){}
+}
+
+db.exec(`CREATE TABLE IF NOT EXISTS global_stats (engine TEXT PRIMARY KEY, historical_dl INTEGER DEFAULT 0, historical_up INTEGER DEFAULT 0)`);
+try { db.exec('ALTER TABLE tasks ADD COLUMN uploaded_size INTEGER DEFAULT 0'); } catch(e){}
+
 const aria2 = {
   async call(idx, method, params = []) {
     const srv = config.aria2[idx]; if(!srv) throw new Error('Aria2节点未配置');
@@ -102,6 +117,42 @@ app.post('/api/moviepilot/recognize', async (req, res) => {
     }
 });
 
+
+app.get('/api/tasks/:id/details', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(id);
+    if (!t) return res.json({ success: false, error: '任务不存在或已被彻底清除' });
+
+    const idx = parseInt(t.engine.split('_')[1]);
+    // 向 Aria2 索要底层详情
+    const status = await aria2.call(idx, 'tellStatus', [t.gid]);
+
+    // 提取并清洗文件列表
+    const files = (status.files || []).map(f => {
+        let name = f.path ? f.path.split(/[\\/]/).pop() : '未知文件';
+        if (!f.path && f.uris && f.uris.length > 0) {
+            name = decodeURIComponent(f.uris[0].uri.split('/').pop().split('?')[0]);
+        }
+        return { name: name, size: parseInt(f.length) || 0 };
+    });
+
+    res.json({
+        success: true,
+        engine: config.aria2[idx] ? config.aria2[idx].name : t.engine,
+        data: {
+            dir: status.dir || '未知',
+            connections: status.connections || 0,
+            numPieces: status.numPieces || 0,
+            infoHash: status.infoHash || ''
+        },
+        files: files
+    });
+  } catch (e) {
+    res.json({ success: false, error: 'Aria2 引擎查询失败: ' + e.message });
+  }
+});
+
 app.post('/api/tasks/:id/:act', async (req, res) => {
   const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(req.params.id); if(!t) return res.json({success:false});
   try {
@@ -112,7 +163,7 @@ app.post('/api/tasks/:id/:act', async (req, res) => {
   } catch(e){} 
   if(req.params.act==='pause') db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(t.id);
   if(req.params.act==='resume') db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(t.id);
-  if(req.params.act==='delete') db.prepare("DELETE FROM tasks WHERE id=?").run(t.id);
+  if(req.params.act==='delete') safeDeleteTask('id', t.id);
   res.json({success:true});
 });
 
@@ -128,7 +179,7 @@ app.post('/api/tasks/batch', async (req, res) => {
     } catch(e){}
     if(action==='pause') db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(id);
     if(action==='resume') db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(id);
-    if(action==='delete') db.prepare("DELETE FROM tasks WHERE id=?").run(id);
+    if(action==='delete') safeDeleteTask('id', id);
   }
   res.json({success:true});
 });
@@ -204,7 +255,10 @@ async function syncDatabase() {
         const upSpeed = parseInt(stat.uploadSpeed)||0;
         globalDlSpeed += dlSpeed; globalUpSpeed += upSpeed;
         
-        aNodesInfo.push({ online: true, name: config.aria2[i].name, dlSpeed, upSpeed, totalDl, totalUp });
+        const h = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?').get(`aria2_${i}`);
+        const finalDl = totalDl + (h ? h.historical_dl : 0);
+        const finalUp = totalUp + (h ? h.historical_up : 0);
+        aNodesInfo.push({ online: true, name: config.aria2[i].name, dlSpeed, upSpeed, totalDl: finalDl, totalUp: finalUp });
       } catch(e){ aNodesInfo.push({ online: false, name: config.aria2[i].name, dlSpeed:0, upSpeed:0, totalDl:0, totalUp:0 }); }
     }
   }
@@ -226,16 +280,17 @@ async function syncDatabase() {
         } catch(e) {}
         if (!fn || fn === '[METADATA]' || fn === '') fn = '种子元数据下载中...';
         
-        db.prepare('INSERT INTO tasks (id, gid, filename, total_size, downloaded_size, speed, progress, status, engine) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET filename=excluded.filename, total_size=excluded.total_size, downloaded_size=excluded.downloaded_size, speed=excluded.speed, progress=excluded.progress, status=excluded.status')
-          .run(t._uid, t.gid, fn, total, comp, speed, prog, st, t._eng);
+        const up = parseInt(t.uploadLength)||0;
+        db.prepare('INSERT INTO tasks (id, gid, filename, total_size, downloaded_size, uploaded_size, speed, progress, status, engine) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET filename=excluded.filename, total_size=excluded.total_size, downloaded_size=excluded.downloaded_size, uploaded_size=excluded.uploaded_size, speed=excluded.speed, progress=excluded.progress, status=excluded.status')
+          .run(t._uid, t.gid, fn, total, comp, up, speed, prog, st, t._eng);
       });
       
       db.prepare('SELECT id, engine FROM tasks').all().forEach(row => {
         if(!curIds.has(row.id)) {
           if (row.engine && row.engine.startsWith('aria2_')) {
             const idx = parseInt(row.engine.split('_')[1]);
-            if (aNodesInfo[idx] && aNodesInfo[idx].online) db.prepare('DELETE FROM tasks WHERE id=?').run(row.id);
-          } else { db.prepare('DELETE FROM tasks WHERE id=?').run(row.id); }
+            if (aNodesInfo[idx] && aNodesInfo[idx].online) safeDeleteTask('id', row.id);
+          } else { safeDeleteTask('id', row.id); }
         }
       });
     })();
@@ -306,7 +361,7 @@ app.post('/api/force_kill_task', async (req, res) => {
     await new Promise(r => setTimeout(r, 600));
     const removeRes = await makeReq('aria2.removeDownloadResult', [gid]);
     
-    try { if(typeof db !== 'undefined') { db.run('DELETE FROM downloads WHERE gid=?', [gid]); db.run('DELETE FROM tasks WHERE gid=?', [gid]); } } catch(e){}
+    try { if(typeof db !== 'undefined') { try{ db.prepare('DELETE FROM downloads WHERE gid=?').run(gid); }catch(e){} safeDeleteTask('gid', gid); } } catch(e){}
     
     res.json({success: true, message: '任务已彻底删除', debug_res: removeRes});
 });
