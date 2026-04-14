@@ -317,7 +317,7 @@
       </div>
       <div id="box-url"><textarea id="url-input" class="form-control" style="height:140px; font-family:monospace; font-size:12px;" placeholder="支持批量，每行一条 (HTTP/HTTPS/FTP/Magnet)"></textarea></div>
       <div id="box-torrent" style="display:none; padding:30px; border:2px dashed var(--primary); border-radius:var(--radius-sm); text-align:center; background:var(--primary-light);">
-        <input type="file" id="torrent-file" accept=".torrent" style="display:none;" onchange="document.getElementById('t-name').innerText=this.files[0]?this.files[0].name:'未选择文件';">
+        <input type="file" id="torrent-file" accept=".torrent" style="display:none;" onclick="this.value=null;" onchange="document.getElementById('t-name').innerText=this.files[0]?this.files[0].name:'未选择文件';">
         <div id="t-name" style="margin-bottom:15px; color:var(--primary); font-weight:bold; font-size:14px;">未选择文件</div>
         <button class="btn btn-primary" onclick="document.getElementById('torrent-file').click()">浏览本地 .torrent 文件</button>
       </div>
@@ -1058,8 +1058,18 @@ function renderTasks(){
       
       document.getElementById('rn-search').style.display = isSingle ? 'none' : 'block';
       document.getElementById('rn-search').value = isSingle ? Array.from(olSelected)[0] : '';
-      document.getElementById('rn-replace').value = isSingle ? Array.from(olSelected)[0] : '';
-      document.getElementById('rn-replace').placeholder = isSingle ? '请输入新文件名' : '替换为 (留空则删除)';
+          document.getElementById('rn-replace').value = isSingle ? Array.from(olSelected)[0] : '';
+          document.getElementById('rn-replace').placeholder = isSingle ? '请输入新文件名' : '替换为 (留空则删除)';
+          
+          // 🧹 彻底清空序列化残留与还原初始默认模式
+          if(document.getElementById('rn-format')) document.getElementById('rn-format').value = '';
+          if(document.getElementById('rn-start')) document.getElementById('rn-start').value = '1';
+          const rplRadio = document.getElementById('rn-type-replace');
+          if(rplRadio) { 
+              rplRadio.checked = true; 
+              document.getElementById('rn-replace-box').style.display='block'; 
+              document.getElementById('rn-seq-box').style.display='none'; 
+          }
       
       showModal('rename-modal'); updateRenamePreview();
     }
