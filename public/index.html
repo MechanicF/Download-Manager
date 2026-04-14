@@ -173,6 +173,7 @@
           <li class="sub-item" onclick="filterTasks('complete', this)">✅ 已完成 <span id="cnt-cp" style="float:right; opacity:0.6;"></span></li>
         </ul>
         <li class="nav-item" onclick="switchTab('openlist', this)">☁️ 云端文件</li>
+        <li class="nav-item" onclick="switchTab('pansou', this)">🔍 全网盘搜</li>
         <li class="nav-item" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:20px;" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
         <li><div id="sidebar-engines-status" style="padding:16px; font-size:12px; color:var(--text-muted); line-height:2.2;"></div></li>
       </ul>
@@ -217,6 +218,22 @@
         <div id="openlist-content" style="background:var(--card-bg); border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-x:auto;"></div>
       </div>
 
+      
+      <div id="section-pansou" class="section">
+        <div class="toolbar" style="border-left: 4px solid var(--primary);">
+          <input type="text" id="pansou-keyword" class="form-control" style="flex:1; max-width:400px; font-weight:bold;" placeholder="输入资源名称 (如: 庆余年)..." onkeyup="if(event.key==='Enter') doPansouSearch()">
+          <button class="btn btn-primary" onclick="doPansouSearch()" id="btn-pansou-search">🔍 搜索全网</button>
+        </div>
+        <div id="pansou-filter-bar" style="display:none; padding: 0 16px 12px 16px; gap: 8px; flex-wrap: wrap;"></div>
+        <div id="pansou-results" style="background:var(--card-bg); border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-x:auto;">
+          <div style="text-align:center; padding:100px 20px; color:var(--text-muted);">
+            <div style="font-size:50px; margin-bottom:20px; opacity:0.8;">🌐</div>
+            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">连接无垠网络</div>
+            <div style="font-size:12px; margin-top:10px;">输入关键字，检索各大网盘资源</div>
+          </div>
+        </div>
+      </div>
+
       <div id="section-settings" class="section">
         <div class="toolbar" style="border-left:4px solid var(--primary); justify-content:space-between;"><h3 style="margin:0;">⚙️ 系统核心配置</h3><button class="btn btn-primary" onclick="saveSettings()">💾 保存并应用</button></div>
         <div class="settings-grid">
@@ -233,7 +250,33 @@
               <button class="btn btn-success btn-sm" onclick="addOlAccount()">➕ 新增</button>
             </div>
             <div id="ol-accounts-container"></div>
-            <h4 style='margin-top:30px; margin-bottom:15px; color:#ff9c6e;'>🎬 MoviePilot 联动配置</h4><div class='config-card'><label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>MP API 地址 (包含端口)</label><input type='text' id='mp-url' class='form-control' style='margin-bottom:12px;' placeholder='http://ip:port'><label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>MP API Token</label><input type='password' id='mp-token' class='form-control' placeholder='API Token'></div><h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
+            
+            <h4 style='margin-top:30px; margin-bottom:15px; color:#1890ff;'>🔍 聚合盘搜配置</h4>
+            <div class='config-card'>
+              <div style="display:flex; gap:20px; margin-bottom:15px; border-bottom:1px dashed var(--border-color); padding-bottom:10px;">
+                 <label style="cursor:pointer; font-weight:600; font-size:13px; color:var(--primary);"><input type="radio" name="pansou_mode" value="default" onclick="togglePansouMode()" checked> 🟢 使用内置聚合引擎</label>
+                 <label style="cursor:pointer; font-weight:600; font-size:13px;"><input type="radio" name="pansou_mode" value="custom" onclick="togglePansouMode()"> ⚙️ 自定义接口</label>
+              </div>
+              <div id="pansou-custom-box" style="display:none; animation:fadeIn 0.3s ease;">
+                  <label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>自定义 API 地址 (必须使用 {k} 代表关键字)</label>
+                  <input type='text' id='pansou-url' class='form-control' placeholder='例如: http://192.168.1.100:8000/search?k={k}'>
+              </div>
+              <div id="pansou-default-tip" style="font-size:12px; color:var(--text-muted); line-height:1.6;">已启用系统内置的云盘聚合搜索引擎，支持全网资源检索。</div>
+            </div>
+            <h4 style='margin-top:30px; margin-bottom:15px; color:#ff9c6e;'>🎬 MoviePilot 联动配置</h4>
+            <div class='config-card'>
+              <div style="display:flex; gap:20px; margin-bottom:15px; border-bottom:1px dashed var(--border-color); padding-bottom:10px;">
+                 <label style="cursor:pointer; font-weight:600; font-size:13px; color:var(--primary);"><input type="radio" name="mp_mode" value="default" onclick="toggleMpMode()" checked> 🟢 使用内置默认服务</label>
+                 <label style="cursor:pointer; font-weight:600; font-size:13px;"><input type="radio" name="mp_mode" value="custom" onclick="toggleMpMode()"> ⚙️ 自定义私有服务</label>
+              </div>
+              <div id="mp-custom-box" style="display:none; animation:fadeIn 0.3s ease;">
+                  <label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>自定义 API 地址 (包含端口)</label>
+                  <input type='text' id='mp-url' class='form-control' style='margin-bottom:12px;' placeholder='例如: http://192.168.1.10:3000'>
+                  <label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>自定义 API Token</label>
+                  <input type='password' id='mp-token' class='form-control' placeholder='填写你的 Token'>
+              </div>
+              <div id="mp-default-tip" style="font-size:12px; color:var(--text-muted); line-height:1.6;">已启用系统内置的 AI 识别引擎，开箱即用，无需配置。</div>
+            </div><h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
             <div class="config-card">
               <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录账号</label>
               <input type="text" id="panel-user" class="form-control" style="margin-bottom:12px;">
@@ -361,6 +404,125 @@
     }
     function doLogout(){ localStorage.removeItem('manager_auth_token'); location.reload(); }
 
+    
+    
+    let globalPansouItems = []; // 保存全局搜索结果
+    let currentPansouFilter = 'all';
+
+    async function doPansouSearch() {
+        const k = document.getElementById('pansou-keyword').value.trim();
+        if (!k) return showToast('请输入搜索关键字', 'warning');
+        const btn = document.getElementById('btn-pansou-search');
+        btn.disabled = true; btn.textContent = '检索中...';
+        document.getElementById('pansou-results').innerHTML = '<div style="text-align:center; padding:80px; color:var(--primary);"><div style="font-size:40px; animation:spin-slow 2s linear infinite; margin-bottom:15px;">💫</div>正在穿透网络进行检索...</div>';
+        document.getElementById('pansou-filter-bar').style.display = 'none';
+
+        try {
+            const r = await api('/api/pansou/search', { method: 'POST', body: JSON.stringify({ keyword: k }) });
+            if (r.success) {
+                let items = [];
+                const rawData = r.data.data || r.data;
+                
+                // 提取并拍扁数据
+                if (rawData.merged_by_type) {
+                    for (const [diskType, fileList] of Object.entries(rawData.merged_by_type)) {
+                        if (Array.isArray(fileList)) {
+                            fileList.forEach(file => {
+                                file._diskType = diskType;
+                                items.push(file);
+                            });
+                        }
+                    }
+                } else {
+                    items = Array.isArray(rawData) ? rawData : (rawData.items || rawData.list || []);
+                    items.forEach(file => { if(!file._diskType) file._diskType = 'other'; });
+                }
+
+                globalPansouItems = items;
+
+                if (globalPansouItems.length === 0) {
+                    document.getElementById('pansou-results').innerHTML = '<div style="text-align:center; padding:80px; color:var(--text-muted);">未找到相关资源 📭</div>';
+                    return;
+                }
+
+                // 生成顶部分类过滤按钮
+                renderPansouFilters();
+                // 渲染全部结果
+                renderPansouResults('all');
+
+            } else {
+                document.getElementById('pansou-results').innerHTML = `<div style="text-align:center; padding:80px; color:var(--danger);">搜索失败: ${r.error}</div>`;
+            }
+        } catch(e) {
+            document.getElementById('pansou-results').innerHTML = '<div style="text-align:center; padding:80px; color:var(--danger);">请求异常，请检查后端网络</div>';
+        } finally {
+            btn.disabled = false; btn.textContent = '🔍 搜索全网';
+        }
+    }
+
+    function renderPansouFilters() {
+        const types = new Set(globalPansouItems.map(item => item._diskType || 'other'));
+        const filterBar = document.getElementById('pansou-filter-bar');
+        
+        if (types.size <= 1) {
+            filterBar.style.display = 'none';
+            return;
+        }
+
+        let html = `<button class="btn ${currentPansouFilter === 'all' ? 'btn-primary' : 'btn-default'} btn-sm" onclick="renderPansouResults('all')">全部 (${globalPansouItems.length})</button>`;
+        
+        Array.from(types).sort().forEach(type => {
+            const count = globalPansouItems.filter(i => (i._diskType || 'other') === type).length;
+            const displayName = type.toUpperCase();
+            html += `<button class="btn ${currentPansouFilter === type ? 'btn-primary' : 'btn-default'} btn-sm" onclick="renderPansouResults('${type}')">${displayName} (${count})</button>`;
+        });
+
+        filterBar.innerHTML = html;
+        filterBar.style.display = 'flex';
+    }
+
+    function renderPansouResults(filterType) {
+        currentPansouFilter = filterType;
+        renderPansouFilters(); // 刷新按钮高亮状态
+
+        const filteredItems = filterType === 'all' 
+            ? globalPansouItems 
+            : globalPansouItems.filter(item => (item._diskType || 'other') === filterType);
+
+        if (filteredItems.length === 0) {
+             document.getElementById('pansou-results').innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-muted);">该分类下暂无资源</div>';
+             return;
+        }
+
+        let h = '<table class="ol-table"><tr><th>资源名称</th><th style="width:150px;">附加信息</th><th style="width:140px;">操作</th></tr>';
+        filteredItems.forEach(item => {
+            const name = item.note || item.title || item.name || '未知资源';
+            const link = item.url || item.link || '';
+            const diskTag = item._diskType ? `<span style="background:var(--primary-light); color:var(--primary); padding:2px 6px; border-radius:4px; font-size:11px; margin-right:6px; font-weight:bold;">${item._diskType.toUpperCase()}</span>` : '';
+            const pwdTag = item.password ? `<span style="color:var(--warning); font-size:11px; border:1px solid var(--warning); padding:1px 4px; border-radius:4px; margin-left:6px;" title="提取码: ${item.password}">🔑 ${item.password}</span>` : '';
+            const meta = (item.datetime || item.date || '').split('T')[0] || item.size || '-';
+            
+            h += `<tr>
+                <td style="word-break:break-all; font-weight:500; color:var(--text-main);">${diskTag}${name}${pwdTag}</td>
+                <td style="color:var(--text-muted); font-size:12px;">${meta}</td>
+                <td>
+                    <a href="${link}" target="_blank" class="btn btn-info btn-sm" style="text-decoration:none; background:#722ed1;">🔗 打开</a>
+                    <button class="btn btn-default btn-sm" onclick="copyText('${link}${item.password ? ' 提取码:' + item.password : ''}')">📋 复制</button>
+                </td>
+            </tr>`;
+        });
+        h += '</table>';
+        document.getElementById('pansou-results').innerHTML = h;
+    }
+    
+
+    function copyText(txt) {
+        if (!txt) return showToast('链接为空', 'warning');
+        if(navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt); }
+        else { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+        showToast('链接已复制到剪贴板');
+    }
+
     function switchTab(id, el){
       document.querySelectorAll('.section').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
       const targetSec = document.getElementById('section-'+id);
@@ -455,7 +617,21 @@
     async function loadConfig(){
       const r = await api('/api/config'); if(r.error) return; sysConfig = r;
       document.getElementById('panel-user').value = r.auth?.username || 'admin';
-      document.getElementById('mp-url').value = r.moviepilot_url || '';
+      
+      const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== 'http://38.45.71.123:3000';
+      if (document.querySelector('input[name="mp_mode"][value="custom"]')) {
+          document.querySelector('input[name="mp_mode"][value="' + (isMpCustom ? 'custom' : 'default') + '"]').checked = true;
+          document.getElementById('mp-url').value = isMpCustom ? r.moviepilot_url : '';
+          document.getElementById('mp-token').value = isMpCustom ? r.moviepilot_token : '';
+          toggleMpMode();
+      }
+
+      const isPanCustom = r.pansou_url && r.pansou_url.length > 0 && r.pansou_url !== 'http://38.76.204.114:805/api/search?kw={k}';
+      if (document.querySelector('input[name="pansou_mode"][value="custom"]')) {
+          document.querySelector('input[name="pansou_mode"][value="' + (isPanCustom ? 'custom' : 'default') + '"]').checked = true;
+          if (document.getElementById('pansou-url')) document.getElementById('pansou-url').value = isPanCustom ? r.pansou_url : '';
+          togglePansouMode();
+      }
       document.getElementById('mp-token').value = r.moviepilot_token || '';
       
       const a2 = document.getElementById('aria2-nodes-container'); a2.innerHTML = '';
@@ -486,10 +662,12 @@
     async function saveSettings(){
       const aria2 = []; document.querySelectorAll('#aria2-nodes-container .config-card').forEach(c=>{ aria2.push({name:c.querySelector('.a2-name').value, url:c.querySelector('.a2-url').value, secret:c.querySelector('.a2-sec').value}); });
       const openlist = []; document.querySelectorAll('#ol-accounts-container .config-card').forEach(c=>{ openlist.push({name:c.querySelector('.ol-name').value, url:c.querySelector('.ol-url').value, token:c.querySelector('.ol-token').value}); });
-      const mpUrl = document.getElementById('mp-url').value; const mpToken = document.getElementById('mp-token').value;
+      const mpMode = document.querySelector('input[name="mp_mode"]:checked')?.value || 'default';
+      const mpUrl = mpMode === 'custom' ? document.getElementById('mp-url').value : '';
+      const mpToken = mpMode === 'custom' ? document.getElementById('mp-token').value : '';
       const u = document.getElementById('panel-user').value; const p = document.getElementById('panel-pass').value || sysConfig.auth.password;
       
-      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, auth:{username:u, password:p}})});
+      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, pansou_url: (document.querySelector('input[name="pansou_mode"]:checked')?.value === 'custom' && document.getElementById('pansou-url')) ? document.getElementById('pansou-url').value : '', auth:{username:u, password:p}})});
       showToast('核心配置保存成功！');
       authToken = btoa(u+':'+p); localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
       sysConfig = await api('/api/config'); populateSelects(); refreshTasks();
@@ -1029,6 +1207,26 @@ function renderTasks(){
     window.addEventListener('error', function(e) { addDebugLog('BUG', `${e.message}`, true); });
     window.addEventListener('unhandledrejection', function(e) { addDebugLog('BUG', `Promise: ${e.reason}`, true); });
 
+    
+    // 强制挂载到 window，确保哪怕在任何角落都能被点击事件找到
+    window.toggleMpMode = function() {
+        const customRadio = document.querySelector('input[name="mp_mode"][value="custom"]');
+        const isCustom = customRadio && customRadio.checked;
+        const box = document.getElementById('mp-custom-box');
+        const tip = document.getElementById('mp-default-tip');
+        if(box) box.style.display = isCustom ? 'block' : 'none';
+        if(tip) tip.style.display = isCustom ? 'none' : 'block';
+    };
+
+    window.togglePansouMode = function() {
+        const customRadio = document.querySelector('input[name="pansou_mode"][value="custom"]');
+        const isCustom = customRadio && customRadio.checked;
+        const box = document.getElementById('pansou-custom-box');
+        const tip = document.getElementById('pansou-default-tip');
+        if(box) box.style.display = isCustom ? 'block' : 'none';
+        if(tip) tip.style.display = isCustom ? 'none' : 'block';
+    };
+    
     initApp();
   </script>
 

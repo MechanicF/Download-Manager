@@ -92,11 +92,26 @@ app.post('/api/openlist/rename', async (req, res) => { const c=getOlConf(req.bod
 app.post('/api/openlist/remove', async (req, res) => { const c=getOlConf(req.body.olIdx); try{res.json((await axios.post(`${c.url}/api/fs/remove`,{dir:req.body.dir,names:req.body.names},{headers:{'Authorization':c.token||''}})).data);}catch(e){res.status(500).json({error:e.message});} });
 
 
+
+app.post('/api/pansou/search', async (req, res) => {
+    const { keyword } = req.body;
+    const pUrl = config.pansou_url || 'http://38.76.204.114:805/api/search?kw={k}';
+    
+    try {
+        // 将 {k} 替换为经过 URL 编码的关键字
+        const targetUrl = pUrl.replace('{k}', encodeURIComponent(keyword));
+        const r = await axios.get(targetUrl, { timeout: 15000 });
+        res.json({ success: true, data: r.data });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/moviepilot/recognize', async (req, res) => {
     const { filename } = req.body;
-    const mpUrl = config.moviepilot_url;
-    const mpToken = config.moviepilot_token;
-    if (!mpUrl || !mpToken) return res.json({ success: false, error: '请配置MP参数' });
+    const mpUrl = config.moviepilot_url || 'http://38.45.71.123:3000';
+    const mpToken = config.moviepilot_token || 'MechanicF_2026_SuperSecret';
+    
     try {
         const r = await axios.get(mpUrl.replace(/\/$/, '') + '/api/v1/media/recognize2', {
             params: { title: filename, token: mpToken },
