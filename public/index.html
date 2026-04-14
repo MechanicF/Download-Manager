@@ -1180,8 +1180,20 @@ function renderTasks(){
 
     function connectWS(){
       if(ws) ws.close(); 
-      const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${wsProto}//${location.host}/ws/tasks?token=${authToken}`);
+      
+      let wsUrl;
+      if (location.protocol === 'https:') {
+          // HTTPS 必定有代理环境
+          wsUrl = `wss://${location.host}/ws/tasks?token=${authToken}`;
+      } else {
+          // HTTP 环境下智能判断：如果有自定义端口且不是 80 (比如直连 IP:1111)
+          if (location.port && location.port !== '80') {
+              wsUrl = `ws://${location.hostname}:28080/tasks?token=${authToken}`; // 局域网直连模式
+          } else {
+              wsUrl = `ws://${location.host}/ws/tasks?token=${authToken}`; // Nginx 80 端口代理模式
+          }
+      }
+      ws = new WebSocket(wsUrl);
       const st = document.getElementById('ws-status');
       ws.onopen = () => { st.textContent = '🟢 引擎通讯中'; st.style.color = 'var(--success)'; };
       ws.onmessage = (e) => { const raw = JSON.parse(e.data); tasks = raw.filter(t => !deadTasks.has(t.id)); renderTasks(); };
