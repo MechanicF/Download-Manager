@@ -53,7 +53,6 @@
     .section { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
     .section.active { display: flex; }
     
-    /* === 动画补丁 === */
     @keyframes slideFadeIn { 0% { opacity: 0; transform: translateY(15px); filter: blur(2px); } 100% { opacity: 1; transform: translateY(0); filter: blur(0); } }
     @keyframes scaleIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -113,24 +112,18 @@
     @media (max-width: 768px) {
       .menu-toggle { display: inline-block; }
       .navbar { padding: 0 16px; }
-      .stat-item { display: none; } /* 隐藏顶部网速，节省空间 */
+      .stat-item { display: none; }
       #ws-status { display: inline-block !important; border:none; padding:0; background: transparent; }
       .sidebar { position: fixed; left: -260px; top: 56px; height: calc(100vh - 56px); width: 260px; transition: left 0.3s ease; z-index: 1000; }
       .sidebar.open { left: 0; box-shadow: 4px 0 16px rgba(0,0,0,0.2); }
       .content { padding: 16px 12px; }
-      
-      /* 工具栏弹性适配：允许换行，绝不拉伸变形 */
       .toolbar { padding: 12px; gap: 12px; }
       .toolbar > div { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
       .toolbar select, .toolbar input[type="text"] { flex: 1; min-width: 130px; }
-      
-      /* 批量操作栏：开启横向滚动，保护按钮原有比例 */
       .toolbar:nth-of-type(2) { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
       .toolbar:nth-of-type(2) > label { display: flex; align-items: center; white-space: nowrap; margin-right: 6px; }
       .toolbar:nth-of-type(2) button { flex: 0 0 auto; white-space: nowrap; }
       .toolbar:nth-of-type(2) > div { margin: 0 4px; }
-      
-      /* 下载卡片重排版：按逻辑层级自然堆叠 */
       .task-card { padding: 14px; }
       .task-header { flex-direction: column; align-items: flex-start; gap: 12px; }
       .task-title { width: 100%; }
@@ -138,21 +131,11 @@
       .task-actions button { flex: 0 1 auto; padding: 6px 14px; font-size: 13px; }
       .task-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
       .meta-right { width: 100%; display: flex; justify-content: space-between; margin-top: 4px; }
-      
-      /* 设置与云盘适配 */
       .settings-grid { flex-direction: column; gap: 16px; }
       .settings-col { width: 100%; min-width: auto; }
       .ol-table th:nth-child(4), .ol-table td:nth-child(4) { display: none; }
-      
-      /* 🚀 灵动岛在手机端的专属姿态：悬浮通知式 */
-      #push-queue-container {
-        position: fixed; top: 66px; left: 50%; transform: translateX(-50%);
-        width: 90%; margin: 0 !important; z-index: 1050;
-      }
-      #push-queue-container > div {
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
-        border: 1px solid var(--primary) !important; background: var(--card-bg) !important;
-      }
+      #push-queue-container { position: fixed; top: 66px; left: 50%; transform: translateX(-50%); width: 90%; margin: 0 !important; z-index: 1050; }
+      #push-queue-container > div { box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important; border: 1px solid var(--primary) !important; background: var(--card-bg) !important; }
     }
   </style>
 </head>
@@ -216,7 +199,6 @@
             <button class="btn btn-success btn-sm" onclick="batchTaskAction('resume')">继续</button>
             <button class="btn btn-danger btn-sm" onclick="batchTaskAction('delete')">删除</button>
         </div>
-        
         <div id="task-list" style="padding-bottom: 20px;"></div>
       </div>
 
@@ -251,7 +233,6 @@
               <button class="btn btn-success btn-sm" onclick="addOlAccount()">➕ 新增</button>
             </div>
             <div id="ol-accounts-container"></div>
-            
             <h4 style='margin-top:30px; margin-bottom:15px; color:#ff9c6e;'>🎬 MoviePilot 联动配置</h4><div class='config-card'><label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>MP API 地址 (包含端口)</label><input type='text' id='mp-url' class='form-control' style='margin-bottom:12px;' placeholder='http://ip:port'><label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>MP API Token</label><input type='password' id='mp-token' class='form-control' placeholder='API Token'></div><h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
             <div class="config-card">
               <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录账号</label>
@@ -322,9 +303,10 @@
   <div class="modal-overlay" id="rename-modal">
     <div class="modal" style="width: 500px;">
       <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;" id="rename-title">✏️ 重命名</h3><button class="btn btn-default btn-sm" onclick="hideModal('rename-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
-      <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector"><button class='btn btn-default btn-sm' id='btn-ai-recognize' onclick='aiSmartRecognize()' style='border-color:#ff9c6e; color:#ff9c6e; font-weight:bold; margin-left:10px;'>✨ AI 智能识别</button>
-          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; updateRenamePreview();"> 查找替换</label>
-          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 序列化</label>
+      <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector">
+          <button class='btn btn-default btn-sm' id='btn-ai-recognize' onclick='aiSmartRecognize()' style='border-color:#ff9c6e; color:#ff9c6e; font-weight:bold; margin-right:10px;'>✨ AI 智能识别</button>
+          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" id="rn-type-replace" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; updateRenamePreview();"> 替换/单文件</label>
+          <label style="cursor:pointer; font-weight:600; margin-left:10px;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 序列化</label>
       </div>
       <div id="rn-replace-box">
           <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;" oninput="updateRenamePreview()">
@@ -332,7 +314,7 @@
       </div>
       <div id="rn-seq-box" style="display:none;">
           <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; background:var(--hover-bg); padding:8px; border-radius:4px;">变量: <code>{n}</code> 代表递增数字，<code>{ext}</code> 代表原后缀</div>
-          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集_S01E{n}{ext}" style="margin-bottom:10px;" oninput="updateRenamePreview()">
+          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集.S01.E{n}{ext}" style="margin-bottom:10px;" oninput="updateRenamePreview()">
           <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字" oninput="updateRenamePreview()">
       </div>
       <div id="rn-preview-box" style="margin-top:15px; max-height:180px; overflow-y:auto; background:var(--bg-body); border-radius:4px; padding:10px; border:1px solid var(--input-border); font-size:12px; display:none;"></div>
@@ -380,17 +362,9 @@
     function doLogout(){ localStorage.removeItem('manager_auth_token'); location.reload(); }
 
     function switchTab(id, el){
-      // 🔥 暴力镇压：绝对隐藏所有无关界面
-      document.querySelectorAll('.section').forEach(s => {
-          s.classList.remove('active');
-          s.style.display = 'none'; 
-      });
-      
+      document.querySelectorAll('.section').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
       const targetSec = document.getElementById('section-'+id);
-      if(targetSec) { 
-          targetSec.classList.add('active'); 
-          targetSec.style.display = 'flex'; // 绝对显示当前界面
-      }
+      if(targetSec) { targetSec.classList.add('active'); targetSec.style.display = 'flex'; }
       
       document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active')); if(el) el.classList.add('active');
       if(id==='settings') loadConfig();
@@ -398,48 +372,31 @@
       if(typeof closeMobileMenu === 'function') closeMobileMenu();
     }
 
-    // --- 双模高级参数编辑器 ---
-    let currentEditEngineId = 0;
-    let isRawConfigMode = false;
-    const aria2ConfigMap = [
-      { key: 'dir', label: '📂 默认下载路径', desc: '文件保存的绝对路径 (如: /downloads)' },
-      { key: 'max-concurrent-downloads', label: '🚦 最大并行任务数', desc: '同时允许下载的任务数量 (建议 3-5)' },
-      { key: 'split', label: '🔪 单文件最大线程', desc: '下载单个文件时使用的最大连接数 (最高 16)' },
-      { key: 'max-connection-per-server', label: '🌐 单服务器最大连接', desc: '每个服务器允许的最大连接数 (最高 16)' },
-      { key: 'min-split-size', label: '🧩 最小分片大小', desc: '文件分块大小 (如: 10M, 20M)' },
-      { key: 'max-overall-download-limit', label: '⬇️ 全局下载限速', desc: '0 为不限速 (如: 0, 5M, 500K)' },
-      { key: 'max-overall-upload-limit', label: '⬆️ 全局上传限速', desc: '0 为不限速 (如: 0, 2M, 100K)' },
-      { key: 'seed-time', label: '🌱 做种时间 (分钟)', desc: 'BT 完成后的最小做种时间 (0 为不做种)' }
-    ];
+    let currentEditEngineId = 0; let isRawConfigMode = false;
+    const aria2ConfigMap = [ { key: 'dir', label: '📂 默认下载路径', desc: '文件保存的绝对路径' }, { key: 'max-concurrent-downloads', label: '🚦 最大并行任务数', desc: '同时允许下载的任务数量' }, { key: 'split', label: '🔪 单文件最大线程', desc: '下载单个文件时使用的最大连接数' }, { key: 'max-connection-per-server', label: '🌐 单服务器最大连接', desc: '每个服务器允许的最大连接数' }, { key: 'min-split-size', label: '🧩 最小分片大小', desc: '文件分块大小 (如: 10M)' }, { key: 'max-overall-download-limit', label: '⬇️ 全局下载限速', desc: '0 为不限速' }, { key: 'max-overall-upload-limit', label: '⬆️ 全局上传限速', desc: '0 为不限速' }, { key: 'seed-time', label: '🌱 做种时间 (分钟)', desc: '0 为不做种' } ];
 
     function toggleConfigMode() {
       isRawConfigMode = !isRawConfigMode;
       document.getElementById('engine-config-visual').style.display = isRawConfigMode ? 'none' : 'grid';
       document.getElementById('engine-config-raw').style.display = isRawConfigMode ? 'flex' : 'none';
       document.getElementById('btn-toggle-cfg').innerHTML = isRawConfigMode ? '🎨 切换至可视化模式' : '💻 切换至源码模式';
-      
       if (isRawConfigMode) {
         try {
           let payload = JSON.parse(document.getElementById('engine-config-json-input').value || '{}');
-          aria2ConfigMap.forEach(item => {
-            const el = document.getElementById(`cfg-${item.key}`);
-            if(el) payload[item.key] = el.value;
-          });
+          aria2ConfigMap.forEach(item => { const el = document.getElementById(`cfg-${item.key}`); if(el) payload[item.key] = el.value; });
           document.getElementById('engine-config-json-input').value = JSON.stringify(payload, null, 2);
         } catch(e) {}
       }
     }
 
     async function openEngineConfigView(idx) {
-      currentEditEngineId = idx;
-      isRawConfigMode = false; 
+      currentEditEngineId = idx; isRawConfigMode = false; 
       document.getElementById('engine-config-visual').style.display = 'grid';
       document.getElementById('engine-config-raw').style.display = 'none';
       document.getElementById('btn-toggle-cfg').innerHTML = '💻 切换至源码模式';
       
       switchTab('engine-config');
       document.getElementById('engine-config-title').textContent = `⚙️ 参数调优 (节点 ${idx+1})`;
-      
       const vContainer = document.getElementById('engine-config-visual');
       vContainer.innerHTML = '<div style="color:var(--primary); padding:20px; font-weight:bold; font-size:16px;">正在拉取引擎底层配置...</div>';
       document.getElementById('engine-config-json-input').value = '拉取中...';
@@ -450,25 +407,20 @@
         let formHtml = '';
         aria2ConfigMap.forEach(item => {
           const val = r.data[item.key] !== undefined ? r.data[item.key] : '';
-          formHtml += `
-            <div class="config-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:center; box-shadow:var(--shadow-sm); border-top:3px solid var(--primary-light);">
+          formHtml += `<div class="config-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:center; box-shadow:var(--shadow-sm); border-top:3px solid var(--primary-light);">
               <label style="font-weight:bold; color:var(--text-main); margin-bottom:6px; font-size:14px;">${item.label}</label>
               <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; min-height:36px;">${item.desc}</div>
               <input type="text" id="cfg-${item.key}" class="form-control" value="${val}" style="border-color:#d9d9d9; font-family:monospace; color:var(--primary); font-weight:600;">
-            </div>
-          `;
+            </div>`;
         });
         vContainer.innerHTML = formHtml;
-      } else {
-        vContainer.innerHTML = `<div style="color:var(--danger); padding:20px;">拉取失败: ${r.error}</div>`;
-      }
+      } else { vContainer.innerHTML = `<div style="color:var(--danger); padding:20px;">拉取失败: ${r.error}</div>`; }
     }
 
     async function saveEngineConfig() {
       let payload = {};
       if (isRawConfigMode) {
-        try { payload = JSON.parse(document.getElementById('engine-config-json-input').value); } 
-        catch(e) { return showToast('JSON 格式错误，请检查语法', 'error'); }
+        try { payload = JSON.parse(document.getElementById('engine-config-json-input').value); } catch(e) { return showToast('JSON 格式错误，请检查语法', 'error'); }
       } else {
         try { payload = JSON.parse(document.getElementById('engine-config-json-input').value || '{}'); } catch(e) { payload = {}; }
         aria2ConfigMap.forEach(item => { const el = document.getElementById(`cfg-${item.key}`); if(el) payload[item.key] = el.value; });
@@ -478,9 +430,7 @@
       btn.innerHTML = '🔄 应用中...'; btn.disabled = true;
       const r = await api(`/api/engine/aria2/${currentEditEngineId}/config`, {method:'POST', body:JSON.stringify(payload)});
       btn.innerHTML = orgText; btn.disabled = false;
-      
-      if(r.success) { showToast('Aria2 参数已应用生效！'); switchTab('settings'); }
-      else showToast('保存失败: ' + r.error, 'error');
+      if(r.success) { showToast('Aria2 参数已应用生效！'); switchTab('settings'); } else showToast('保存失败: ' + r.error, 'error');
     }
 
     function toggleTaskType(){
@@ -513,10 +463,7 @@
         a2.innerHTML += `<div class="config-card">
           <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;">
             <span style="font-weight:bold; color:var(--text-main);">节点 ${i+1}</span>
-            <div>
-              <button class="btn btn-default btn-sm" onclick="openEngineConfigView(${i})">⚙️ 参数</button>
-              <button onclick="this.parentElement.parentElement.parentElement.remove()" style="border:none;background:none;font-size:16px;cursor:pointer;color:var(--text-muted);margin-left:10px;">✖</button>
-            </div>
+            <div><button class="btn btn-default btn-sm" onclick="openEngineConfigView(${i})">⚙️ 参数</button><button onclick="this.parentElement.parentElement.parentElement.remove()" style="border:none;background:none;font-size:16px;cursor:pointer;color:var(--text-muted);margin-left:10px;">✖</button></div>
           </div>
           <input type="text" class="form-control a2-name" value="${n.name}" style="margin-bottom:8px;" placeholder="节点名称">
           <input type="text" class="form-control a2-url" value="${n.url}" style="margin-bottom:8px;" placeholder="http://ip:6800/jsonrpc">
@@ -539,8 +486,7 @@
     async function saveSettings(){
       const aria2 = []; document.querySelectorAll('#aria2-nodes-container .config-card').forEach(c=>{ aria2.push({name:c.querySelector('.a2-name').value, url:c.querySelector('.a2-url').value, secret:c.querySelector('.a2-sec').value}); });
       const openlist = []; document.querySelectorAll('#ol-accounts-container .config-card').forEach(c=>{ openlist.push({name:c.querySelector('.ol-name').value, url:c.querySelector('.ol-url').value, token:c.querySelector('.ol-token').value}); });
-      const mpUrl = document.getElementById('mp-url').value;
-      const mpToken = document.getElementById('mp-token').value;
+      const mpUrl = document.getElementById('mp-url').value; const mpToken = document.getElementById('mp-token').value;
       const u = document.getElementById('panel-user').value; const p = document.getElementById('panel-pass').value || sysConfig.auth.password;
       
       await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, auth:{username:u, password:p}})});
@@ -562,17 +508,14 @@
       let o = ''; (sysConfig.openlist||[]).forEach((n,i)=> o+=`<option value="${i}">☁️ ${n.name}</option>`);
       if(document.getElementById('ol-account-select')) { 
           document.getElementById('ol-account-select').innerHTML = o || '<option value="">请先添加云盘</option>';
-          if(curOlAcc && sysConfig.openlist && sysConfig.openlist.length > curOlAcc) {
-              document.getElementById('ol-account-select').value = curOlAcc;
-          }
+          if(curOlAcc && sysConfig.openlist && sysConfig.openlist.length > curOlAcc) document.getElementById('ol-account-select').value = curOlAcc;
       }
     }
 
     async function refreshTasks(){
       const s = await api('/api/global-stats');
-      if (document.getElementById('global-speed')) {
-        document.getElementById('global-speed').innerHTML = `⬇️ ${formatSize(s.globalDlSpeed)}/s <span style="color:var(--border-color);margin:0 5px;">|</span> ⬆️ ${formatSize(s.globalUpSpeed)}/s`;
-      }
+      if(s.error) return; // 避免未授权报错
+      if (document.getElementById('global-speed')) document.getElementById('global-speed').innerHTML = `⬇️ ${formatSize(s.globalDlSpeed)}/s <span style="color:var(--border-color);margin:0 5px;">|</span> ⬆️ ${formatSize(s.globalUpSpeed)}/s`;
       
       let html = '';
       (s.aria2Nodes||[]).forEach((n,i) => {
@@ -596,9 +539,7 @@
                     </div>`;
         }
       });
-      if (document.getElementById('sidebar-engines-status')) {
-        document.getElementById('sidebar-engines-status').innerHTML = html || '<div style="text-align:center; padding:20px; color:var(--warning); border:1px dashed var(--warning); border-radius:var(--radius-sm);">未配置任何引擎节点</div>';
-      }
+      if (document.getElementById('sidebar-engines-status')) document.getElementById('sidebar-engines-status').innerHTML = html || '<div style="text-align:center; padding:20px; color:var(--warning); border:1px dashed var(--warning); border-radius:var(--radius-sm);">未配置任何引擎节点</div>';
     }
 
     function filterTasks(f, el){ document.querySelectorAll('.sub-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); currentTaskFilter = f; selectedTasks.clear(); renderTasks(); switchTab('downloads', document.querySelector('.sidebar-menu .nav-item')); closeMobileMenu(); }
@@ -606,57 +547,89 @@
     function toggleAllTasks(c) { const f = getFilteredTasks(); if(c) f.forEach(t=>selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
     function getFilteredTasks() { return tasks.filter(t => currentTaskFilter==='all' || (currentTaskFilter==='downloading' && t.status==='downloading') || (currentTaskFilter==='waiting' && (t.status==='waiting'||t.status==='paused')) || (currentTaskFilter==='complete' && (t.status==='complete'||t.status==='error'))); }
 
+    
+    let globalTaskDeleteQueue = []; let isTaskDeleting = false; let taskDeleteStats = { total: 0, current: 0, success: 0, fail: 0 };
+
     async function batchTaskAction(act){
       if(selectedTasks.size===0) return showToast('请先选择任务', 'error');
       if(act==='delete' && !confirm(`确定删除选中的 ${selectedTasks.size} 个任务吗？`)) return;
-      
       if(act === 'delete') {
-          for(let id of selectedTasks) {
+          selectedTasks.forEach(id => {
               const parts = id.split('_'); const eIdx = parseInt(parts[0].replace('aria2', ''), 10) || 0; const gid = parts[1];
               const config = sysConfig.aria2[eIdx];
-              if(config) {
-                  await api('/api/force_kill_task', {method:'POST', body:JSON.stringify({url: config.url, secret: config.secret, gid: gid})});
-                  document.getElementById('t-'+id)?.remove(); deadTasks.add(id); 
-              }
-          }
-      } else {
-          await api('/api/tasks/batch', {method:'POST', body:JSON.stringify({ids:Array.from(selectedTasks), action:act})});
+              // 提取任务名称用于进度条显示
+              const t = tasks.find(x => x.id === id); const name = t && t.filename ? t.filename : gid;
+              if(config) globalTaskDeleteQueue.push({ id, gid, url: config.url, secret: config.secret, name });
+          });
+          taskDeleteStats.total += globalTaskDeleteQueue.length;
+          selectedTasks.clear(); processTaskDeleteQueue();
+      } else { 
+          await api('/api/tasks/batch', {method:'POST', body:JSON.stringify({ids:Array.from(selectedTasks), action:act})}); 
+          selectedTasks.clear(); showToast('指令已下发'); refreshTasks();
       }
-      selectedTasks.clear(); showToast('指令已下发'); refreshTasks();
     }
     
     async function singleAction(id, act, btn){ 
         if(act==='delete' && !confirm('确认彻底删除该任务及其记录吗？')) return; 
         if(btn) { btn.style.opacity='0.5'; btn.disabled=true; }
-        
         if(act === 'delete') {
             const parts = id.split('_'); const eIdx = parseInt(parts[0].replace('aria2', ''), 10) || 0; const gid = parts[1];
             const config = sysConfig.aria2[eIdx];
-            if(config) {
-                await api('/api/force_kill_task', {method:'POST', body:JSON.stringify({url: config.url, secret: config.secret, gid: gid})});
-                document.getElementById('t-'+id)?.remove(); deadTasks.add(id); 
-                showToast('任务已彻底抹杀');
+            const t = tasks.find(x => x.id === id); const name = t && t.filename ? t.filename : gid;
+            if(config) { 
+                globalTaskDeleteQueue.push({ id, gid, url: config.url, secret: config.secret, name }); 
+                taskDeleteStats.total += 1; processTaskDeleteQueue(); 
             }
-        } else {
-            await api(`/api/tasks/${id}/${act}`, {method:'POST'}); 
-        }
+        } else { await api(`/api/tasks/${id}/${act}`, {method:'POST'}); }
     }
 
-    function renderTasks(){
-      const dl = tasks.filter(t => t.status === 'downloading').length;
-      const wt = tasks.filter(t => t.status === 'waiting' || t.status === 'paused').length;
-      const cp = tasks.filter(t => t.status === 'complete' || t.status === 'error').length;
+    async function processTaskDeleteQueue() {
+      if (isTaskDeleting) return; isTaskDeleting = true; const qContainer = document.getElementById('push-queue-container');
+      if (!document.getElementById('task-delete-capsule')) {
+        qContainer.insertAdjacentHTML('beforeend', `<div id="task-delete-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
+             <span style="font-size:13px; font-weight:bold; color:var(--danger); white-space:nowrap;">🗑️ 抹杀 <span id="txt-tdel-prog">0/0</span></span>
+             <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
+                <div id="bar-tdel-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #ff4d4f, #cf1322); transition:width 0.3s ease;"></div>
+             </div>
+             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;"><span style="color:var(--success);">✅<span id="suc-tdel-prog">0</span></span><span style="color:var(--danger);">❌<span id="fail-tdel-prog">0</span></span></span>
+             <span id="st-tdel-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">启动中</span>
+          </div>`);
+      }
+      while (globalTaskDeleteQueue.length > 0) {
+        const task = globalTaskDeleteQueue.shift(); taskDeleteStats.current++;
+        const stProg = document.getElementById('st-tdel-prog'); if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
+        try {
+          const r = await api('/api/force_kill_task', {method:'POST', body:JSON.stringify({url: task.url, secret: task.secret, gid: task.gid})});
+          if(r.success) { taskDeleteStats.success++; document.getElementById('t-'+task.id)?.remove(); deadTasks.add(task.id); } 
+          else taskDeleteStats.fail++;
+        } catch (e) { taskDeleteStats.fail++; }
+        
+        const percent = Math.round((taskDeleteStats.current / taskDeleteStats.total) * 100);
+        const bar = document.getElementById('bar-tdel-prog'); if(bar) bar.style.width = percent + '%';
+        const txt = document.getElementById('txt-tdel-prog'); if(txt) txt.textContent = `${taskDeleteStats.current}/${taskDeleteStats.total}`;
+        const suc = document.getElementById('suc-tdel-prog'); if(suc) suc.textContent = taskDeleteStats.success;
+        const fail = document.getElementById('fail-tdel-prog'); if(fail) fail.textContent = taskDeleteStats.fail;
+      }
+      const stFinal = document.getElementById('st-tdel-prog'); if(stFinal) { stFinal.textContent = '清理完成'; stFinal.style.color = 'var(--success)'; }
+      const barFinal = document.getElementById('bar-tdel-prog'); if(barFinal) barFinal.style.background = 'var(--success)';
       
+      setTimeout(() => {
+        const el = document.getElementById('task-delete-capsule');
+        if(el && globalTaskDeleteQueue.length === 0) { 
+           el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease'; 
+           setTimeout(() => { if(globalTaskDeleteQueue.length === 0) { el.remove(); taskDeleteStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); 
+        }
+        isTaskDeleting = false; 
+      }, 4000);
+    }
+    
+function renderTasks(){
+      const dl = tasks.filter(t => t.status === 'downloading').length; const wt = tasks.filter(t => t.status === 'waiting' || t.status === 'paused').length; const cp = tasks.filter(t => t.status === 'complete' || t.status === 'error').length;
       const updateTxt = (id, txt) => { const el = document.getElementById(id); if(el && el.textContent !== String(txt)) el.textContent = txt; };
-      updateTxt('cnt-all', tasks.length > 0 ? `(${tasks.length})` : '');
-      updateTxt('cnt-dl', dl > 0 ? `(${dl})` : '');
-      updateTxt('cnt-wt', wt > 0 ? `(${wt})` : '');
-      updateTxt('cnt-cp', cp > 0 ? `(${cp})` : '');
+      updateTxt('cnt-all', tasks.length > 0 ? `(${tasks.length})` : ''); updateTxt('cnt-dl', dl > 0 ? `(${dl})` : ''); updateTxt('cnt-wt', wt > 0 ? `(${wt})` : ''); updateTxt('cnt-cp', cp > 0 ? `(${cp})` : '');
 
-      const list = document.getElementById('task-list');
-      let filtered = getFilteredTasks();
+      const list = document.getElementById('task-list'); let filtered = getFilteredTasks();
       
-      // 🌟 自然排序算法引入
       filtered.sort((a,b)=>{
         let c=0;
         if(taskSortBy==='created_at') c = new Date(a.created_at.replace(' ','T')).getTime() - new Date(b.created_at.replace(' ','T')).getTime();
@@ -667,10 +640,7 @@
       });
 
       const cIds = new Set(filtered.map(t=>t.id));
-      Array.from(list.children).forEach(c=>{ 
-          if(c.id === 'empty-state-view') return; 
-          if(!cIds.has(c.id.replace('t-',''))) c.remove(); 
-      });
+      Array.from(list.children).forEach(c=>{ if(c.id === 'empty-state-view') return; if(!cIds.has(c.id.replace('t-',''))) c.remove(); });
       
       const selectAllCb = document.getElementById('task-select-all');
       if(selectAllCb) selectAllCb.checked = filtered.length > 0 && selectedTasks.size === filtered.length;
@@ -678,22 +648,14 @@
       if(filtered.length===0) {
         if(list.dataset.emptyFilter === currentTaskFilter) return; 
         list.dataset.emptyFilter = currentTaskFilter;
-        
         let eIco = '📭', eTxt = '任务列表空空如也', eSub = '去【云端文件】挑选一些资源推送过来吧 ~';
         if (currentTaskFilter === 'downloading') { eIco = '🚀'; eTxt = '当前没有正在狂飙的任务'; eSub = '去新建任务添加几个下载链接吧！'; }
         else if (currentTaskFilter === 'waiting') { eIco = '⏸️'; eTxt = '没有被暂停或等待中的任务'; eSub = '所有任务都在顺利进行中 ~'; }
         else if (currentTaskFilter === 'complete') { eIco = '✅'; eTxt = '还没有已完成的任务'; eSub = '耐心等待一下，美好的事物即将降临 ~'; }
-        
-        list.innerHTML = `<div id="empty-state-view" style="text-align:center;padding:120px 20px;color:var(--text-muted);animation: fadeIn 0.15s ease-out;">
-          <div style="font-size:65px;margin-bottom:20px;display:inline-block;animation: float 3s ease-in-out infinite;">${eIco}</div>
-          <div style="font-size:17px;font-weight:600;color:var(--text-main);letter-spacing:1px;">${eTxt}</div>
-          <div style="font-size:13px;margin-top:12px;opacity:0.7;">${eSub}</div>
-        </div>`;
+        list.innerHTML = `<div id="empty-state-view" style="text-align:center;padding:120px 20px;color:var(--text-muted);animation: fadeIn 0.15s ease-out;"><div style="font-size:65px;margin-bottom:20px;display:inline-block;animation: float 3s ease-in-out infinite;">${eIco}</div><div style="font-size:17px;font-weight:600;color:var(--text-main);letter-spacing:1px;">${eTxt}</div><div style="font-size:13px;margin-top:12px;opacity:0.7;">${eSub}</div></div>`;
         return;
       }
-      list.dataset.emptyFilter = '';
-      const emptyView = document.getElementById('empty-state-view');
-      if(emptyView) emptyView.remove(); // 🔥 核心修复：有任务来时，立刻销毁空状态占位符！
+      list.dataset.emptyFilter = ''; const emptyView = document.getElementById('empty-state-view'); if(emptyView) emptyView.remove();
 
       filtered.forEach((t, i) => {
         let card = document.getElementById('t-'+t.id);
@@ -703,41 +665,21 @@
         
         if(!card){
           card = document.createElement('div'); card.id = 't-'+t.id;
-          card.innerHTML = `<div class="task-header">
-            <div class="task-title" style="flex:1; display:flex; align-items:flex-start;"><input type="checkbox" style="margin-right:12px; margin-top:4px;" class="cb"> <span class="nm" style="word-break:break-all; font-weight:600;"></span></div>
-            <div class="task-actions"></div>
-          </div>
-          <div class="progress-wrapper"><div class="progress-bar" style="width:0%;"></div><div class="progress-text" style="position:absolute;width:100%;text-align:center;font-size:10px;font-weight:bold;color:#333;z-index:1;"></div></div>
-          <div class="task-meta" style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted);">
-            <div class="meta-left"><span style="background:var(--bg-body);padding:2px 8px;border-radius:10px;font-size:11px;border:1px solid var(--border-color);" class="tg"></span> <span class="st" style="font-weight:600;margin-left:8px;"></span> <span style="color:var(--border-color);margin:0 8px;">|</span> <span class="inf"></span></div>
-            <div class="meta-right"></div>
-          </div>`;
+          card.innerHTML = `<div class="task-header"><div class="task-title" style="flex:1; display:flex; align-items:flex-start;"><input type="checkbox" style="margin-right:12px; margin-top:4px;" class="cb"> <span class="nm" style="word-break:break-all; font-weight:600;"></span></div><div class="task-actions"></div></div><div class="progress-wrapper"><div class="progress-bar" style="width:0%;"></div><div class="progress-text" style="position:absolute;width:100%;text-align:center;font-size:10px;font-weight:bold;color:#333;z-index:1;"></div></div><div class="task-meta" style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted);"><div class="meta-left"><span style="background:var(--bg-body);padding:2px 8px;border-radius:10px;font-size:11px;border:1px solid var(--border-color);" class="tg"></span> <span class="st" style="font-weight:600;margin-left:8px;"></span> <span style="color:var(--border-color);margin:0 8px;">|</span> <span class="inf"></span></div><div class="meta-right"></div></div>`;
         }
         
         if (card.className !== `task-card ${t.status}`) card.className = `task-card ${t.status}`;
-        
-        const cb = card.querySelector('.cb');
-        if (cb.checked !== selectedTasks.has(t.id)) cb.checked = selectedTasks.has(t.id);
-        cb.onchange = (e) => toggleTask(t.id, e.target.checked);
+        const cb = card.querySelector('.cb'); if (cb.checked !== selectedTasks.has(t.id)) cb.checked = selectedTasks.has(t.id); cb.onchange = (e) => toggleTask(t.id, e.target.checked);
         
         const safeTxt = (cls, val) => { const el = card.querySelector(cls); if(el && el.textContent !== String(val)) el.textContent = val; };
-        safeTxt('.nm', t.filename || '解析中...');
-        safeTxt('.progress-text', prog+'%');
-        safeTxt('.tg', eTag);
-        safeTxt('.inf', `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`);
+        safeTxt('.nm', t.filename || '解析中...'); safeTxt('.progress-text', prog+'%'); safeTxt('.tg', eTag); safeTxt('.inf', `${formatSize(t.downloaded_size)} / ${formatSize(t.total_size)}`);
         
-        const pb = card.querySelector('.progress-bar');
-        if (pb.style.width !== prog+'%') pb.style.width = prog+'%';
-        
+        const pb = card.querySelector('.progress-bar'); if (pb.style.width !== prog+'%') pb.style.width = prog+'%';
         const rightHtml = t.status==='downloading' ? `<span style="color:var(--primary);">⬇️ ${formatSize(t.speed)}/s</span> <span style="font-weight:normal;color:var(--text-muted); margin-left:10px;">⏳ ${formatTime(eta)}</span>` : '';
-        if (card.dataset.lastRight !== rightHtml) {
-            card.querySelector('.meta-right').innerHTML = rightHtml;
-            card.dataset.lastRight = rightHtml;
-        }
+        if (card.dataset.lastRight !== rightHtml) { card.querySelector('.meta-right').innerHTML = rightHtml; card.dataset.lastRight = rightHtml; }
         
         if (card.dataset.status !== t.status) {
-            card.dataset.status = t.status;
-            let stHtml = '';
+            card.dataset.status = t.status; let stHtml = '';
             if(t.status==='downloading') stHtml = '<span style="display:inline-block;animation:spin-slow 2.5s linear infinite;margin-right:4px;">⚙️</span><span style="color:var(--primary);">下载中</span>';
             else if(t.status==='waiting') stHtml = '<span style="display:inline-block;animation:float 2s ease-in-out infinite;margin-right:4px;">⏳</span><span style="color:var(--warning);">等待中</span>';
             else if(t.status==='paused') stHtml = '<span style="display:inline-block;animation:blink 1.5s infinite;margin-right:4px;">⏸️</span><span style="color:var(--warning);">已暂停</span>';
@@ -751,7 +693,6 @@
             opHtml += `<button class="btn btn-default btn-sm" onclick="singleAction('${t.id}','delete',this)"><span style="color:var(--danger);">删除</span></button>`;
             card.querySelector('.task-actions').innerHTML = opHtml;
         }
-        
         if(list.children[i] !== card) list.insertBefore(card, list.children[i]);
       });
     }
@@ -759,11 +700,9 @@
     async function showTaskDetails(id){
       document.getElementById('task-detail-content').innerHTML = '<div style="text-align:center; padding: 20px; color: var(--primary);">正在抓取底层数据...</div>';
       showModal('task-detail-modal');
-      const r = await api(`/api/tasks/${id}/details`);
-      const c = document.getElementById('task-detail-content');
+      const r = await api(`/api/tasks/${id}/details`); const c = document.getElementById('task-detail-content');
       if(r.success && r.data){
-        let h = `<div class="detail-row"><div class="detail-label">物理引擎</div><div class="detail-value">🟣 ${r.engine}</div></div><div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${r.data.dir}</div></div><div class="detail-row"><div class="detail-label">并发连接数</div><div class="detail-value">${r.data.connections} 个线程</div></div><div class="detail-row"><div class="detail-label">文件切片数</div><div class="detail-value">${r.data.numPieces} 块</div></div><div class="detail-row"><div class="detail-label">InfoHash</div><div class="detail-value" style="font-size:11px;">${r.data.infoHash||'无'}</div></div>`;
-        h += `<div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;"><strong style="color:var(--text-main);">📁 包含的文件列表：</strong></div><div style="max-height:200px; overflow-y:auto; background:var(--bg-body); padding:10px; margin-top:10px; border-radius:var(--radius-sm); border:1px solid var(--input-border);">`;
+        let h = `<div class="detail-row"><div class="detail-label">物理引擎</div><div class="detail-value">🟣 ${r.engine}</div></div><div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${r.data.dir}</div></div><div class="detail-row"><div class="detail-label">并发连接数</div><div class="detail-value">${r.data.connections} 个线程</div></div><div class="detail-row"><div class="detail-label">文件切片数</div><div class="detail-value">${r.data.numPieces} 块</div></div><div class="detail-row"><div class="detail-label">InfoHash</div><div class="detail-value" style="font-size:11px;">${r.data.infoHash||'无'}</div></div><div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;"><strong style="color:var(--text-main);">📁 包含的文件列表：</strong></div><div style="max-height:200px; overflow-y:auto; background:var(--bg-body); padding:10px; margin-top:10px; border-radius:var(--radius-sm); border:1px solid var(--input-border);">`;
         if(!r.files || r.files.length===0) h+=`<div style="text-align:center; color:var(--text-muted);">暂无文件信息</div>`;
         (r.files||[]).forEach(f => h+=`<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="word-break:break-all;">${f.name}</span><span style="color:var(--text-muted); flex-shrink:0; margin-left:10px;">${formatSize(f.size)}</span></div>`);
         c.innerHTML = h + `</div>`;
@@ -771,23 +710,18 @@
     }
 
     async function addDownload(){
-      const eng = document.getElementById('task-engine-select').value;
-      const type = document.querySelector('input[name="task_type"]:checked').value;
+      const eng = document.getElementById('task-engine-select').value; const type = document.querySelector('input[name="task_type"]:checked').value;
       const btn = event.currentTarget; btn.disabled = true; btn.textContent = '投递中...';
-      
       if(type==='url'){
-        const url = document.getElementById('url-input').value;
-        const r = await api('/api/download', {method:'POST', body:JSON.stringify({url, engine:eng})});
-        if(r.success) { hideModal('new-task-modal'); showToast(r.message); refreshTasks(); }
-        else showToast(r.error||'添加任务失败', 'error');
+        const url = document.getElementById('url-input').value; const r = await api('/api/download', {method:'POST', body:JSON.stringify({url, engine:eng})});
+        if(r.success) { hideModal('new-task-modal'); showToast(r.message); refreshTasks(); } else showToast(r.error||'添加任务失败', 'error');
       } else {
         const file = document.getElementById('torrent-file').files[0];
         if(!file) { showToast('请先选择种子文件', 'warning'); btn.disabled=false; btn.textContent='🚀 开始投递'; return; }
         const reader = new FileReader();
         reader.onload = async(e)=>{
           const r = await api('/api/upload', {method:'POST', body:JSON.stringify({engine:eng, filename:file.name, fileBase64:e.target.result.split(',')[1]})});
-          if(r.success) { hideModal('new-task-modal'); showToast(r.message); refreshTasks(); }
-          else showToast(r.error||'种子解析失败', 'error');
+          if(r.success) { hideModal('new-task-modal'); showToast(r.message); refreshTasks(); } else showToast(r.error||'种子解析失败', 'error');
         };
         reader.readAsDataURL(file);
       }
@@ -800,74 +734,44 @@
       const r = await api('/api/openlist/list', {method:'POST', body:JSON.stringify({olIdx:parseInt(idx), path})});
       if(r.code===200){
         currentOpenListPath = path; document.getElementById('openlist-path').value = path; olFiles = r.data.content||[]; olSelected.clear();
-        const ss = localStorage.getItem('dm_ol_sort_'+path);
-        if(ss){ const p=ss.split('_'); olSortBy=p[0]; olSortDesc=p[1]==='true'; } else { olSortBy='name'; olSortDesc=false; }
+        const ss = localStorage.getItem('dm_ol_sort_'+path); if(ss){ const p=ss.split('_'); olSortBy=p[0]; olSortDesc=p[1]==='true'; } else { olSortBy='name'; olSortDesc=false; }
         renderOpenList();
       } else { c.innerHTML = `<div style="text-align:center;padding:60px;color:var(--danger);">拉取失败: ${r.error || r.message || '网络异常'}</div>`; }
     }
     function openListGoUp(){ if(currentOpenListPath==='/') return; const p=currentOpenListPath.split('/'); p.pop(); loadOpenList(p.join('/')||'/'); }
     
-    function sortOpenList(f){
-      if(olSortBy===f) olSortDesc=!olSortDesc; else {olSortBy=f; olSortDesc=false;}
-      localStorage.setItem('dm_ol_sort_'+currentOpenListPath, `${olSortBy}_${olSortDesc}`);
-      renderOpenList();
-    }
+    function sortOpenList(f){ if(olSortBy===f) olSortDesc=!olSortDesc; else {olSortBy=f; olSortDesc=false;} localStorage.setItem('dm_ol_sort_'+currentOpenListPath, `${olSortBy}_${olSortDesc}`); renderOpenList(); }
 
     function renderOpenList(){
-      // 🌟 自然排序算法引入
       olFiles.sort((a,b)=>{
         if(a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-        let c=0; 
-        if(olSortBy==='name') c=a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}); 
-        else if(olSortBy==='size') c=a.size-b.size; 
-        else c=new Date(a.modified)-new Date(b.modified);
-        return olSortDesc?-c:c;
+        let c=0; if(olSortBy==='name') c=a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}); else if(olSortBy==='size') c=a.size-b.size; else c=new Date(a.modified)-new Date(b.modified); return olSortDesc?-c:c;
       });
-      const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : '';
-      const allC = olFiles.length>0 && olSelected.size===olFiles.length ? 'checked' : '';
+      const getIco = (f) => f===olSortBy ? (olSortDesc?'▼':'▲') : ''; const allC = olFiles.length>0 && olSelected.size===olFiles.length ? 'checked' : '';
       let html = `<table class="ol-table"><tr><th style="width:40px;"><input type="checkbox" class="custom-checkbox" ${allC} onclick="olFiles.forEach(f=>olSelected[this.checked?'add':'delete'](f.name));renderOpenList();"></th><th onclick="sortOpenList('name')">文件名称 <span style="font-size:10px;">${getIco('name')}</span></th><th onclick="sortOpenList('size')" style="width:120px;">大小 <span style="font-size:10px;">${getIco('size')}</span></th><th onclick="sortOpenList('time')" style="width:180px;">修改时间 <span style="font-size:10px;">${getIco('time')}</span></th></tr>`;
       olFiles.forEach((f, i)=>{
-        const chk = olSelected.has(f.name)?'checked':'';
-        const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${f.name}')` : `olSelected.has('${f.name}')?olSelected.delete('${f.name}'):olSelected.add('${f.name}');renderOpenList();`;
-        html += `<tr style="animation: slideFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: ${Math.min(i * 0.025, 0.5)}s; opacity: 0;"><td><input type="checkbox" class="custom-checkbox" ${chk} onclick="if(this.checked)olSelected.add('${f.name}');else olSelected.delete('${f.name}');renderOpenList();"></td>
-        <td style="cursor:pointer; color:var(--text-main);" onclick="${act}"><span style="font-size:16px; margin-right:8px;">${f.is_dir?'📁':'📄'}</span> <span style="word-break:break-all;">${f.name}</span></td>
-        <td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
+        const chk = olSelected.has(f.name)?'checked':''; const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${f.name}')` : `olSelected.has('${f.name}')?olSelected.delete('${f.name}'):olSelected.add('${f.name}');renderOpenList();`;
+        const renameBtn = f.is_dir ? "" : `<span onclick="event.stopPropagation(); renameFile('${f.name}')" style="margin-left:8px; cursor:pointer; opacity:0.5;" title="重命名">✏️</span>`;
+        html += `<tr style="animation: slideFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: ${Math.min(i * 0.025, 0.5)}s; opacity: 0;"><td><input type="checkbox" class="custom-checkbox" ${chk} onclick="if(this.checked)olSelected.add('${f.name}');else olSelected.delete('${f.name}');renderOpenList();"></td><td style="cursor:pointer; color:var(--text-main);" onclick="${act}"><span style="font-size:16px; margin-right:8px;">${f.is_dir?'📁':'📄'}</span> <span style="word-break:break-all;">${f.name}</span>${renameBtn}</td><td style="color:var(--text-muted);">${f.is_dir?'-':formatSize(f.size)}</td><td style="color:var(--text-muted);">${new Date(f.modified).toLocaleString()}</td></tr>`;
       });
       document.getElementById('openlist-content').innerHTML = html+'</table>';
-      const cntSpan = document.getElementById('ol-selected-count');
-      if (cntSpan) {
-        cntSpan.style.display = olSelected.size > 0 ? 'inline-block' : 'none';
-        cntSpan.textContent = `已选择 ${olSelected.size} 项`;
-      }
-      document.getElementById('btn-ol-download').style.display = olSelected.size>0?'inline-block':'none';
-      document.getElementById('btn-ol-rename').style.display = olSelected.size>0?'inline-block':'none';
-      document.getElementById('btn-ol-delete').style.display = olSelected.size>0?'inline-block':'none';
+      const cntSpan = document.getElementById('ol-selected-count'); if (cntSpan) { cntSpan.style.display = olSelected.size > 0 ? 'inline-block' : 'none'; cntSpan.textContent = `已选择 ${olSelected.size} 项`; }
+      document.getElementById('btn-ol-download').style.display = olSelected.size>0?'inline-block':'none'; document.getElementById('btn-ol-rename').style.display = olSelected.size>0?'inline-block':'none'; document.getElementById('btn-ol-delete').style.display = olSelected.size>0?'inline-block':'none';
     }
 
     function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateSelects(); showModal('engine-select-modal'); }
 
     let globalPushQueue = []; let isPushing = false; let pushStats = { total: 0, current: 0, success: 0, fail: 0 };
-
     async function executeOlDownload() {
-      const eng = document.getElementById('ol-engine-select').value;
-      const idx = document.getElementById('ol-account-select').value;
-      const tasksToProcess = Array.from(olSelected);
-      const parentPath = currentOpenListPath;
-
+      const eng = document.getElementById('ol-engine-select').value; const idx = document.getElementById('ol-account-select').value; const tasksToProcess = Array.from(olSelected); const parentPath = currentOpenListPath;
       if(tasksToProcess.length === 0) return;
       hideModal('engine-select-modal');
-      switchTab('downloads', document.querySelector('.sidebar-menu .nav-item'));
-
       tasksToProcess.forEach(n => { globalPushQueue.push({ name: n, fullPath: parentPath === '/' ? `/${n}` : `${parentPath}/${n}`, idx: idx, eng: eng }); });
-      pushStats.total += tasksToProcess.length;
-      olSelected.clear(); renderOpenList();
-      processPushQueue();
+      pushStats.total += tasksToProcess.length; olSelected.clear(); renderOpenList(); processPushQueue();
     }
 
     async function processPushQueue() {
-      if (isPushing) return; isPushing = true;
-      const qContainer = document.getElementById('push-queue-container');
-      
+      if (isPushing) return; isPushing = true; const qContainer = document.getElementById('push-queue-container');
       if (!document.getElementById('push-capsule')) {
         qContainer.innerHTML = `<div id="push-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);">
              <span style="font-size:13px; font-weight:bold; color:var(--primary); white-space:nowrap;">🚀 推送 <span id="txt-push-prog">0/0</span></span>
@@ -878,11 +782,9 @@
              <span id="st-push-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">启动中</span>
           </div>`;
       }
-
       while (globalPushQueue.length > 0) {
         const task = globalPushQueue.shift(); pushStats.current++;
         const stProg = document.getElementById('st-push-prog'); if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
-
         try {
           const r = await api('/api/openlist/get', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), path:task.fullPath})});
           if(r.code === 200 && r.data){
@@ -892,117 +794,128 @@
             if(dr.success) pushStats.success++; else pushStats.fail++;
           } else { pushStats.fail++; }
         } catch (e) { pushStats.fail++; }
-        
         const percent = Math.round((pushStats.current / pushStats.total) * 100);
         const bar = document.getElementById('bar-push-prog'); if(bar) bar.style.width = percent + '%';
         const txt = document.getElementById('txt-push-prog'); if(txt) txt.textContent = `${pushStats.current}/${pushStats.total}`;
         const suc = document.getElementById('suc-push-prog'); if(suc) suc.textContent = pushStats.success;
         const fail = document.getElementById('fail-push-prog'); if(fail) fail.textContent = pushStats.fail;
       }
-
       const stFinal = document.getElementById('st-push-prog'); if(stFinal) { stFinal.textContent = '队列已清空'; stFinal.style.color = 'var(--success)'; }
       const barFinal = document.getElementById('bar-push-prog'); if(barFinal) barFinal.style.background = 'var(--success)';
       refreshTasks();
-      
       setTimeout(() => {
         const el = document.getElementById('push-capsule');
-        if(el && globalPushQueue.length === 0) { 
-           el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease';
-           setTimeout(() => { if(globalPushQueue.length === 0) { el.remove(); pushStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); 
-        }
+        if(el && globalPushQueue.length === 0) { el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease'; setTimeout(() => { if(globalPushQueue.length === 0) { el.remove(); pushStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); }
         isPushing = false; 
       }, 4000);
     }
     
-    // 🌟 全新加入：重命名实时预览
+    // 🌟 单/多文件重命名统一入口
+    function renameFile(name){
+        if(typeof olSelected === 'undefined') return;
+        olSelected.clear(); olSelected.add(name);
+        const replaceRadio = document.getElementById('rn-type-replace');
+        if(replaceRadio) { replaceRadio.checked = true; document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; }
+        showRenameModal();
+    }
+
     function showRenameModal() { 
       if(olSelected.size===0) return; 
-      document.getElementById('rename-title').innerHTML = olSelected.size===1?'✏️ 单文件重命名':`✏️ 批量重命名 (${olSelected.size}项)`;
-      document.getElementById('rename-mode-selector').style.display = olSelected.size===1?'none':'flex';
-      document.getElementById('rn-search').value = olSelected.size===1?Array.from(olSelected)[0]:'';
-      document.getElementById('rn-replace').value = '';
-      showModal('rename-modal'); 
-      updateRenamePreview();
+      const isSingle = olSelected.size === 1;
+      document.getElementById('rename-title').innerHTML = isSingle ? '✏️ 单文件重命名' : `✏️ 批量重命名 (${olSelected.size}项)`;
+      
+      const radios = document.querySelectorAll('input[name="rn_type"]');
+      radios.forEach(r => r.parentElement.style.display = isSingle ? 'none' : '');
+      
+      document.getElementById('rn-search').style.display = isSingle ? 'none' : 'block';
+      document.getElementById('rn-search').value = isSingle ? Array.from(olSelected)[0] : '';
+      document.getElementById('rn-replace').value = isSingle ? Array.from(olSelected)[0] : '';
+      document.getElementById('rn-replace').placeholder = isSingle ? '请输入新文件名' : '替换为 (留空则删除)';
+      
+      showModal('rename-modal'); updateRenamePreview();
     }
 
     function updateRenamePreview() {
       const mode = document.querySelector('input[name="rn_type"]:checked').value;
-      const search = document.getElementById('rn-search').value; 
-      const replace = document.getElementById('rn-replace').value;
-      const fmt = document.getElementById('rn-format').value; 
-      let startNum = parseInt(document.getElementById('rn-start').value)||1;
-      
-      const box = document.getElementById('rn-preview-box');
-      if(!box) return;
-      if (olSelected.size <= 1) { box.style.display = 'none'; return; } 
-      box.style.display = 'block';
+      const search = document.getElementById('rn-search').value; const replace = document.getElementById('rn-replace').value; const fmt = document.getElementById('rn-format').value; let startNum = parseInt(document.getElementById('rn-start').value)||1;
+      const box = document.getElementById('rn-preview-box'); if(!box) return;
+      if (olSelected.size <= 1) { box.style.display = 'none'; return; } box.style.display = 'block';
       
       let pHtml = '<div style="font-weight:bold; margin-bottom:8px; color:var(--text-muted);">👀 变更预览 (滑动查看)：</div>';
       const sortedNames = Array.from(olSelected).sort((a,b)=>a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
       sortedNames.forEach(n => {
         let newName = n;
-        if(mode==='replace' && search) newName = n.split(search).join(replace);
-        else if(mode==='seq' && fmt) {
-          const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : '';
-          newName = fmt.replace('{ext}', ext).replace('{n}', startNum++);
-        }
-        
-        if (newName !== n) {
-            pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--danger); text-decoration:line-through; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;" title="${n}">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--success); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%; font-weight:bold;" title="${newName}">${newName}</span></div>`;
-        } else {
-            pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">(无变化)</span></div>`;
-        }
+        if(mode==='replace' && search) newName = n.split(search).join(replace); else if(mode==='seq' && fmt) { const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : ''; newName = fmt.replace('{ext}', ext).replace('{n}', startNum++); }
+        if (newName !== n) pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--danger); text-decoration:line-through; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;" title="${n}">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--success); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%; font-weight:bold;" title="${newName}">${newName}</span></div>`;
+        else pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">(无变化)</span></div>`;
       });
       box.innerHTML = pHtml;
     }
-    
+
+    let globalRenameQueue = []; let isRenaming = false; let renameStats = { total: 0, current: 0, success: 0, fail: 0 };
     async function submitRename() {
-      const idx = document.getElementById('ol-account-select').value;
-      const mode = document.querySelector('input[name="rn_type"]:checked').value;
-      const search = document.getElementById('rn-search').value; const replace = document.getElementById('rn-replace').value;
-      const fmt = document.getElementById('rn-format').value; let startNum = parseInt(document.getElementById('rn-start').value)||1;
-      
-      let sc = 0; hideModal('rename-modal'); showToast('开始处理...');
-      
-      // 🚀 必须自然排序提交，防止集数打乱
+      const idx = document.getElementById('ol-account-select').value; const mode = document.querySelector('input[name="rn_type"]:checked').value;
+      const search = document.getElementById('rn-search').value; const replace = document.getElementById('rn-replace').value; const fmt = document.getElementById('rn-format').value; let startNum = parseInt(document.getElementById('rn-start').value)||1;
+      hideModal('rename-modal');
       const sortedNames = Array.from(olSelected).sort((a,b)=>a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+      const parentPath = currentOpenListPath;
       for (const n of sortedNames) {
         let newName = n;
         if(olSelected.size===1) newName = replace || search;
         else if(mode==='replace' && search) newName = n.split(search).join(replace);
-        else if(mode==='seq' && fmt) {
-          const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : '';
-          newName = fmt.replace('{ext}', ext).replace('{n}', startNum++);
-        }
-        if(newName !== n) {
-          const path = currentOpenListPath==='/'?`/${n}`:`${currentOpenListPath}/${n}`;
-          const r = await api('/api/openlist/rename', {method:'POST', body:JSON.stringify({olIdx:parseInt(idx), path, name:newName})});
-          if(r.code===200) sc++;
-        }
+        else if(mode==='seq' && fmt) { const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : ''; newName = fmt.replace('{ext}', ext).replace('{n}', startNum++); }
+        if(newName !== n) globalRenameQueue.push({ oldName: n, newName: newName, path: parentPath==='/'?`/${n}`:`${parentPath}/${n}`, idx: idx });
       }
-      showToast(`重命名完成，共修改 ${sc} 项`); loadOpenList();
+      if(globalRenameQueue.length === 0) return showToast('没有文件名称发生变化');
+      renameStats.total += globalRenameQueue.length; olSelected.clear(); renderOpenList(); processRenameQueue();
+    }
+
+    async function processRenameQueue() {
+      if (isRenaming) return; isRenaming = true; const qContainer = document.getElementById('push-queue-container');
+      if (!document.getElementById('rename-capsule')) {
+        qContainer.insertAdjacentHTML('beforeend', `<div id="rename-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
+             <span style="font-size:13px; font-weight:bold; color:#faad14; white-space:nowrap;">✏️ 改名 <span id="txt-rn-prog">0/0</span></span>
+             <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
+                <div id="bar-rn-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #faad14, #d48806); transition:width 0.3s ease;"></div>
+             </div>
+             <span style="font-size:12px; white-space:nowrap; display:flex; gap:6px; font-weight:600;"><span style="color:var(--success);">✅<span id="suc-rn-prog">0</span></span><span style="color:var(--danger);">❌<span id="fail-rn-prog">0</span></span></span>
+             <span id="st-rn-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">启动中</span>
+          </div>`);
+      }
+      while (globalRenameQueue.length > 0) {
+        const task = globalRenameQueue.shift(); renameStats.current++;
+        const stProg = document.getElementById('st-rn-prog'); if(stProg) { stProg.textContent = task.newName; stProg.title = task.newName; }
+        try {
+          const r = await api('/api/openlist/rename', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), path:task.path, name:task.newName})});
+          if(r.code===200) renameStats.success++; else renameStats.fail++;
+        } catch (e) { renameStats.fail++; }
+        const percent = Math.round((renameStats.current / renameStats.total) * 100);
+        const bar = document.getElementById('bar-rn-prog'); if(bar) bar.style.width = percent + '%';
+        const txt = document.getElementById('txt-rn-prog'); if(txt) txt.textContent = `${renameStats.current}/${renameStats.total}`;
+        const suc = document.getElementById('suc-rn-prog'); if(suc) suc.textContent = renameStats.success;
+        const fail = document.getElementById('fail-rn-prog'); if(fail) fail.textContent = renameStats.fail;
+      }
+      const stFinal = document.getElementById('st-rn-prog'); if(stFinal) { stFinal.textContent = '修改完成'; stFinal.style.color = 'var(--success)'; }
+      const barFinal = document.getElementById('bar-rn-prog'); if(barFinal) barFinal.style.background = 'var(--success)';
+      loadOpenList();
+      setTimeout(() => {
+        const el = document.getElementById('rename-capsule');
+        if(el && globalRenameQueue.length === 0) { el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease'; setTimeout(() => { if(globalRenameQueue.length === 0) { el.remove(); renameStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); }
+        isRenaming = false; 
+      }, 4000);
     }
 
     let globalDeleteQueue = []; let isDeleting = false; let deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
-
     async function deleteSelectedFiles(){
-      const tasksToProcess = Array.from(olSelected);
-      if(tasksToProcess.length === 0) return;
+      const tasksToProcess = Array.from(olSelected); if(tasksToProcess.length === 0) return;
       if(!confirm(`危险操作：确定要彻底删除云端的 ${tasksToProcess.length} 个文件吗？此操作不可逆！`)) return;
-
-      const idx = document.getElementById('ol-account-select').value;
-      const parentPath = currentOpenListPath;
-
+      const idx = document.getElementById('ol-account-select').value; const parentPath = currentOpenListPath;
       tasksToProcess.forEach(n => { globalDeleteQueue.push({ name: n, fullPath: parentPath, idx: idx }); });
-      deleteStats.total += tasksToProcess.length;
-      olSelected.clear(); renderOpenList(); 
-      processDeleteQueue();
+      deleteStats.total += tasksToProcess.length; olSelected.clear(); renderOpenList(); processDeleteQueue();
     }
 
     async function processDeleteQueue() {
-      if (isDeleting) return; isDeleting = true;
-      const qContainer = document.getElementById('push-queue-container');
-      
+      if (isDeleting) return; isDeleting = true; const qContainer = document.getElementById('push-queue-container');
       if (!document.getElementById('delete-capsule')) {
         qContainer.insertAdjacentHTML('beforeend', `<div id="delete-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
              <span style="font-size:13px; font-weight:bold; color:var(--danger); white-space:nowrap;">🗑️ 删除 <span id="txt-del-prog">0/0</span></span>
@@ -1013,33 +926,25 @@
              <span id="st-del-prog" style="font-size:11px; color:var(--text-muted); max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">启动中</span>
           </div>`);
       }
-
       while (globalDeleteQueue.length > 0) {
         const task = globalDeleteQueue.shift(); deleteStats.current++;
         const stProg = document.getElementById('st-del-prog'); if(stProg) { stProg.textContent = task.name; stProg.title = task.name; }
-
         try {
           const r = await api('/api/openlist/remove', {method:'POST', body:JSON.stringify({olIdx:parseInt(task.idx), dir:task.fullPath, names:[task.name]})});
           if(r.code === 200) deleteStats.success++; else deleteStats.fail++;
         } catch (e) { deleteStats.fail++; }
-        
         const percent = Math.round((deleteStats.current / deleteStats.total) * 100);
         const bar = document.getElementById('bar-del-prog'); if(bar) bar.style.width = percent + '%';
         const txt = document.getElementById('txt-del-prog'); if(txt) txt.textContent = `${deleteStats.current}/${deleteStats.total}`;
         const suc = document.getElementById('suc-del-prog'); if(suc) suc.textContent = deleteStats.success;
         const fail = document.getElementById('fail-del-prog'); if(fail) fail.textContent = deleteStats.fail;
       }
-
       const stFinal = document.getElementById('st-del-prog'); if(stFinal) { stFinal.textContent = '清理完成'; stFinal.style.color = 'var(--success)'; }
       const barFinal = document.getElementById('bar-del-prog'); if(barFinal) barFinal.style.background = 'var(--success)';
       loadOpenList();
-      
       setTimeout(() => {
         const el = document.getElementById('delete-capsule');
-        if(el && globalDeleteQueue.length === 0) { 
-           el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease';
-           setTimeout(() => { if(globalDeleteQueue.length === 0) { el.remove(); deleteStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); 
-        }
+        if(el && globalDeleteQueue.length === 0) { el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; el.style.transition = 'all 0.4s ease'; setTimeout(() => { if(globalDeleteQueue.length === 0) { el.remove(); deleteStats = { total: 0, current: 0, success: 0, fail: 0 }; } }, 400); }
         isDeleting = false; 
       }, 4000);
     }
@@ -1052,39 +957,34 @@
       ws.onclose = () => { st.textContent = '🔴 引擎失联'; st.style.color = 'var(--danger)'; setTimeout(connectWS, 3000); };
     }
 
-    // 🌟 加入后端宕机拦截机制
-    
-async function aiSmartRecognize() {
-    const btn = document.getElementById('btn-ai-recognize');
-    const oldText = btn.textContent;
-    const selected = Array.from(olSelected);
-    if (selected.length === 0) return;
-    btn.disabled = true; btn.textContent = '🕵️ 识别中...';
-    try {
-        const r = await api('/api/moviepilot/recognize', { method: 'POST', body: JSON.stringify({ filename: selected[0] }) });
-        if (r.success) {
-            const mode = document.querySelector('input[name="rn_type"]:checked').value;
-            let ext = selected.length === 1 && selected[0].includes('.') ? selected[0].substring(selected[0].lastIndexOf('.')) : '';
-            if (mode === 'replace') {
-                document.getElementById('rn-replace').value = r.cleanName + ext;
-            } else if (mode === 'seq') {
-                let seqBase = r.cleanName.replace(/\.?E\d+$/, '');
-                document.getElementById('rn-format').value = seqBase + '.E{n}{ext}';
-            }
-            showToast('识别完成！已填入'); updateRenamePreview();
-        } else { showToast(r.error, 'error'); }
-    } catch (e) { showToast('识别引擎异常', 'error'); } finally { btn.disabled = false; btn.textContent = oldText; }
-}
+    async function aiSmartRecognize() {
+        const btn = document.getElementById('btn-ai-recognize'); const oldText = btn.textContent;
+        const selected = Array.from(olSelected); if (selected.length === 0) return;
+        
+        btn.disabled = true; btn.textContent = '🕵️ 识别中...';
+        try {
+            const r = await api('/api/moviepilot/recognize', { method: 'POST', body: JSON.stringify({ filename: selected[0] }) });
+            if (r.success) {
+                const mode = document.querySelector('input[name="rn_type"]:checked').value;
+                let ext = selected[0].includes('.') ? selected[0].substring(selected[0].lastIndexOf('.')) : '';
+                if (mode === 'replace') document.getElementById('rn-replace').value = r.cleanName + ext;
+                else if (mode === 'seq') { let seqBase = r.cleanName.replace(/\.?E\d+$/, ''); document.getElementById('rn-format').value = seqBase + '.E{n}{ext}'; }
+                showToast('识别完成！已填入'); updateRenamePreview();
+            } else { showToast(r.error, 'error'); }
+        } catch (e) { showToast('识别引擎异常', 'error'); } finally { btn.disabled = false; btn.textContent = oldText; }
+    }
 
-async function initApp(){ 
+    async function initApp(){ 
       document.getElementById('task-sort-select').value = savedSort;
       if(!authToken) { document.getElementById('login-screen').style.display='flex'; return; } 
       try {
-          sysConfig = await api('/api/config'); 
+          const cfgRes = await api('/api/config'); 
+          if (cfgRes.error) return; // 💡 致命错误拦截：防止 token 过期导致静默崩溃
+          sysConfig = cfgRes; 
           populateSelects();
           refreshTasks(); 
           connectWS(); 
-          setInterval(refreshTasks, 3000); 
+          setInterval(refreshTasks, 6000); 
       } catch(e) {
           showToast('无法连接后端服务，请检查 app.js 是否宕机！', 'error');
           document.getElementById('ws-status').textContent = '🔴 服务宕机';
@@ -1103,8 +1003,7 @@ async function initApp(){
       if(window.isDebugPaused) return; 
       if(document.getElementById('ignore-stats')?.checked && typeof msg === 'string' && msg.includes('global-stats')) return; 
 
-      const c = document.getElementById('debug-content');
-      if(!c) return;
+      const c = document.getElementById('debug-content'); if(!c) return;
       const t = new Date().toLocaleTimeString('en-US', {hour12:false}) + '.' + new Date().getMilliseconds().toString().padStart(3,'0');
       const color = isErr ? '#f14c4c' : (type==='REQ' ? '#c586c0' : (type==='RES' ? '#4ec9b0' : '#dcdcaa'));
       const div = document.createElement('div');
@@ -1112,8 +1011,7 @@ async function initApp(){
       let msgStr = typeof msg === 'object' ? JSON.stringify(msg) : msg;
       if(msgStr && msgStr.length > 600) msgStr = msgStr.substring(0, 600) + ' ... [已截断]';
       div.innerHTML = `<span style="color:#858585">[${t}]</span> <span style="color:${color};font-weight:bold;width:50px;display:inline-block;">[${type}]</span> ${msgStr}`;
-      c.appendChild(div);
-      c.scrollTop = c.scrollHeight;
+      c.appendChild(div); c.scrollTop = c.scrollHeight;
     }
     
     const _originalApi = api;
@@ -1138,14 +1036,12 @@ async function initApp(){
     <div style="padding:8px 16px; background:#2d2d2d; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #000;">
       <span style="font-weight:bold; color:#4fc1ff; font-family:monospace; font-size:13px;">🐞 开发者控制台 (全链路监控)</span>
       <div style="display:flex; gap:10px;">
-        
         <label style="display:flex; align-items:center; gap:4px; color:#ccc; font-size:12px; cursor:pointer; margin:0;">
           <input type="checkbox" id="ignore-stats" checked> 过滤心跳包
         </label>
         <button id="btn-pause" class="btn btn-warning btn-sm" onclick="window.isDebugPaused=!window.isDebugPaused; this.innerText=window.isDebugPaused?'▶️ 继续记录':'⏸️ 暂停拦截'" style="color:#000; font-weight:bold;">⏸️ 暂停拦截</button>
         <button class="btn btn-success btn-sm" onclick="const txt = document.getElementById('debug-content').innerText; if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(txt); } else { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } alert('✅ 日志已成功复制！');" style="color:#fff; font-weight:bold;">📋 一键复制</button>
         <button class="btn btn-danger btn-sm" onclick="document.getElementById('debug-content').innerHTML=''">清空</button>
-
         <button class="btn btn-danger btn-sm" onclick="toggleDebugPanel()">关闭面板</button>
       </div>
     </div>

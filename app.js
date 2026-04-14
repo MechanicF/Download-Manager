@@ -90,7 +90,8 @@ app.post('/api/moviepilot/recognize', async (req, res) => {
         const d = r.data;
         if (d && d.media_info) {
             let name = d.media_info.title || d.meta_info?.title || '';
-            name = name.replace(/\s+/g, '.'); // 将剧名中的空格替换为点号
+            // ✅ 修复：增加非空校验，合并正则，剔除干扰括号
+            if (name) name = name.replace(/\s+/g, '.').replace(/[\(\)]/g, '');
             if (d.media_info.year) name += '.' + d.media_info.year;
             if (d.meta_info && d.meta_info.begin_season != null) name += '.S' + String(d.meta_info.begin_season).padStart(2,'0');
             if (d.meta_info && d.meta_info.begin_episode != null) name += '.E' + String(d.meta_info.begin_episode).padStart(2,'0');
@@ -191,7 +192,6 @@ async function syncDatabase() {
         ]);
         
         const allTasks = [...a, ...w, ...s];
-        // 核心修复：把节点序号 i 加入唯一 ID，绝对杜绝多节点 GID 冲突
         aTasks = aTasks.concat(allTasks.filter(t=>t.status!=='removed').map(t=>({...t, _eng:`aria2_${i}`, _uid:`${i}_${t.gid}`})));
         
         let totalDl = 0; let totalUp = 0;
@@ -226,7 +226,6 @@ async function syncDatabase() {
         } catch(e) {}
         if (!fn || fn === '[METADATA]' || fn === '') fn = '种子元数据下载中...';
         
-        // 使用 _uid 作为主键，彻底告别冲突
         db.prepare('INSERT INTO tasks (id, gid, filename, total_size, downloaded_size, speed, progress, status, engine) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET filename=excluded.filename, total_size=excluded.total_size, downloaded_size=excluded.downloaded_size, speed=excluded.speed, progress=excluded.progress, status=excluded.status')
           .run(t._uid, t.gid, fn, total, comp, speed, prog, st, t._eng);
       });
@@ -248,17 +247,25 @@ async function syncDatabase() {
 app.get('/api/tasks', async (req, res) => { await syncDatabase(); res.json(db.prepare('SELECT * FROM tasks ORDER BY created_at DESC').all()); });
 app.get('/api/global-stats', async (req, res) => { res.json(await syncDatabase()); });
 
+// ✅ 修复：提取全局心跳，改为广播分发模式，彻底解决多端连接榨干 CPU 和网络的问题
 const wss = new WebSocket.Server({ port: WS_PORT });
+
+setInterval(async () => {
+  if (wss.clients.size === 0) return; // 没人看就不查库
+  await syncDatabase();
+  const payload = JSON.stringify(db.prepare("SELECT * FROM tasks ORDER BY created_at DESC").all());
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN && client.isAuthenticated) {
+      client.send(payload);
+    }
+  });
+}, 1500);
+
 wss.on('connection', (ws, req) => {
   const token = new URL(req.url, 'http://x').searchParams.get('token');
   if(token !== Buffer.from(`${config.auth.username}:${config.auth.password}`).toString('base64')) return ws.close();
-  const timer = setInterval(async () => {
-    await syncDatabase();
-    ws.send(JSON.stringify(db.prepare("SELECT * FROM tasks ORDER BY created_at DESC").all()));
-  }, 1500);
-  ws.on('close', () => clearInterval(timer));
+  ws.isAuthenticated = true; // 标记合法连接，开始接收广播
 });
-
 
 // 🔪 降维杀手 API：无视原有逻辑，直接代理强杀 Aria2
 app.post('/api/force_kill_task', async (req, res) => {
@@ -269,7 +276,6 @@ app.post('/api/force_kill_task', async (req, res) => {
     
     const makeReq = (method, params=[]) => new Promise(resolve => {
         try {
-            // 将 JSON 转为 Buffer，精确计算字节长度！这是破局的核心！
             const payloadBuffer = Buffer.from(JSON.stringify({ 
                 jsonrpc: '2.0', id: 'kill_'+Date.now(), method, 
                 params: secret ? [`token:${secret}`, ...params] : params 
@@ -282,7 +288,7 @@ app.post('/api/force_kill_task', async (req, res) => {
                 method: 'POST', 
                 headers: {
                     'Content-Type': 'application/json',
-                    'Content-Length': payloadBuffer.length // 强制告诉 Aria2 长度，拒绝分块传输！
+                    'Content-Length': payloadBuffer.length
                 }, 
                 timeout: 3000 
             }, (response) => {
@@ -291,20 +297,17 @@ app.post('/api/force_kill_task', async (req, res) => {
                 response.on('end', () => { try { resolve(JSON.parse(data)); } catch(e){ resolve({error: '解析失败'}); } });
             });
             request.on('error', (e) => resolve({error: e.message})); 
-            request.write(payloadBuffer); // 发送精确的 Buffer
+            request.write(payloadBuffer);
             request.end();
         } catch(e) { resolve({error: e.message}); }
     });
 
-    // 真正的二连击绝杀：
-    await makeReq('aria2.forceRemove', [gid]); // 强杀
-    await new Promise(r => setTimeout(r, 600)); // 等 Aria2 反应半秒钟
-    const removeRes = await makeReq('aria2.removeDownloadResult', [gid]); // 扬骨灰
+    await makeReq('aria2.forceRemove', [gid]);
+    await new Promise(r => setTimeout(r, 600));
+    const removeRes = await makeReq('aria2.removeDownloadResult', [gid]);
     
-    // 超度本地数据库
     try { if(typeof db !== 'undefined') { db.run('DELETE FROM downloads WHERE gid=?', [gid]); db.run('DELETE FROM tasks WHERE gid=?', [gid]); } } catch(e){}
     
-    // 为了防止还有幺蛾子，我们把第二次清理的返回结果打印在日志里
     res.json({success: true, message: '任务已彻底删除', debug_res: removeRes});
 });
 
