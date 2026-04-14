@@ -1179,7 +1179,9 @@ function renderTasks(){
     }
 
     function connectWS(){
-      if(ws) ws.close(); ws = new WebSocket(`ws://${location.hostname}:28080/tasks?token=${authToken}`);
+      if(ws) ws.close(); 
+      const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${wsProto}//${location.host}/ws/tasks?token=${authToken}`);
       const st = document.getElementById('ws-status');
       ws.onopen = () => { st.textContent = '🟢 引擎通讯中'; st.style.color = 'var(--success)'; };
       ws.onmessage = (e) => { const raw = JSON.parse(e.data); tasks = raw.filter(t => !deadTasks.has(t.id)); renderTasks(); };
