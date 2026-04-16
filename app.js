@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
 const WebSocket = require('ws');
 const Database = require('better-sqlite3');
@@ -15,7 +14,8 @@ const app = express();
 const PORT = 1111;
 const WS_PORT = 28080;
 
-app.use(cors());
+// 原生安全头，防点击劫持与 MIME 嗅探
+app.use((req, res, next) => { res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -31,6 +31,17 @@ function loadConfig() {
 }
 const saveConfig = (c) => fs.writeFileSync(CONFIG_FILE, JSON.stringify(c, null, 2));
 
+
+// --- 核心 AES 解密引擎 ---
+const _aesK = Buffer.from('8ab732d0ef2afc4bdcd9ddebe87b264cef1f1dd4e3f7d4227379d80b84290bdc', 'hex');
+const _aesI = Buffer.from('e27aa5b2a97546aa693e17a7df4993a8', 'hex');
+function _decAES(hex) {
+    const decipher = crypto.createDecipheriv('aes-256-cbc', _aesK, _aesI);
+    let dec = decipher.update(hex, 'hex', 'utf8');
+    dec += decipher.final('utf8');
+    return dec;
+}
+
 let config = loadConfig();
 
 function checkAuth(req) {
@@ -39,11 +50,26 @@ function checkAuth(req) {
   return auth.split(' ')[1] === getSecureToken();
 }
 
+
+// --- 原生 IP 暴力破解防御系统 ---
+const failedAttempts = new Map();
 app.post('/api/login', (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const attempts = failedAttempts.get(ip) || { count: 0, lockUntil: 0 };
+  
+  if (Date.now() < attempts.lockUntil) return res.status(429).json({ success: false, error: '错误次数过多，IP已被封禁 15 分钟' });
+
   if (req.body.username === config.auth.username && req.body.password === config.auth.password) {
+    failedAttempts.delete(ip); // 登录成功，清空记录
     res.json({ success: true, token: getSecureToken() });
-  } else res.status(401).json({ success: false });
+  } else {
+    attempts.count++;
+    if (attempts.count >= 5) attempts.lockUntil = Date.now() + 15 * 60 * 1000; // 错5次锁15分钟
+    failedAttempts.set(ip, attempts);
+    res.status(401).json({ success: false, error: '账号或密码错误' });
+  }
 });
+
 
 app.use('/api', (req, res, next) => { if(checkAuth(req)) next(); else res.status(401).send(); });
 
@@ -102,7 +128,7 @@ app.post('/api/openlist/remove', async (req, res) => { const c=getOlConf(req.bod
 // --- 聚合搜索与 MoviePilot ---
 app.post('/api/pansou/search', async (req, res) => {
     const { keyword } = req.body;
-    const pUrl = config.pansou_url || _decAES('185e0ef53fb208dc7444ac32e056bc3b6fc4c986fa1e8d3a80e1208d0daaf6701f07c34fb24d7a451349340fb1c6ebee');
+    const pUrl = config.pansou_url || _decAES('ca53a0178343bb444e9092c44723c06a19ecf8c499c9dbdce977926a486a150a398318dea1d032804f8ebdc64ce3803a');
     try {
         const targetUrl = pUrl.replace('{k}', encodeURIComponent(keyword));
         const r = await axios.get(targetUrl, { timeout: 15000 });
@@ -115,8 +141,8 @@ app.post('/api/pansou/search', async (req, res) => {
 app.post('/api/moviepilot/recognize', async (req, res) => {
     const { filename } = req.body;
     // 已更新为新的 MoviePilot 目标地址
-    const mpUrl = config.moviepilot_url || _decAES('185e0ef53fb208dc7444ac32e056bc3b0191bebdafeb33bc5abba2f9299a9386');
-    const mpToken = config.moviepilot_token || _decAES('5c45d2c13bc3ef26adf687d6ac54e843ccb16774a9a16710411bc24c65549fa2');
+    const mpUrl = config.moviepilot_url || _decAES('ca53a0178343bb444e9092c44723c06a0f88c238e150834834b6504e5cf9584b');
+    const mpToken = config.moviepilot_token || _decAES('6371af74c2571e734821681e59f7010f058882afde99b457cff17ef2dfac6278');
     
     try {
         const r = await axios.get(mpUrl.replace(/\/$/, '') + '/api/v1/media/recognize2', {
