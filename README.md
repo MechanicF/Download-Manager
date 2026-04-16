@@ -1,7 +1,3 @@
-明白，去掉形容词和修饰语，这份是纯技术导向的 `README.md`：
-
-***
-
 # Download Manager Pro
 
 一个基于 Node.js、SQLite 和原生 JavaScript 构建的轻量自托管下载管理面板，不依赖前端框架。
