@@ -21,7 +21,6 @@ fi
 install_env() {
     echo -e "${YELLOW}>> 正在检查并安装基础组件 (Node.js / Git / PM2)...${RESET}"
     
-    # 智能识别包管理器并安装 Git
     if ! command -v git &> /dev/null; then
         if command -v apt-get &> /dev/null; then
             apt-get update && apt-get install -y git
@@ -30,7 +29,6 @@ install_env() {
         fi
     fi
     
-    # 严格区分 apt 和 yum 的 Node.js 20.x 源
     if ! command -v node &> /dev/null; then
         if command -v apt-get &> /dev/null; then
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -83,7 +81,6 @@ install_app() {
     echo -e "${YELLOW}>> 正在启动服务并配置开机自启...${RESET}"
     chmod +x manager.sh 2>/dev/null || true
     
-    # 注入全局快捷命令 `dm`
     if [ -f "$INSTALL_DIR/manager.sh" ]; then
         ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
         chmod +x /usr/local/bin/dm
@@ -103,23 +100,32 @@ install_app() {
     echo -e "⚠️  为了安全，请务必在登录后前往【全局设置】修改默认密码！"
     echo -e "${GREEN}==================================================${RESET}"
     
-    # 移除 exit 0，让用户安装完能直接看到菜单
     read -p "按回车键进入管理菜单..."
 }
 
-# ================= 3. 更新模块 =================
+# ================= 3. 更新模块 (防弹修复版) =================
 update_app() {
     echo -e "\n${YELLOW}>> 开始从 GitHub 拉取最新版本...${RESET}"
     cd "$INSTALL_DIR" || exit
+    
+    echo -e "${YELLOW}>> 正在停止后台服务，保护数据库文件...${RESET}"
+    pm2 stop "$APP_NAME" >/dev/null 2>&1
     
     HTTP_PORT=$(grep "const PORT =" app.js | grep -o '[0-9]\+')
     WS_PORT=$(grep "const WS_PORT =" app.js | grep -o '[0-9]\+')
     
     echo -e "当前端口保护: HTTP=${HTTP_PORT}, WS=${WS_PORT}"
     
+    echo -e "${YELLOW}>> 正在备份本地数据库...${RESET}"
+    mkdir -p /tmp/dm_db_backup
+    cp -f downloads.db* /tmp/dm_db_backup/ 2>/dev/null || true
+    
     git fetch --all
     git reset --hard origin/main
     git pull
+    
+    echo -e "${YELLOW}>> 正在还原本地数据库...${RESET}"
+    cp -f /tmp/dm_db_backup/downloads.db* ./ 2>/dev/null || true
     
     if [ -n "$HTTP_PORT" ] && [ -n "$WS_PORT" ]; then
         sed -i "s/const PORT = 1111;/const PORT = ${HTTP_PORT};/g" app.js
@@ -128,7 +134,6 @@ update_app() {
     fi
     
     chmod +x manager.sh 2>/dev/null || true
-    # 更新快捷命令以防丢失
     if [ -f "$INSTALL_DIR/manager.sh" ]; then
         ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
         chmod +x /usr/local/bin/dm
@@ -138,7 +143,7 @@ update_app() {
     npm install
     
     pm2 restart "$APP_NAME"
-    echo -e "${GREEN}🎉 更新完成，服务已重启！${RESET}"
+    echo -e "${GREEN}🎉 更新完成，服务已安全重启！${RESET}"
     read -p "按回车键返回菜单..."
 }
 
