@@ -72,7 +72,7 @@ const aria2 = {
   async call(idx, method, params = []) {
     const srv = config.aria2[idx];
     if(!srv) throw new Error('Aria2节点未配置');
-    const r = await axios.post(srv.url, { jsonrpc:'2.0', id:Date.now(), method:`aria2.${method}`, params:[`token:${srv.secret}`, ...params] }, {timeout:5000});
+    const r = await axios.post(srv.url, { jsonrpc:'2.0', id:Date.now(), method:`aria2.${method}`, params:[`token:${srv.secret}`, ...params] }, {timeout:15000});
     if (r.data.error) throw new Error(r.data.error.message);
     return r.data.result;
   }
@@ -259,8 +259,8 @@ async function syncDatabase() {
       try {
         const [a, w, s, stat] = await Promise.all([
           aria2.call(i,'tellActive'), 
-          aria2.call(i,'tellWaiting',[0,1000]), 
-          aria2.call(i,'tellStopped',[0,1000]),
+          aria2.call(i,'tellWaiting',[0,200]), 
+          aria2.call(i,'tellStopped',[0,200]),
           aria2.call(i,'getGlobalStat')
         ]);
         const allTasks = [...a, ...w, ...s];
