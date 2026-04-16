@@ -758,7 +758,7 @@
       const r = await api('/api/config'); if(r.error) return; sysConfig = r;
       document.getElementById('panel-user').value = r.auth?.username || 'admin';
       
-      const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== 'http://38.45.71.123:3000';
+      const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== 'http://38.76.204.114:3000';
       if (document.querySelector('input[name="mp_mode"][value="custom"]')) {
           document.querySelector('input[name="mp_mode"][value="' + (isMpCustom ? 'custom' : 'default') + '"]').checked = true;
           document.getElementById('mp-url').value = isMpCustom ? r.moviepilot_url : '';
