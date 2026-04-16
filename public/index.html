@@ -758,7 +758,7 @@
       const r = await api('/api/config'); if(r.error) return; sysConfig = r;
       document.getElementById('panel-user').value = r.auth?.username || 'admin';
       
-      const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== 'http://38.76.204.114:3000';
+      const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== atob('aHR0cDovLzM4Ljc2LjIwNC4xMTQ6MzAwMA==');
       if (document.querySelector('input[name="mp_mode"][value="custom"]')) {
           document.querySelector('input[name="mp_mode"][value="' + (isMpCustom ? 'custom' : 'default') + '"]').checked = true;
           document.getElementById('mp-url').value = isMpCustom ? r.moviepilot_url : '';
@@ -766,7 +766,7 @@
           toggleMpMode();
       }
 
-      const isPanCustom = r.pansou_url && r.pansou_url.length > 0 && r.pansou_url !== 'http://38.76.204.114:805/api/search?kw={k}';
+      const isPanCustom = r.pansou_url && r.pansou_url.length > 0 && r.pansou_url !== atob('aHR0cDovLzM4Ljc2LjIwNC4xMTQ6ODA1L2FwaS9zZWFyY2g/a3c9e2t9');
       if (document.querySelector('input[name="pansou_mode"][value="custom"]')) {
           document.querySelector('input[name="pansou_mode"][value="' + (isPanCustom ? 'custom' : 'default') + '"]').checked = true;
           if (document.getElementById('pansou-url')) document.getElementById('pansou-url').value = isPanCustom ? r.pansou_url : '';
@@ -809,8 +809,8 @@
       
       await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, pansou_url: (document.querySelector('input[name="pansou_mode"]:checked')?.value === 'custom' && document.getElementById('pansou-url')) ? document.getElementById('pansou-url').value : '', auth:{username:u, password:p}})});
       showToast('核心配置保存成功！');
-      authToken = btoa(u+':'+p); localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
-      sysConfig = await api('/api/config'); populateSelects(); refreshTasks();
+      authToken = sysConfig.newToken || authToken; localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
+      sysConfig = await api('/api/config'); if(sysConfig.newToken) authToken = sysConfig.newToken; populateSelects(); refreshTasks();
     }
 
     function populateSelects(){
@@ -1415,6 +1415,10 @@ function renderTasks(){
       const div = document.createElement('div');
       div.style.borderBottom = '1px dashed #333'; div.style.paddingBottom = '4px'; div.style.marginBottom = '4px'; div.style.wordBreak = 'break-all';
       let msgStr = typeof msg === 'object' ? JSON.stringify(msg) : msg;
+      // 密码脱敏防泄露
+      if (msgStr && msgStr.includes('"password":')) {
+          msgStr = msgStr.replace(/"password":"[^"]+"/g, '"password":"[已隐藏]"');
+      }
       if(msgStr && msgStr.length > 600) msgStr = msgStr.substring(0, 600) + ' ... [已截断]';
       div.innerHTML = `<span style="color:#858585">[${t}]</span> <span style="color:${color};font-weight:bold;width:50px;display:inline-block;">[${type}]</span> ${msgStr}`;
       c.appendChild(div); c.scrollTop = c.scrollHeight;
