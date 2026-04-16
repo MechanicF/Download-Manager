@@ -1,69 +1,88 @@
-Download Manager Pro
-一个轻量、高效的自托管下载管理面板。
-基于 Node.js、SQLite 和原生 JavaScript 构建，无复杂前端框架依赖。系统原生整合了 Aria2 集群管理、OpenList 云盘文件挂载、聚合盘搜以及基于 MoviePilot 的智能重命名功能。
+明白，去掉形容词和修饰语，这份是纯技术导向的 `README.md`：
 
-✨ 核心功能
-1. Aria2 集群与任务管理
-多节点支持：可同时绑定和管理多个 Aria2 RPC 节点。
+***
 
-双模配置：提供可视化表单与 JSON 源码两种配置模式，支持 Aria2 底层参数（并发数、分片大小等）热重载。
+# Download Manager Pro
 
-深度清理：支持强制结束下载任务，并同步清理底层残留文件。
+一个基于 Node.js、SQLite 和原生 JavaScript 构建的轻量自托管下载管理面板，不依赖前端框架。
 
-2. 聚合搜索与云端文件管理
-OpenList 集成：支持直接在面板内浏览、管理云端网盘文件。
+## 主要功能
 
-全网盘搜：内置聚合搜索接口，支持按网盘类型（如 115、夸克、阿里云盘等）进行一键过滤和筛选。
+### 1. 界面与交互
+* **面包屑导航**：支持云端目录层级点击跳转。
+* **响应式布局**：适配移动端及桌面端浏览器。
+* **UI 动效**：使用 CSS 实现毛玻璃效果（Backdrop-filter）与过渡动画。
+* **主题支持**：内置浅色与深色（Dark Mode）模式。
 
-异步推送：支持将云端文件批量推送至本地 Aria2 下载，配备悬浮进度条，操作全程不阻塞界面。
+### 2. Aria2 集群管理
+* **多节点支持**：可同时连接并监控多个 Aria2 实例。
+* **配置热重载**：支持在界面直接修改并保存 Aria2 的底层 RPC 参数。
+* **任务控制**：支持任务暂停、恢复、批量删除以及强杀（Force Kill）并清理残留文件。
+* **离线检测优化**：调整了 RPC 超时逻辑，减少因海量历史任务导致的节点假死误报。
 
-3. 文件重命名体系
-AI 智能识别：接入 MoviePilot API，可将杂乱的采集源文件名一键规范化为标准剧集格式。
+### 3. 文件管理与搜索
+* **OpenList 挂载**：支持挂载云盘，浏览文件列表。
+* **批量投递**：支持将云盘文件批量推送到指定的 Aria2 节点进行下载。
+* **网盘搜索**：集成聚合搜索接口，支持按网盘类型筛选。
 
-批量操作：支持正则替换、递增序列化等多种批量重命名规则。
+### 4. 自动化识别
+* **MoviePilot 联动**：支持调用 MoviePilot API 进行媒体信息识别。
+* **重命名工具**：支持正则替换、序列化命名（如 `{n}`、`{ext}`），并提供实时预览。
 
-4. 统计与界面体验
-持久化数据统计：采用 SQLite 记录全局历史流量（global_stats）。任务即使从 Aria2 中删除，总下载量/上传量依然会永久保留。
+### 5. 系统维护
+* **dm 控制台**：通过全局命令 `dm` 管理服务启停、日志查看与自动更新。
+* **更新安全机制**：更新脚本会自动执行“停机 -> 备份数据库 -> 拉取代码 -> 还原数据库 -> 启动”流程，防止 SQLite 数据库损坏。
 
-响应式 UI：纯原生 CSS 开发，适配 PC 与移动端。
+---
 
-动态配置面板：全局设置支持“内置服务”与“自定义私有节点”的无缝切换，界面整洁直观。
+## 安装部署
 
-🛠️ 技术栈
-前端: HTML5, CSS3, Vanilla JavaScript, WebSocket
+### 环境要求
+* Node.js 20.x 或更高版本
+* Git
+* PM2
 
-后端: Node.js, Express, Axios
+### 部署步骤
+1.  克隆仓库：
+    ```bash
+    git clone https://github.com/MechanicF/Download-Manager.git /opt/Download-Manager
+    ```
+2.  执行管理脚本完成安装：
+    ```bash
+    cd /opt/Download-Manager
+    bash manager.sh
+    ```
 
-数据库: SQLite (基于 better-sqlite3开启 WAL 模式)
+---
 
-📦 部署指南
-1. 环境依赖
-请确保服务器已安装 Node.js (建议 v18 及以上版本) 与 PM2。
+## 管理维护
 
-2. 安装步骤
-Bash
-# 获取源码
-git clone https://github.com/YourName/Download-Manager.git
-cd Download-Manager
+在系统中任何目录下输入 `dm` 即可呼出管理菜单：
 
-# 安装依赖
-npm install express cors axios ws better-sqlite3
-3. 启动服务
-使用 PM2 守护进程并在后台运行服务：
+```bash
+dm
+```
 
-Bash
-pm2 start app.js --name DownloadManager
-注：Web 面板默认运行在 1111 端口，WebSocket 通讯运行在 28080 端口。
+### 菜单选项说明
+1.  **启动面板服务**：启动 Node.js 后端进程。
+2.  **停止面板服务**：停止进程并释放端口。
+3.  **重启面板服务**：重新加载配置与代码。
+4.  **查看实时运行日志**：查看 PM2 输出。
+5.  **设置开机自动启动**：配置 Systemd 服务。
+6.  **一键更新**：从 GitHub 拉取代码并自动备份/恢复数据库。
+7.  **彻底卸载**：清理文件、配置与全局命令。
 
-⚙️ 初始设置
-访问面板：在浏览器中访问 http://<服务器IP>:1111。
+---
 
-默认登录凭证：
+## 技术细节
 
-账号：admin
+* **服务端**：Node.js (Express, ws, better-sqlite3, axios)
+* **前端**：Vanilla JS, CSS Variables
+* **数据存储**：SQLite 3
+* **配置文件**：`config.json`
+* **数据库文件**：`downloads.db` (Git 已配置自动忽略)
 
-密码：password
+---
 
-安全建议：首次登录后，请前往**【全局设置】**修改默认登录密码。
-
-服务配置：在设置页面绑定你的 Aria2 RPC 地址（需包含完整 URL 与端口）。MoviePilot 与盘搜功能已配置默认内置接口，如需使用私有服务，可在设置中切换并填写对应 API。
+## 许可证
+MIT License
