@@ -102,7 +102,7 @@ app.post('/api/openlist/remove', async (req, res) => { const c=getOlConf(req.bod
 // --- 聚合搜索与 MoviePilot ---
 app.post('/api/pansou/search', async (req, res) => {
     const { keyword } = req.body;
-    const pUrl = config.pansou_url || Buffer.from('aHR0cDovLzM4Ljc2LjIwNC4xMTQ6ODA1L2FwaS9zZWFyY2g/a3c9e2t9', 'base64').toString();
+    const pUrl = config.pansou_url || _decAES('185e0ef53fb208dc7444ac32e056bc3b6fc4c986fa1e8d3a80e1208d0daaf6701f07c34fb24d7a451349340fb1c6ebee');
     try {
         const targetUrl = pUrl.replace('{k}', encodeURIComponent(keyword));
         const r = await axios.get(targetUrl, { timeout: 15000 });
@@ -115,8 +115,8 @@ app.post('/api/pansou/search', async (req, res) => {
 app.post('/api/moviepilot/recognize', async (req, res) => {
     const { filename } = req.body;
     // 已更新为新的 MoviePilot 目标地址
-    const mpUrl = config.moviepilot_url || Buffer.from('aHR0cDovLzM4Ljc2LjIwNC4xMTQ6MzAwMA==', 'base64').toString();
-    const mpToken = config.moviepilot_token || Buffer.from('TWVjaGFuaWNGXzIwMjZfU3VwZXJTZWNyZXQ=', 'base64').toString();
+    const mpUrl = config.moviepilot_url || _decAES('185e0ef53fb208dc7444ac32e056bc3b0191bebdafeb33bc5abba2f9299a9386');
+    const mpToken = config.moviepilot_token || _decAES('5c45d2c13bc3ef26adf687d6ac54e843ccb16774a9a16710411bc24c65549fa2');
     
     try {
         const r = await axios.get(mpUrl.replace(/\/$/, '') + '/api/v1/media/recognize2', {
