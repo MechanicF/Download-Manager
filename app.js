@@ -5,6 +5,11 @@ const WebSocket = require('ws');
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+
+function getSecureToken() {
+  return crypto.createHmac('sha256', 'ManagerPro_Sec_2026').update(config.auth.username + ':' + config.auth.password).digest('hex');
+}
 
 const app = express();
 const PORT = 1111;
@@ -31,15 +36,12 @@ let config = loadConfig();
 function checkAuth(req) {
   const auth = req.headers.authorization;
   if (!auth) return false;
-  try {
-    const [u, p] = Buffer.from(auth.split(' ')[1], 'base64').toString().split(':');
-    return u === config.auth.username && p === config.auth.password;
-  } catch(e) { return false; }
+  return auth.split(' ')[1] === getSecureToken();
 }
 
 app.post('/api/login', (req, res) => {
   if (req.body.username === config.auth.username && req.body.password === config.auth.password) {
-    res.json({ success: true, token: Buffer.from(`${req.body.username}:${req.body.password}`).toString('base64') });
+    res.json({ success: true, token: getSecureToken() });
   } else res.status(401).json({ success: false });
 });
 
@@ -80,7 +82,7 @@ const aria2 = {
 
 // --- 全局与引擎配置 API ---
 app.get('/api/config', (req, res) => res.json(config));
-app.post('/api/config', (req, res) => { config = req.body; saveConfig(config); res.json({success:true}); });
+app.post('/api/config', (req, res) => { config = req.body; saveConfig(config); res.json({success:true, newToken: getSecureToken()}); });
 app.get('/api/engine/aria2/:id/config', async (req, res) => { 
   try { res.json({ success: true, data: await aria2.call(parseInt(req.params.id), 'getGlobalOption') }); } 
   catch(e) { res.json({success:false, error:e.message}); } 
@@ -344,7 +346,7 @@ setInterval(async () => {
 
 wss.on('connection', (ws, req) => {
   const token = new URL(req.url, 'http://x').searchParams.get('token');
-  if(token !== Buffer.from(`${config.auth.username}:${config.auth.password}`).toString('base64')) return ws.close();
+  if(token !== getSecureToken()) return ws.close();
   ws.isAuthenticated = true; 
 });
 
