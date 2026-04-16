@@ -245,6 +245,39 @@
     }
 </style>
 
+
+<style id="modern-ui-upgrade">
+    :root { --radius-sm: 8px !important; --radius-md: 12px !important; --radius-lg: 20px !important; --shadow-sm: 0 4px 14px rgba(0,0,0,0.04) !important; --shadow-md: 0 12px 32px rgba(0,0,0,0.08) !important; --spring: cubic-bezier(0.34, 1.56, 0.64, 1); }
+    [data-theme="dark"] { --shadow-sm: 0 4px 14px rgba(0,0,0,0.3) !important; --shadow-md: 0 12px 32px rgba(0,0,0,0.5) !important; }
+    .navbar { background: rgba(255, 255, 255, 0.8) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(128,128,128,0.08) !important; }
+    [data-theme="dark"] .navbar { background: rgba(10, 10, 10, 0.8) !important; }
+    .btn { transition: transform 0.3s var(--spring), box-shadow 0.3s ease, background 0.2s !important; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+    .btn:active { transform: translateY(1px) scale(0.96); }
+    .task-card { transition: transform 0.4s var(--spring), box-shadow 0.4s ease, border-color 0.4s ease !important; animation: cardSlideUp 0.6s var(--spring) backwards; }
+    .task-card:hover { transform: translateY(-4px) scale(1.005) !important; box-shadow: var(--shadow-md) !important; z-index: 2; position: relative; }
+    @keyframes cardSlideUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .task-card:nth-child(1) { animation-delay: 0.05s; } .task-card:nth-child(2) { animation-delay: 0.10s; } .task-card:nth-child(3) { animation-delay: 0.15s; } .task-card:nth-child(4) { animation-delay: 0.20s; } .task-card:nth-child(n+5) { animation-delay: 0.25s; }
+    .modal { transition: transform 0.5s var(--spring), opacity 0.3s ease !important; }
+    .modal-overlay.show .modal { transform: scale(1) translateY(0) !important; opacity: 1; }
+    .modal-overlay:not(.show) .modal { transform: scale(0.85) translateY(30px) !important; opacity: 0; }
+    .nav-item, .sub-item { transition: all 0.3s ease !important; }
+    .nav-item:hover, .sub-item:hover { transform: translateX(6px); }
+    .form-control { transition: all 0.3s ease !important; }
+    .form-control:focus { box-shadow: 0 0 0 3px var(--primary-light) !important; transform: translateY(-1px); }
+    input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; transition: transform 0.2s var(--spring); }
+    input[type="checkbox"]:active { transform: scale(0.7); }
+</style>
+
+<style id="blur-layout-fix">
+    /* 让内容能滚进导航栏底下，激活真正的毛玻璃透视 */
+    body { display: block !important; }
+    .navbar { position: absolute !important; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.65) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: none !important; }
+    [data-theme="dark"] .navbar { background: rgba(10, 10, 10, 0.65) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .main-wrapper { height: 100vh !important; }
+    .content { padding-top: 76px !important; }
+    @media (min-width: 769px) { .sidebar { padding-top: 66px !important; } }
+</style>
 </head>
 <body>
   <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-body);z-index:10000;display:none;align-items:center;justify-content:center;">
