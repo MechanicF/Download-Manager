@@ -6,3 +6,4 @@ qbit_cookie.txt
 *.db-shm
 *.db-wal
 downloads.db*
+downloads.db*
