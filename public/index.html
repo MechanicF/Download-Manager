@@ -150,7 +150,44 @@
       #push-queue-container { position: fixed; top: 66px; left: 50%; transform: translateX(-50%); width: 90%; margin: 0 !important; z-index: 1050; }
       #push-queue-container > div { box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important; border: 1px solid var(--primary) !important; background: var(--card-bg) !important; }
     }
-  </style>
+  
+    /* === 面包屑导航 V2 美化版 === */
+    .breadcrumb-container {
+        flex: 1;
+        min-width: 100px;
+        background: var(--input-bg);
+        display: flex;
+        align-items: center;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--input-border);
+        font-size: 13px;
+    }
+    .breadcrumb-container .bc-item {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: var(--text-main);
+        transition: color 0.2s, background 0.2s;
+    }
+    .breadcrumb-container .bc-item:hover {
+        color: var(--primary);
+        background: var(--hover-bg);
+    }
+    .breadcrumb-container .bc-parent {
+        font-weight: bold;
+        color: var(--primary);
+    }
+    .breadcrumb-container .bc-slash {
+        margin: 0 4px;
+        color: var(--text-muted);
+        opacity: 0.4;
+        user-select: none;
+    }
+
+</style>
 
 <style id="mobile-header-debug-css">
     @media screen and (max-width: 768px) {
@@ -277,7 +314,7 @@
         <div class="toolbar">
           <select id="ol-account-select" class="form-control" style="width:160px; font-weight:bold; color:var(--primary);" onchange="loadOpenList('/')"></select>
           <button class="btn btn-default" onclick="openListGoUp()">⬆️ 返回上级</button>
-          <div id="openlist-path" class="form-control" style="flex:1; min-width:100px; background:var(--bg-body); display:flex; align-items:center; overflow-x:auto; white-space:nowrap; padding: 0 12px; font-size: 13px;"></div>
+          <div id="openlist-path" class="breadcrumb-container"></div>
           <button class="btn btn-primary" onclick="loadOpenList()">🔄 刷新</button>
           <div style="border-left:1px solid var(--border-color); height:20px; margin:0 5px;"></div>
           <span id="ol-selected-count" style="display:none; font-size:13px; font-weight:600; color:var(--primary); margin:0 10px; animation: fadeIn 0.2s ease;">已选择 0 项</span>
@@ -987,11 +1024,11 @@ function renderTasks(){
             pEl.value = path; 
         } else { 
             let pts = path.split('/').filter(x => x); 
-            let h = '<span style="cursor:pointer;font-weight:bold;color:var(--primary);" onclick="loadOpenList(\'/\')">☁️ 云端根目录</span>'; 
+            let h = '<span class="bc-item bc-parent" onclick="loadOpenList(\'/\')">☁️ 云端根目录</span>'; 
             let cp = ''; 
             pts.forEach(x => { 
                 cp += '/' + x; 
-                h += '<span style="color:var(--text-muted);margin:0 6px;">/</span><span style="cursor:pointer;transition:color 0.2s;" onclick="loadOpenList(\''+cp+'\')" onmouseover="this.style.color=\'var(--primary)\'" onmouseout="this.style.color=\'\'">'+x+'</span>'; 
+                h += '<span class="bc-slash">/</span><span class="bc-item" onclick="loadOpenList(\''+cp+'\')">'+x+'</span>'; 
             }); 
             pEl.innerHTML = h; 
         } olFiles = r.data.content||[]; olSelected.clear();
