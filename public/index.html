@@ -23,11 +23,34 @@
       --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
     }
     [data-theme="dark"] {
-      --primary-light: rgba(24,144,255,0.15);
-      --bg-body: #000000; --bg-content: #0a0a0a; --bg-sidebar: #0a0a0a; --bg-navbar: #0a0a0a; --card-bg: #141414;
-      --text-main: #e5e5e5; --text-muted: #8b8b8b; --border-color: #262626;
-      --input-bg: #141414; --input-border: #333333; --hover-bg: #1f1f1f;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.4); --shadow-md: 0 6px 16px rgba(0,0,0,0.6);
+      /* 针对夜间模式降低饱和度的柔和品牌色 */
+      --primary: #4493f8;
+      --primary-hover: #58a6ff;
+      --primary-light: rgba(68, 147, 248, 0.15);
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      
+      /* 深邃石板灰层级体系 (参考 GitHub Dark) */
+      --bg-body: #0d1117;        /* 最底层的深背景 */
+      --bg-content: #0d1117;
+      --bg-sidebar: #161b22;     /* 悬浮层 (侧边栏/卡片) */
+      --bg-navbar: #161b22;
+      --card-bg: #161b22;
+      
+      /* 护眼文字配色 */
+      --text-main: #c9d1d9;      /* 柔和的灰白色 */
+      --text-muted: #8b949e;     /* 极度弱化的次要文字 */
+      
+      /* 边框与交互层 */
+      --border-color: #30363d;   /* 极细的石板边框 */
+      --input-bg: #0d1117;
+      --input-border: #30363d;
+      --hover-bg: #21262d;       /* 点击悬浮的高亮底色 */
+      
+      /* 物理阴影 (夜间模式的阴影需要更重、范围更大才能显现层级) */
+      --shadow-sm: 0 4px 16px rgba(0,0,0,0.5);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.8);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -254,7 +277,7 @@
     :root { --radius-sm: 8px !important; --radius-md: 12px !important; --radius-lg: 20px !important; --shadow-sm: 0 4px 14px rgba(0,0,0,0.04) !important; --shadow-md: 0 12px 32px rgba(0,0,0,0.08) !important; --spring: cubic-bezier(0.34, 1.56, 0.64, 1); }
     [data-theme="dark"] { --shadow-sm: 0 4px 14px rgba(0,0,0,0.3) !important; --shadow-md: 0 12px 32px rgba(0,0,0,0.5) !important; }
     .navbar { background: rgba(255, 255, 255, 0.8) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(128,128,128,0.08) !important; }
-    [data-theme="dark"] .navbar { background: rgba(10, 10, 10, 0.8) !important; }
+    [data-theme="dark"] .navbar { background: rgba(22, 27, 34, 0.8) !important; }
     .btn { transition: transform 0.3s var(--spring), box-shadow 0.3s ease, background 0.2s !important; }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
     .btn:active { transform: translateY(1px) scale(0.96); }
@@ -277,7 +300,7 @@
     /* 让内容能滚进导航栏底下，激活真正的毛玻璃透视 */
     body { display: block !important; }
     .navbar { position: absolute !important; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.65) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: none !important; }
-    [data-theme="dark"] .navbar { background: rgba(10, 10, 10, 0.65) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    [data-theme="dark"] .navbar { background: rgba(22, 27, 34, 0.65) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
     .main-wrapper { height: 100vh !important; }
     .content { padding-top: 76px !important; }
     @media (min-width: 769px) { .sidebar { padding-top: 66px !important; } }
@@ -313,6 +336,50 @@
         #btn-ol-delete { flex: 1 1 47% !important; order: 8; margin: 0 !important; }
     }
     </style>
+
+    <style id="ui-polish-css">
+        .breadcrumb-container {
+            background: transparent !important;
+            border: none !important;
+            padding: 6px 4px !important;
+            font-size: 14px !important;
+        }
+        .breadcrumb-container .bc-item { font-weight: 600; }
+    </style>
+
+
+<style id="dark-theme-pro-override">
+  /* 暴力覆写暗黑模式所有颜色，赋予 GitHub Dark 同款石板灰质感 */
+  [data-theme="dark"] {
+      --primary: #4493f8 !important;
+      --primary-hover: #58a6ff !important;
+      --primary-light: rgba(68, 147, 248, 0.15) !important;
+      --success: #3fb950 !important;
+      --warning: #d29922 !important;
+      --danger: #f85149 !important;
+      
+      --bg-body: #0d1117 !important;
+      --bg-content: #0d1117 !important;
+      --bg-sidebar: #161b22 !important;
+      --bg-navbar: #161b22 !important;
+      --card-bg: #161b22 !important;
+      
+      --text-main: #c9d1d9 !important;
+      --text-muted: #8b949e !important;
+      
+      --border-color: #30363d !important;
+      --input-bg: #0d1117 !important;
+      --input-border: #30363d !important;
+      --hover-bg: #21262d !important;
+      
+      --shadow-sm: 0 4px 16px rgba(0,0,0,0.5) !important;
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.8) !important;
+  }
+  
+  /* 修复毛玻璃透视层的底色 */
+  [data-theme="dark"] .navbar { background: rgba(22, 27, 34, 0.8) !important; }
+</style>
+
 </head>
 <body>
   <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-body);z-index:10000;display:none;align-items:center;justify-content:center;">
@@ -349,7 +416,7 @@
         </ul>
         <li class="nav-item" onclick="switchTab('openlist', this)">☁️ 云端文件</li>
         <li class="nav-item" onclick="switchTab('pansou', this)">🔍 全网盘搜</li>
-        <li class="nav-item" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:20px;" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
+        <div style="margin: 12px 16px; border-top: 1px dashed var(--border-color);"></div><li class="nav-item" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
         <li><div id="sidebar-engines-status" style="padding:16px; font-size:12px; color:var(--text-muted); line-height:2.2;"></div></li>
       </ul>
     </aside>
@@ -382,7 +449,7 @@
         <div class="toolbar">
           <select id="ol-account-select" class="form-control" style="width:160px; font-weight:bold; color:var(--primary);" onchange="loadOpenList('/')"></select>
           <button class="btn btn-default" onclick="openListGoUp()">⬆️ 返回上级</button>
-          <div id="openlist-path" class="breadcrumb-container"></div>
+          <div id="openlist-path" class="breadcrumb-container"><span class="bc-item bc-parent" onclick="loadOpenList('/')">☁️ 云端根目录</span></div>
           <button class="btn btn-primary" onclick="loadOpenList()">🔄 刷新</button>
           <div style="border-left:1px solid var(--border-color); height:20px; margin:0 5px;"></div>
           <span id="ol-selected-count" style="display:none; font-size:13px; font-weight:600; color:var(--primary); margin:0 10px; animation: fadeIn 0.2s ease;">已选择 0 项</span>
@@ -853,8 +920,9 @@
       const curOlEng = document.getElementById('ol-engine-select') ? document.getElementById('ol-engine-select').value : null;
       const curOlAcc = document.getElementById('ol-account-select') ? document.getElementById('ol-account-select').value : null;
 
-      let h = '<option value="auto">✨ 智能引擎投递</option>';
+      let h = '';
       (sysConfig.aria2||[]).forEach((n,i)=> h+=`<option value="aria2_${i}">🟣 Aria2: ${n.name}</option>`);
+      if(!h) h = '<option value="">请先配置下载器</option>';
       if(document.getElementById('task-engine-select')) { document.getElementById('task-engine-select').innerHTML = h; if(curTask) document.getElementById('task-engine-select').value = curTask; }
       if(document.getElementById('ol-engine-select')) { document.getElementById('ol-engine-select').innerHTML = h; if(curOlEng) document.getElementById('ol-engine-select').value = curOlEng; }
       
@@ -1084,7 +1152,19 @@ function renderTasks(){
     async function loadOpenList(path=currentOpenListPath){
       const idx = document.getElementById('ol-account-select').value; if(idx==="") return;
       const c = document.getElementById('openlist-content'); c.innerHTML = '<div style="text-align:center;padding:80px;color:var(--primary);animation: scaleIn 0.3s ease-out;"><div style="font-size:40px;margin-bottom:15px;display:inline-block;animation:spin-slow 2s linear infinite;">💫</div><div style="font-weight:bold;letter-spacing:1px;animation:blink 1.5s infinite;">正在穿透云端拉取目录...</div></div>';
+      
+      // 🌟 瞬间更新面包屑 UI，告别等待空白
+      const pEl = document.getElementById('openlist-path');
+      if (pEl) {
+          let pts = path.split('/').filter(x => x);
+          let h = '<span class="bc-item bc-parent" onclick="loadOpenList(\'/\')">☁️ 云端根目录</span>';
+          let cp = '';
+          pts.forEach(x => { cp += '/' + x; h += '<span class="bc-slash">/</span><span class="bc-item" onclick="loadOpenList(\''+cp+'\')">'+x+'</span>'; });
+          pEl.innerHTML = h;
+      }
+      
       const r = await api('/api/openlist/list', {method:'POST', body:JSON.stringify({olIdx:parseInt(idx), path})});
+
       if(r.code===200){
         currentOpenListPath = path; 
         const pEl = document.getElementById('openlist-path'); 
@@ -1164,7 +1244,7 @@ function renderTasks(){
         const safeName = f.name.replace(/'/g, "\\'");
         
         const act = f.is_dir ? `loadOpenList('${currentOpenListPath==='/'?'':currentOpenListPath}/${safeName}')` : `toggleOlItem('${safeName}', '${cbId}', event)`;
-        const renameBtn = f.is_dir ? "" : `<span onclick="event.stopPropagation(); renameFile('${safeName}')" style="margin-left:8px; cursor:pointer; opacity:0.5;" title="重命名">✏️</span>`;
+        const renameBtn = f.is_dir ? "" : `<span onclick="event.stopPropagation(); pushSingleFile('${safeName}')" style="margin-left:12px; cursor:pointer; opacity:0.5; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5" title="推送到下载器">🚀</span><span onclick="event.stopPropagation(); renameFile('${safeName}')" style="margin-left:12px; cursor:pointer; opacity:0.5; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5" title="重命名">✏️</span>`;
         
         html += `<tr style="animation: slideFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: ${Math.min(i * 0.025, 0.5)}s; opacity: 0;">
         <td><input type="checkbox" id="${cbId}" class="custom-checkbox ol-row-cb" ${chk} onclick="toggleOlItem('${safeName}', '${cbId}', event)"></td>
@@ -1174,6 +1254,16 @@ function renderTasks(){
       
       document.getElementById('openlist-content').innerHTML = html+'</table>';
       updateOlUI(); // 初次渲染完毕后，同步一次顶部按钮状态
+    }
+
+    
+    // 🌟 单文件快捷推送入口
+    window.pushSingleFile = function(name) {
+        if(typeof olSelected === 'undefined') return;
+        olSelected.clear();      // 清空之前可能遗留的选中项
+        olSelected.add(name);    // 把当前文件加入待处理队列
+        updateOlUI();            // 同步一下 UI (自动勾选前面的框)
+        showEngineSelectModalForOL(); // 呼出选择引擎弹窗
     }
 
     function showEngineSelectModalForOL() { if (olSelected.size === 0) return; populateSelects(); showModal('engine-select-modal'); }
