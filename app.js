@@ -52,7 +52,15 @@ function checkAuth(req) {
 
 
 // --- 原生 IP 暴力破解防御系统 ---
+// --- 原生 IP 暴力破解防御系统 (带内存回收) ---
 const failedAttempts = new Map();
+// 每小时执行一次垃圾回收，清理掉已经解封的闲置 IP，防止内存泄漏
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of failedAttempts.entries()) {
+    if (now > data.lockUntil) failedAttempts.delete(ip);
+  }
+}, 60 * 60 * 1000);
 app.post('/api/login', (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const attempts = failedAttempts.get(ip) || { count: 0, lockUntil: 0 };
@@ -370,10 +378,24 @@ setInterval(async () => {
   });
 }, 1500);
 
+// 心跳检测机制：清理断网假死的僵尸客户端
+const interval = setInterval(() => {
+  wss.clients.forEach(ws => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+wss.on('close', () => clearInterval(interval));
+
 wss.on('connection', (ws, req) => {
   const token = new URL(req.url, 'http://x').searchParams.get('token');
   if(token !== getSecureToken()) return ws.close();
+  
   ws.isAuthenticated = true; 
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; }); // 收到客户端心跳回应
 });
 
 // 修复 SSRF 漏洞：加入目标 URL 白名单校验
@@ -427,5 +449,16 @@ app.post('/api/force_kill_task', async (req, res) => {
     
     res.json({success: true, message: '任务已彻底删除', debug_res: removeRes});
 });
+
+
+// --- 优雅退出机制 (Graceful Shutdown) ---
+// 拦截 PM2 restart 或服务器关机信号，安全合并 WAL 日志并关闭数据库
+function shutdownGracefully() {
+    console.log('\n[系统] 接收到退出信号，正在安全关闭数据库连接...');
+    try { if (db) db.close(); } catch(e) {}
+    process.exit(0);
+}
+process.on('SIGTERM', shutdownGracefully);
+process.on('SIGINT', shutdownGracefully);
 
 app.listen(PORT, () => console.log('🚀 API Running on ' + PORT));
