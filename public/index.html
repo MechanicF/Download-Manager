@@ -380,6 +380,23 @@
   [data-theme="dark"] .navbar { background: rgba(22, 27, 34, 0.8) !important; }
 </style>
 
+
+  <style id="hw-accel-css">
+    /* 开启 GPU 硬件渲染层，提升滚动帧率 */
+    .task-card { 
+        will-change: transform; 
+        transform: translateZ(0); 
+        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease; 
+    }
+    /* 移动端触摸真实反馈 */
+    .task-card:active { 
+        transform: scale(0.98) translateZ(0); 
+        box-shadow: var(--shadow-sm); 
+    }
+    .ol-table tbody tr { transition: background-color 0.1s ease; }
+    .ol-table tbody tr:active { background-color: var(--hover-bg) !important; }
+  </style>
+
 </head>
 <body>
 
@@ -1630,7 +1647,7 @@ function renderTasks(){
       let msgStr = typeof msg === 'object' ? JSON.stringify(msg) : msg;
       // 密码脱敏防泄露
       if (msgStr && msgStr.includes('"password":')) {
-          msgStr = msgStr.replace(/"password":"[^"]+"/g, '"password":"[已隐藏]"');
+          msgStr = msgStr.replace(/"(password|token)":"[^"]+"/g, '"$1":"[已隐藏]"');
       }
       if(msgStr && msgStr.length > 600) msgStr = msgStr.substring(0, 600) + ' ... [已截断]';
       div.innerHTML = `<span style="color:#858585">[${t}]</span> <span style="color:${color};font-weight:bold;width:50px;display:inline-block;">[${type}]</span> ${msgStr}`;
