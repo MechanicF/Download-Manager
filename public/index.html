@@ -789,7 +789,34 @@
     }
 
     let currentEditEngineId = 0; let isRawConfigMode = false;
-    const aria2ConfigMap = [ { key: 'dir', label: '📂 默认下载路径', desc: '文件保存的绝对路径' }, { key: 'max-concurrent-downloads', label: '🚦 最大并行任务数', desc: '同时允许下载的任务数量' }, { key: 'split', label: '🔪 单文件最大线程', desc: '下载单个文件时使用的最大连接数' }, { key: 'max-connection-per-server', label: '🌐 单服务器最大连接', desc: '每个服务器允许的最大连接数' }, { key: 'min-split-size', label: '🧩 最小分片大小', desc: '文件分块大小 (如: 10M)' }, { key: 'max-overall-download-limit', label: '⬇️ 全局下载限速', desc: '0 为不限速' }, { key: 'max-overall-upload-limit', label: '⬆️ 全局上传限速', desc: '0 为不限速' }, { key: 'seed-time', label: '🌱 做种时间 (分钟)', desc: '0 为不做种' } ];
+    const aria2ConfigMap = [
+      { key: 'dir', label: '📂 默认下载路径', desc: '文件保存的绝对路径 (如 /downloads)' },
+      { key: 'max-concurrent-downloads', label: '🚦 最大并行任务数', desc: '同时允许下载的任务数量' },
+      { key: 'continue', label: '⏯️ 断点续传', desc: '开启后自动恢复下载', type: 'boolean' },
+      
+      { key: 'split', label: '🔪 单文件最大线程', desc: '下载单个文件时使用的最大连接数 (1-16)' },
+      { key: 'max-connection-per-server', label: '🌐 单服务器最大连接', desc: '每个服务器允许的最大连接数 (1-16)' },
+      { key: 'min-split-size', label: '🧩 最小分片大小', desc: '文件分块大小 (如: 1M, 10M)', type: 'size' },
+      
+      { key: 'max-overall-download-limit', label: '⬇️ 全局下载限速', desc: '0 为不限速 (如: 1M, 100K)', type: 'size' },
+      { key: 'max-overall-upload-limit', label: '⬆️ 全局上传限速', desc: '0 为不限速 (如: 1M, 100K)', type: 'size' },
+      { key: 'max-download-limit', label: '🔽 单任务下载限速', desc: '0 为不限速', type: 'size' },
+      { key: 'max-upload-limit', label: '🔼 单任务上传限速', desc: '0 为不限速', type: 'size' },
+      
+      { key: 'user-agent', label: '🥸 UA 伪装', desc: '自定义 User-Agent 请求头，防盗链必备' },
+      { key: 'referer', label: '🔗 默认 Referer', desc: '自定义引用页，用于突破防盗链' },
+      { key: 'all-proxy', label: '🌍 全局代理', desc: '所有流量走代理 (例如: http://127.0.0.1:7890)' },
+      
+      { key: 'bt-max-peers', label: '🕸️ BT 最大连接数', desc: '每个 BT 任务的最大节点连接数 (默认 55)' },
+      { key: 'enable-dht', label: '📡 启用 DHT 网络', desc: '无 Tracker 也能寻找节点', type: 'boolean' },
+      { key: 'enable-peer-exchange', label: '🔄 启用 PEX 交换', desc: 'Peer 交换机制', type: 'boolean' },
+      { key: 'bt-tracker', label: '🎯 默认 Tracker', desc: '逗号分隔的 BT Tracker 列表' },
+      { key: 'seed-time', label: '🌱 做种时间 (分钟)', desc: '0 为不做种，PT玩家建议留空或加大' },
+      { key: 'seed-ratio', label: '⚖️ 做种分享率', desc: '达到指定分享率后停止做种 (如 1.0, 1.5)' },
+      
+      { key: 'disk-cache', label: '💾 磁盘缓存大小', desc: '内存写盘缓存，极大减少机械盘磨损', type: 'size' },
+      { key: 'file-allocation', label: '📦 文件预分配机制', desc: 'none, prealloc, trunc, falloc' }
+    ];
 
     function toggleConfigMode() {
       isRawConfigMode = !isRawConfigMode;
@@ -821,12 +848,36 @@
       if(r.success) {
         document.getElementById('engine-config-json-input').value = JSON.stringify(r.data, null, 2);
         let formHtml = '';
+        // 智能字节逆向转换 (Byte -> KB/MB)
+        const formatSize = (v) => {
+            if(!v || isNaN(v)) return v;
+            const b = parseInt(v);
+            if (b === 0) return '0';
+            if (b >= 1048576 && b % 1048576 === 0) return (b / 1048576) + 'M';
+            if (b >= 1024 && b % 1024 === 0) return (b / 1024) + 'K';
+            return v;
+        };
+
         aria2ConfigMap.forEach(item => {
-          const val = r.data[item.key] !== undefined ? r.data[item.key] : '';
+          let val = r.data[item.key] !== undefined ? r.data[item.key] : '';
+          let inputHtml = '';
+          
+          if (item.type === 'boolean') {
+              const selT = val === 'true' ? 'selected' : '';
+              const selF = val === 'false' ? 'selected' : '';
+              inputHtml = `<select id="cfg-${item.key}" class="form-control" style="border-color:#d9d9d9; font-weight:600; color:var(--primary); cursor:pointer;">
+                  <option value="true" ${selT}>开启 (true)</option>
+                  <option value="false" ${selF}>关闭 (false)</option>
+              </select>`;
+          } else {
+              if (item.type === 'size') val = formatSize(val);
+              inputHtml = `<input type="text" id="cfg-${item.key}" class="form-control" value="${val}" style="border-color:#d9d9d9; font-family:monospace; color:var(--primary); font-weight:600;">`;
+          }
+          
           formHtml += `<div class="config-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:center; box-shadow:var(--shadow-sm); border-top:3px solid var(--primary-light);">
               <label style="font-weight:bold; color:var(--text-main); margin-bottom:6px; font-size:14px;">${item.label}</label>
               <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; min-height:36px;">${item.desc}</div>
-              <input type="text" id="cfg-${item.key}" class="form-control" value="${val}" style="border-color:#d9d9d9; font-family:monospace; color:var(--primary); font-weight:600;">
+              ${inputHtml}
             </div>`;
         });
         vContainer.innerHTML = formHtml;
