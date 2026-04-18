@@ -83,6 +83,9 @@ app.use('/api', (req, res, next) => { if(checkAuth(req)) next(); else res.status
 
 const db = new Database('downloads.db');
 db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');     // 极大减少磁盘 I/O 消耗
+db.pragma('temp_store = MEMORY');      // 将临时表和索引放入内存加速
+db.pragma('mmap_size = 268435456');    // 开启 256MB 内存映射 (MMAP) 加速读取
 db.exec(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, gid TEXT, url TEXT, filename TEXT, total_size INTEGER, downloaded_size INTEGER, speed INTEGER, progress REAL, status TEXT, engine TEXT, hash TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
 try { db.exec('ALTER TABLE tasks ADD COLUMN url TEXT'); } catch(e){}
 db.exec(`CREATE TABLE IF NOT EXISTS global_stats (engine TEXT PRIMARY KEY, historical_dl INTEGER DEFAULT 0, historical_up INTEGER DEFAULT 0)`);
@@ -256,7 +259,7 @@ app.post('/api/download', async (req, res) => {
   
   let sc = 0; let lastErr = '';
   for (const dlUrl of urls) {
-    let target = engine === 'auto' ? 'aria2_0' : engine;
+    let target = engine;
     try {
       const idx = parseInt(target.split('_')[1]);
       let opts = {};
@@ -275,7 +278,7 @@ app.post('/api/download', async (req, res) => {
 app.post('/api/upload', async (req, res) => {
   const { engine, fileBase64, filename } = req.body;
   if (!config.aria2 || config.aria2.length === 0) return res.json({ success: false, error: '请先配置 Aria2 节点' });
-  let target = engine === 'auto' ? 'aria2_0' : engine;
+  let target = engine;
   try {
     const idx = parseInt(target.split('_')[1]);
     const gid = await aria2.call(idx, 'addTorrent', [fileBase64]);

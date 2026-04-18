@@ -382,6 +382,12 @@
 
 </head>
 <body>
+
+  <div id="drop-zone-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(24, 144, 255, 0.15); backdrop-filter:blur(4px); z-index:99999; border:6px dashed var(--primary); box-sizing:border-box; align-items:center; justify-content:center; flex-direction:column; color:var(--primary);">
+      <div style="font-size:80px; margin-bottom:20px; animation:float 2s infinite;">📥</div>
+      <h1 style="font-weight:900; font-size:32px; text-shadow: 0 4px 12px rgba(0,0,0,0.2);">松开鼠标，立即解析种子文件</h1>
+  </div>
+
   <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-body);z-index:10000;display:none;align-items:center;justify-content:center;">
     <div style="background:var(--card-bg);padding:40px;border-radius:16px;width:380px;box-shadow:var(--shadow-md);text-align:center;border:1px solid var(--border-color);">
       <h2 style="margin-bottom:24px; color:var(--text-main);">Manager Pro</h2>
@@ -1625,6 +1631,35 @@ function renderTasks(){
             });
         });
     });
+
+    
+    // --- 极客交互：全局拖拽种子文件自动解析 ---
+    window.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+    window.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        const file = e.dataTransfer?.files[0];
+        if(file && file.name.toLowerCase().endsWith('.torrent')) {
+            showNewTaskModal(); // 唤起新建弹窗
+            const radio = document.querySelector('input[name="task_type"][value="torrent"]');
+            if(radio) { radio.checked = true; toggleTaskType(); }
+            
+            // 劫持文件流并挂载到隐藏的 input 里
+            const dt = new DataTransfer(); 
+            dt.items.add(file);
+            document.getElementById('torrent-file').files = dt.files;
+            document.getElementById('t-name').innerText = file.name;
+            
+            showToast('✅ 种子已就绪，请选择引擎后投递！');
+        } else if (file) {
+            showToast('❌ 只支持拖拽 .torrent 种子文件哦', 'error');
+        }
+    });
+
+    
+    let dragCounter = 0;
+    window.addEventListener('dragenter', e => { e.preventDefault(); dragCounter++; document.getElementById('drop-zone-overlay').style.display='flex'; });
+    window.addEventListener('dragleave', e => { dragCounter--; if(dragCounter===0) document.getElementById('drop-zone-overlay').style.display='none'; });
+    window.addEventListener('drop', e => { dragCounter=0; document.getElementById('drop-zone-overlay').style.display='none'; });
 
     initApp();
   </script>
