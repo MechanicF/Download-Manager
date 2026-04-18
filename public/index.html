@@ -656,7 +656,13 @@
         if (!k) return showToast('请输入搜索关键字', 'warning');
         const btn = document.getElementById('btn-pansou-search');
         btn.disabled = true; btn.textContent = '检索中...';
-        document.getElementById('pansou-results').innerHTML = '<div style="text-align:center; padding:80px; color:var(--primary);"><div style="font-size:40px; animation:spin-slow 2s linear infinite; margin-bottom:15px;">💫</div>正在穿透网络进行检索...</div>';
+        document.getElementById('pansou-results').innerHTML = `<div style="text-align:center; padding:100px 20px; color:var(--text-muted); display:flex; flex-direction:column; align-items:center;">
+        <svg viewBox="0 0 24 24" style="width:40px; height:40px; margin-bottom:20px; animation:spin-slow 1s linear infinite; stroke:var(--primary); stroke-width:2.5; fill:none; stroke-linecap:round; stroke-linejoin:round;">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+        </svg>
+        <div style="font-size:15px; font-weight:600; color:var(--text-main); letter-spacing:1px; animation:blink 2s infinite;">正在检索全网资源...</div>
+        <div style="font-size:12px; margin-top:8px; opacity:0.6;">穿透引擎节点，这通常需要几秒钟</div>
+    </div>`;
         document.getElementById('pansou-filter-bar').style.display = 'none';
 
         try {
@@ -1151,7 +1157,24 @@ function renderTasks(){
 
     async function loadOpenList(path=currentOpenListPath){
       const idx = document.getElementById('ol-account-select').value; if(idx==="") return;
-      const c = document.getElementById('openlist-content'); c.innerHTML = '<div style="text-align:center;padding:80px;color:var(--primary);animation: scaleIn 0.3s ease-out;"><div style="font-size:40px;margin-bottom:15px;display:inline-block;animation:spin-slow 2s linear infinite;">💫</div><div style="font-weight:bold;letter-spacing:1px;animation:blink 1.5s infinite;">正在穿透云端拉取目录...</div></div>';
+      const c = document.getElementById('openlist-content');
+      let skeletonRows = '';
+      for(let i=0; i<6; i++) {
+          const w = 30 + Math.random() * 40; // 随机文件名宽度，看起来更真实
+          const delay = i * 0.1; // 产生阶梯式的流水闪烁效果
+          skeletonRows += `<tr style="border-bottom:1px solid var(--border-color); pointer-events:none;">
+            <td><div style="width:16px;height:16px;border-radius:4px;background:var(--border-color);opacity:0.2;animation:blink 1.5s infinite ${delay}s;"></div></td>
+            <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:20px;height:20px;border-radius:4px;background:var(--border-color);opacity:0.2;animation:blink 1.5s infinite ${delay}s;"></div><div style="height:16px;width:${w}%;border-radius:4px;background:var(--border-color);opacity:0.2;animation:blink 1.5s infinite ${delay}s;"></div></div></td>
+            <td><div style="height:16px;width:40px;border-radius:4px;background:var(--border-color);opacity:0.2;animation:blink 1.5s infinite ${delay}s;"></div></td>
+            <td><div style="height:16px;width:120px;border-radius:4px;background:var(--border-color);opacity:0.2;animation:blink 1.5s infinite ${delay}s;"></div></td>
+          </tr>`;
+      }
+      c.innerHTML = `<div style="width:100%; overflow-x:auto; background:var(--card-bg);">
+          <table class="ol-table" style="width:100%; min-width:500px;">
+              <thead><tr><th style="width:40px;"></th><th>文件名称</th><th style="width:120px;">大小</th><th style="width:180px;">修改时间</th></tr></thead>
+              <tbody>${skeletonRows}</tbody>
+          </table>
+      </div>`;
       
       // 🌟 瞬间更新面包屑 UI，告别等待空白
       const pEl = document.getElementById('openlist-path');
