@@ -493,7 +493,7 @@
         <div id="pansou-results" style="background:var(--card-bg); border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-x:auto;">
           <div style="text-align:center; padding:100px 20px; color:var(--text-muted);">
             <div style="font-size:50px; margin-bottom:20px; opacity:0.8;">🌐</div>
-            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">连接无垠网络</div>
+            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">全网资源聚合搜索</div>
             <div style="font-size:12px; margin-top:10px;">输入关键字，检索各大网盘资源</div>
           </div>
         </div>
@@ -602,7 +602,7 @@
   
   <div class="modal-overlay" id="engine-select-modal">
     <div class="modal" style="width: 400px;">
-      <h3 style="margin-bottom:15px;">发送云盘文件至下载器</h3>
+      <h3 style="margin-bottom:15px;">推送到下载节点</h3>
       <select id="ol-engine-select" class="form-control" style="margin-bottom:20px; font-weight:bold;"></select>
       <div style="text-align:right;"><button class="btn btn-default" onclick="hideModal('engine-select-modal')" style="margin-right:10px;">取消</button><button class="btn btn-primary" onclick="executeOlDownload()">确定发送</button></div>
     </div>
@@ -1088,7 +1088,7 @@
       if (isTaskDeleting) return; isTaskDeleting = true; const qContainer = document.getElementById('push-queue-container');
       if (!document.getElementById('task-delete-capsule')) {
         qContainer.insertAdjacentHTML('beforeend', `<div id="task-delete-capsule" style="display:flex; align-items:center; gap:10px; background:var(--hover-bg); padding:5px 16px; border-radius:20px; border:1px solid var(--border-color); animation:fadeIn 0.3s ease; max-width:450px; width:100%; box-shadow:inset 0 1px 3px rgba(0,0,0,0.02); margin-left: 10px;">
-             <span style="font-size:13px; font-weight:bold; color:var(--danger); white-space:nowrap;">🗑️ 抹杀 <span id="txt-tdel-prog">0/0</span></span>
+             <span style="font-size:13px; font-weight:bold; color:var(--danger); white-space:nowrap;">🗑️ 删除 <span id="txt-tdel-prog">0/0</span></span>
              <div style="flex:1; height:6px; background:var(--bg-body); border-radius:3px; overflow:hidden; min-width:60px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.08);">
                 <div id="bar-tdel-prog" style="height:100%; width:0%; background:linear-gradient(90deg, #ff4d4f, #cf1322); transition:width 0.3s ease;"></div>
              </div>
@@ -1149,10 +1149,10 @@ function renderTasks(){
       if(filtered.length===0) {
         if(list.dataset.emptyFilter === currentTaskFilter) return; 
         list.dataset.emptyFilter = currentTaskFilter;
-        let eIco = '📭', eTxt = '任务列表空空如也', eSub = '去【云端文件】挑选一些资源推送过来吧 ~';
-        if (currentTaskFilter === 'downloading') { eIco = '🚀'; eTxt = '当前没有正在狂飙的任务'; eSub = '去新建任务添加几个下载链接吧！'; }
+        let eIco = '📭', eTxt = '任务列表空空如也', eSub = '您可以前往【云端文件】挑选并推送资源';
+        if (currentTaskFilter === 'downloading') { eIco = '🚀'; eTxt = '当前没有正在下载的任务'; eSub = '去新建任务添加几个下载链接吧！'; }
         else if (currentTaskFilter === 'waiting') { eIco = '⏸️'; eTxt = '没有被暂停或等待中的任务'; eSub = '所有任务都在顺利进行中 ~'; }
-        else if (currentTaskFilter === 'complete') { eIco = '✅'; eTxt = '还没有已完成的任务'; eSub = '耐心等待一下，美好的事物即将降临 ~'; }
+        else if (currentTaskFilter === 'complete') { eIco = '✅'; eTxt = '还没有已完成的任务'; eSub = '下载完成的任务将会显示在这里'; }
         list.innerHTML = `<div id="empty-state-view" style="text-align:center;padding:120px 20px;color:var(--text-muted);animation: fadeIn 0.15s ease-out;"><div style="font-size:65px;margin-bottom:20px;display:inline-block;animation: float 3s ease-in-out infinite;">${eIco}</div><div style="font-size:17px;font-weight:600;color:var(--text-main);letter-spacing:1px;">${eTxt}</div><div style="font-size:13px;margin-top:12px;opacity:0.7;">${eSub}</div></div>`;
         return;
       }
@@ -1618,7 +1618,8 @@ function renderTasks(){
           if (cfgRes.error) return; // 💡 致命错误拦截：防止 token 过期导致静默崩溃
           sysConfig = cfgRes; 
           populateSelects();
-          refreshTasks(); 
+          refreshTasks();
+          renderTasks(); // 首次主动渲染
           connectWS(); 
           setInterval(refreshTasks, 6000); 
       } catch(e) {
