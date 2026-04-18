@@ -2,7 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <meta name="theme-color" content="#1890ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Download Manager Pro</title>
   <script>
     function initTheme() { document.documentElement.setAttribute('data-theme', localStorage.getItem('dm_theme') || 'light'); }
@@ -146,7 +150,7 @@
       .task-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
       .meta-right { width: 100%; display: flex; justify-content: space-between; margin-top: 4px; }
       .settings-grid { flex-direction: column; gap: 16px; }
-      .ol-table th:nth-child(4), .ol-table td:nth-child(4) { display: none; }
+      /* 废弃的列隐藏代码 */
       #push-queue-container { position: fixed; top: 66px; left: 50%; transform: translateX(-50%); width: 90%; margin: 0 !important; z-index: 1050; }
       #push-queue-container > div { box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important; border: 1px solid var(--primary) !important; background: var(--card-bg) !important; }
     }
@@ -278,6 +282,37 @@
     .content { padding-top: 76px !important; }
     @media (min-width: 769px) { .sidebar { padding-top: 66px !important; } }
 </style>
+<style id="mobile-ultimate-fix">
+    @media screen and (max-width: 768px) {
+        /* 1. 调整顶部安全距离，去掉过大的留白，让画面更紧凑 */
+        .content { padding-top: 110px !important; }
+        #push-queue-container { top: 110px !important; z-index: 1050; }
+
+        /* 2. 致命修复：隐藏手机端无用的竖线分隔符，它是导致中间产生奇怪空行的罪魁祸首 */
+        .toolbar > div[style*="border-left"] { display: none !important; }
+
+        /* 3. 恢复【云端文件】列表被强行隐藏的第四列（修改时间），改为横向滑动查看 */
+        .ol-table th:nth-child(4), .ol-table td:nth-child(4) { display: table-cell !important; }
+        
+        /* 4. 深度重构【云端文件】顶部工具栏的弹性布局，更加紧凑美观 */
+        #section-openlist .toolbar { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 10px !important; 
+            padding: 12px !important; 
+        }
+        #ol-account-select { flex: 1 1 50% !important; min-width: 0; margin: 0 !important; order: 1; }
+        #section-openlist .toolbar > button.btn-default:nth-of-type(1) { flex: 1 1 40% !important; margin: 0 !important; order: 2; padding: 6px 10px; } /* 返回上级 */
+        #openlist-path { flex: 1 1 100% !important; order: 3; margin: 0 !important; } /* 面包屑独占一行 */
+        #section-openlist .toolbar > button.btn-primary { flex: 1 1 100% !important; order: 4; margin: 0 !important; } /* 刷新按钮独占一行 */
+        
+        /* 5. 选中文件时的按钮优化排列 */
+        #ol-selected-count { flex: 1 1 100% !important; order: 5; text-align: center; margin: 0 !important; }
+        #btn-ol-download { flex: 1 1 100% !important; order: 6; margin: 0 !important; }
+        #btn-ol-rename { flex: 1 1 47% !important; order: 7; margin: 0 !important; }
+        #btn-ol-delete { flex: 1 1 47% !important; order: 8; margin: 0 !important; }
+    }
+    </style>
 </head>
 <body>
   <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-body);z-index:10000;display:none;align-items:center;justify-content:center;">
@@ -492,13 +527,13 @@
           <label style="cursor:pointer; font-weight:600; margin-left:10px;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 序列化</label>
       </div>
       <div id="rn-replace-box">
-          <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;" oninput="updateRenamePreview()">
-          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除)" oninput="updateRenamePreview()">
+          <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;" oninput="updateRenamePreviewDebounced()">
+          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除)" oninput="updateRenamePreviewDebounced()">
       </div>
       <div id="rn-seq-box" style="display:none;">
           <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; background:var(--hover-bg); padding:8px; border-radius:4px;">变量: <code>{n}</code> 代表递增数字，<code>{ext}</code> 代表原后缀</div>
-          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集.S01.E{n}{ext}" style="margin-bottom:10px;" oninput="updateRenamePreview()">
-          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字" oninput="updateRenamePreview()">
+          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集.S01.E{n}{ext}" style="margin-bottom:10px;" oninput="updateRenamePreviewDebounced()">
+          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字" oninput="updateRenamePreviewDebounced()">
       </div>
       <div id="rn-preview-box" style="margin-top:15px; max-height:180px; overflow-y:auto; background:var(--bg-body); border-radius:4px; padding:10px; border:1px solid var(--input-border); font-size:12px; display:none;"></div>
       <div style="text-align:right; margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;">
@@ -1227,6 +1262,14 @@ function renderTasks(){
       showModal('rename-modal'); updateRenamePreview();
     }
 
+    
+    // --- 性能优化：输入框防抖机制 ---
+    let renamePreviewTimer;
+    function updateRenamePreviewDebounced() {
+        clearTimeout(renamePreviewTimer);
+        renamePreviewTimer = setTimeout(updateRenamePreview, 250); // 延迟 250ms 执行
+    }
+
     function updateRenamePreview() {
       const mode = document.querySelector('input[name="rn_type"]:checked').value;
       const search = document.getElementById('rn-search').value; const replace = document.getElementById('rn-replace').value; const fmt = document.getElementById('rn-format').value; let startNum = parseInt(document.getElementById('rn-start').value)||1;
@@ -1459,6 +1502,17 @@ function renderTasks(){
         if(tip) tip.style.display = isCustom ? 'none' : 'block';
     };
     
+    
+    // --- UX 优化：点击遮罩层外部自动关闭弹窗 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('mousedown', function(e) {
+                // 确保点击的正是 overlay 本身，而不是它内部的 .modal 子元素
+                if (e.target === this) this.classList.remove('show');
+            });
+        });
+    });
+
     initApp();
   </script>
 
