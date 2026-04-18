@@ -1,84 +1,85 @@
-# Download Manager Pro
+# 🚀 Download Manager Pro
 
-一个基于 Node.js、SQLite 和原生 JavaScript 构建的轻量自托管下载管理面板，不依赖前端框架。
+![Docker Pulls](https://img.shields.io/docker/pulls/mechanicf/download-manager.svg?style=flat-square&color=blue)
+![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)
+![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg?style=flat-square)
 
-## 主要功能
+这是一个专为极客、NAS 玩家和自托管爱好者打造的**极轻量级、零臃肿**的现代化全能下载与聚合检索面板。
 
-### 1. 界面与交互
-* **面包屑导航**：支持云端目录层级点击跳转。
-* **响应式布局**：适配移动端及桌面端浏览器。
-* **UI 动效**：使用 CSS 实现毛玻璃效果（Backdrop-filter）与过渡动画。
-* **主题支持**：内置浅色与深色（Dark Mode）模式。
+我们拒绝“企业级”的过度设计（没有沉重的 JWT、没有拖泥带水的 ORM 框架）。整个后端基于原生 Node.js 极简架构，配合 `better-sqlite3` 预编译引擎与纯粹的 WebSocket 通讯，在极低的内存占用下，实现了匹敌大型商业系统的并发吞吐量与实时响应速度。
 
-### 2. Aria2 集群管理
-* **多节点支持**：可同时连接并监控多个 Aria2 实例。
-* **配置热重载**：支持在界面直接修改并保存 Aria2 的底层 RPC 参数。
-* **任务控制**：支持任务暂停、恢复、批量删除以及强杀（Force Kill）并清理残留文件。
-* **离线检测优化**：调整了 RPC 超时逻辑，减少因海量历史任务导致的节点假死误报。
+## ✨ 核心特性
 
-### 3. 文件管理与搜索
-* **OpenList 挂载**：支持挂载云盘，浏览文件列表。
-* **批量投递**：支持将云盘文件批量推送到指定的 Aria2 节点进行下载。
-* **网盘搜索**：集成聚合搜索接口，支持按网盘类型筛选。
-
-### 4. 自动化识别
-* **MoviePilot 联动**：支持调用 MoviePilot API 进行媒体信息识别。
-* **重命名工具**：支持正则替换、序列化命名（如 `{n}`、`{ext}`），并提供实时预览。
-
-### 5. 系统维护
-* **dm 控制台**：通过全局命令 `dm` 管理服务启停、日志查看与自动更新。
-* **更新安全机制**：更新脚本会自动执行“停机 -> 备份数据库 -> 拉取代码 -> 还原数据库 -> 启动”流程，防止 SQLite 数据库损坏。
+- ⚡️ **极致轻量**：极简代码架构，Alpine 环境打包，专为低配置机器（如树莓派、入门级 NAS）优化。
+- 🟢 **毫秒级实时通讯**：底层采用纯粹的 WebSocket 长连接池，无视 HTTP 短轮询的延迟，下载进度、节点状态做到真正的肉眼级实时同步。
+- 🔗 **多节点引擎支持**：原生无缝接管 **Aria2** 节点，支持配置多路下载源。
+- 🔍 **聚合检索生态**：内置 **盘搜 (Openlist)** 与 **MoviePilot** 接口深度对接，实现“搜、推、下、存”一站式闭环。
+- 💾 **极速本地存储**：强制启用 SQLite `WAL` 模式与预编译 SQL (Prepared Statements)，数据读写稳如磐石。
 
 ---
 
-## 安装部署
+## 🐳 Docker 一键极速部署 (推荐)
 
-### 环境要求
-* Node.js 20.x 或更高版本
-* Git
-* PM2
+我们提供了官方的 Docker 镜像，只需几行命令，即可在任何 Linux/NAS 系统上无脑拉起面板。
 
-### 部署步骤
-1.  克隆仓库：
-    ```bash
-    git clone https://github.com/MechanicF/Download-Manager.git /opt/Download-Manager
-    ```
-2.  执行管理脚本完成安装：
-    ```bash
-    cd /opt/Download-Manager
-    bash manager.sh
-    ```
-
----
-
-## 管理维护
-
-在系统中任何目录下输入 `dm` 即可呼出管理菜单：
+### 1. 准备环境
+在你的服务器上创建一个工作目录，并**提前创建好空文件**（防止 Docker 误将其挂载为目录）：
 
 ```bash
-dm
-```
+mkdir -p /opt/dl-manager && cd /opt/dl-manager
+touch config.json downloads.db
+2. 创建 docker-compose.yml
+在同一目录下创建 docker-compose.yml 文件并填入以下内容：
 
-### 菜单选项说明
-1.  **启动面板服务**：启动 Node.js 后端进程。
-2.  **停止面板服务**：停止进程并释放端口。
-3.  **重启面板服务**：重新加载配置与代码。
-4.  **查看实时运行日志**：查看 PM2 输出。
-5.  **设置开机自动启动**：配置 Systemd 服务。
-6.  **一键更新**：从 GitHub 拉取代码并自动备份/恢复数据库。
-7.  **彻底卸载**：清理文件、配置与全局命令。
+YAML
+version: '3.8'
 
----
+services:
+  download-manager:
+    image: mechanicf/download-manager:latest
+    container_name: download-manager
+    restart: always
+    ports:
+      - "1111:1111"    # Web 面板端口
+      - "28080:28080"  # WebSocket 实时通讯端口
+    volumes:
+      - ./config.json:/app/config.json
+      - ./downloads.db:/app/downloads.db
+      - /root/downloads:/downloads  # 请将前面替换为你宿主机的真实下载路径
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai
+3. 拉起服务
+Bash
+docker compose up -d
+🎉 搞定！ 现在打开浏览器访问 http://你的服务器IP:1111 即可进入面板。
 
-## 技术细节
+💡 初始账号密码：
+首次启动时，系统会自动在你的 config.json 中生成默认凭据。
 
-* **服务端**：Node.js (Express, ws, better-sqlite3, axios)
-* **前端**：Vanilla JS, CSS Variables
-* **数据存储**：SQLite 3
-* **配置文件**：`config.json`
-* **数据库文件**：`downloads.db` (Git 已配置自动忽略)
+默认账号：admin
 
----
+默认密码：password
+(登录后请务必在本地修改 config.json 并重启容器以保障安全)
 
-## 许可证
-MIT License
+🛠️ 进阶配置与反向代理
+如果你希望使用域名访问（配合 Nginx 或 Cloudflare Tunnel），请注意处理好 WebSocket 的转发。
+
+Nginx 代理参考配置：
+
+Nginx
+location / {
+    proxy_pass [http://127.0.0.1:1111](http://127.0.0.1:1111);
+    proxy_set_header Host $host;
+}
+
+# 如果你将 WebSocket 与主域名同端口转发，请单独处理 Upgrade 头
+location /ws {
+    proxy_pass [http://127.0.0.1:28080](http://127.0.0.1:28080);
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+}
+🛡️ 安全与隐私理念
+本项目坚持**“自托管、零遥测、全本地”**的理念。
+你的所有搜索记录、网盘 Token、下载路径和密码均仅加密存储于你本地挂载的 config.json 与 SQLite 数据库中。面板没有任何外部流量回传，请放心食用。
