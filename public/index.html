@@ -137,6 +137,11 @@
 
     /* === 📱 移动端完美响应式重构 (终极版) === */
     @media (max-width: 768px) {
+
+        /* 修复手机浏览器底部导航栏遮挡/截断问题 */
+        #vo-cluster-grid { padding-bottom: 120px !important; }
+        #section-upload_status { padding-bottom: 60px !important; }
+
       /* 核心物理抗溢出 */
       html, body { width: 100vw; max-width: 100vw; overflow-x: hidden; margin: 0; padding: 0; }
       .main-wrapper { width: 100vw; max-width: 100vw; overflow-x: hidden; }
@@ -214,7 +219,18 @@
         user-select: none;
     }
 
-</style>
+
+        /* 终端弹窗手机端错位修复 */
+        @media (max-width: 768px) {
+            .vo-term-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; padding-right: 45px !important; position: relative !important; }
+            .vo-term-info { flex-wrap: wrap !important; gap: 8px !important; }
+            .vo-term-ctrls { width: 100% !important; justify-content: flex-start !important; flex-wrap: wrap !important; gap: 8px !important; }
+            .vo-term-divider { display: none !important; /* 手机端隐藏竖条分隔符 */ }
+            .vo-term-close { position: absolute !important; right: 12px !important; top: 12px !important; padding: 5px !important; }
+            #term-node-name { white-space: nowrap; }
+        }
+
+    </style>
 
 <style id="mobile-header-debug-css">
     @media screen and (max-width: 768px) {
@@ -397,6 +413,17 @@
     .ol-table tbody tr:active { background-color: var(--hover-bg) !important; }
   </style>
 
+
+    <style>
+        /* 手机端响应式适配 */
+        @media (max-width: 768px) {
+            .vo-node-row { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+            .vo-node-row > div { width: 100% !important; flex: none !important; }
+            .vo-node-row .btn { width: 100%; margin-top: 5px; }
+            .vo-dashboard-grid { grid-template-columns: 1fr !important; }
+            .vo-term-ctrls { flex-wrap: wrap; justify-content: flex-end; }
+        }
+    </style>
 </head>
 <body>
 
@@ -501,36 +528,40 @@
       </div>
 
       
+      
       <div id="section-upload_status" class="section">
         <div class="toolbar" style="border-left: 4px solid #722ed1;">
-          <h3 style="margin:0;">📊 上传进度控制台</h3>
-          <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
-              <span id="vo-status-badge" style="padding:6px 12px; border-radius:20px; font-size:12px; font-weight:bold; background:#636e72; color:white; margin-right:10px;">检查中</span>
-              <button class="btn btn-success" onclick="voAction('start')">▶ 启动</button>
-              <button class="btn btn-danger" onclick="voAction('stop')">⏹ 停止</button>
-              <button class="btn btn-warning" onclick="voAction('restart')" style="color:black;">🔄 重启</button>
-              <button class="btn btn-default" onclick="voAction('clean')">🧹 清理</button>
+          <h3 style="margin:0;">📊 上传进度</h3>
+          <div style="margin-left:auto;">
+              <button class="btn btn-default" onclick="renderVoDashboard(true)">🔄 强制刷新</button>
           </div>
         </div>
-        
-        <div style="display:flex; gap:15px; margin-bottom:15px;">
-            <div class="config-card" style="flex:1; margin:0; text-align:center;">
-                <div style="font-size:12px;color:var(--text-muted)">进程 PID</div>
-                <div id="vo-pid" style="font-size:18px;font-weight:bold;margin-top:5px;">-</div>
-            </div>
-            <div class="config-card" style="flex:1; margin:0; text-align:center;">
-                <div style="font-size:12px;color:var(--text-muted)">运行时间</div>
-                <div id="vo-uptime" style="font-size:18px;font-weight:bold;margin-top:5px;">-</div>
-            </div>
-            <div class="config-card" style="flex:1; margin:0; text-align:center;">
-                <div style="font-size:12px;color:var(--text-muted)">内存占用</div>
-                <div id="vo-mem" style="font-size:18px;font-weight:bold;margin-top:5px;">-</div>
-            </div>
+        <div id="vo-cluster-grid" class="vo-dashboard-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px; padding-bottom:30px;">
+            <div style="color:var(--text-muted); grid-column: 1 / -1; text-align:center; padding:50px 0;">请先在【全局设置】中添加集群节点</div>
         </div>
+      </div>
 
-        <div id="vo-term" style="background:#1e1e1e; color:#d4d4d4; padding:15px; height:calc(100vh - 270px); overflow-y:auto; border-radius:var(--radius-sm); font-family:'Consolas', monospace; font-size:13px; line-height:1.6; border:1px solid #333; box-shadow:inset 0 4px 10px rgba(0,0,0,0.2); word-break: break-all;">
-            <div style="color:#888; text-align:center; margin-top:100px;">正在连接安全网关...</div>
-        </div>
+      <div id="vo-terminal-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+          <div style="background:#1e1e1e; width:90%; max-width:1000px; height:85vh; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; border:1px solid #444; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+              <div class="vo-term-header" style="background:#2d2d2d; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #111;">
+                  <div class="vo-term-info" style="display:flex; align-items:center; gap:15px;">
+                      <span id="term-node-name" style="color:#fff; font-weight:bold; font-size:16px;">节点终端</span>
+                      <span id="term-badge" style="padding:4px 10px; border-radius:4px; font-size:12px; font-weight:bold; background:#636e72; color:white;">检查中</span>
+                      <span id="term-stats" style="color:#aaa; font-size:12px; font-family:monospace;">PID: - | Mem: - | UP: -</span>
+                  </div>
+                  <div class="vo-term-ctrls" style="display:flex; gap:8px; align-items:center;">
+                      <button class="btn btn-sm btn-success" onclick="voAction(currentTermNodeId, 'start')" style="padding:4px 10px; font-size:12px;">▶ 启动</button>
+                      <button class="btn btn-sm btn-danger" onclick="voAction(currentTermNodeId, 'stop')" style="padding:4px 10px; font-size:12px;">⏹ 停止</button>
+                      <button class="btn btn-sm btn-warning" onclick="voAction(currentTermNodeId, 'restart')" style="padding:4px 10px; font-size:12px; color:black;">🔄 重启</button>
+                      <button class="btn btn-sm btn-default" onclick="voAction(currentTermNodeId, 'clean')" style="padding:4px 10px; font-size:12px;">🧹 清理</button>
+                      <div class="vo-term-divider" style="width:1px; height:20px; background:#555; margin:0 5px;"></div>
+                      <button class="vo-term-close" onclick="closeVoTerminal()" style="background:transparent; border:none; color:#fff; font-size:28px; cursor:pointer; line-height:1;">×</button>
+                  </div>
+              </div>
+              <div id="term-log-box" style="flex:1; padding:15px; overflow-y:auto; font-family:'Consolas', monospace; font-size:13px; line-height:1.6; color:#d4d4d4; word-break:break-all;">
+                  <div style="color:#888; text-align:center; margin-top:100px;">正在连接安全网关...</div>
+              </div>
+          </div>
       </div>
       <div id="section-settings" class="section">
         <div class="toolbar" style="border-left:4px solid var(--primary); justify-content:space-between;"><h3 style="margin:0;">⚙️ 系统核心配置</h3><button class="btn btn-primary" onclick="saveSettings()">💾 保存并应用</button></div>
@@ -575,11 +606,9 @@
               </div>
               <div id="mp-default-tip" style="font-size:12px; color:var(--text-muted); line-height:1.6;">已启用系统内置的 AI 识别引擎，开箱即用，无需配置。</div>
             </div>
-            <h4 style='margin-top:30px; margin-bottom:15px; color:#722ed1;'>📊 上传进度控制台集成</h4>
-            <div class='config-card'>
-              <label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>Web 控制台地址 (必须包含端口，例如: http://38.45.71.123:10086)</label>
-              <input type='text' id='upload-status-url' class='form-control' placeholder='请填入完整的 HTTP 地址'>
-            </div>
+            <h4 style='margin-top:30px; margin-bottom:15px; color:#722ed1;'>🌐 上传进度节点配置</h4>
+            <div id="vo-nodes-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <button class="btn btn-default" onclick="addVoNode()" style="margin-top:15px; margin-bottom:30px; width:100%; border:1px dashed #555; background:transparent; color:#888;">➕ 添加新节点</button>
             <h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
             <div class="config-card">
               <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录账号</label>
@@ -1001,7 +1030,7 @@
     async function loadConfig(){
       const r = await api('/api/config'); if(r.error) return; sysConfig = r;
       document.getElementById('panel-user').value = r.auth?.username || 'admin';
-      if(document.getElementById('upload-status-url')) document.getElementById('upload-status-url').value = r.video_organizer_url || '';
+      if(typeof renderVoSettings === 'function') renderVoSettings();
       
       const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== atob('aHR0cDovLzM4Ljc2LjIwNC4xMTQ6MzAwMA==');
       if (document.querySelector('input[name="mp_mode"][value="custom"]')) {
@@ -1053,7 +1082,19 @@
       const u = document.getElementById('panel-user').value; const p = document.getElementById('panel-pass').value || sysConfig.auth.password;
       
       await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, pansou_url: (document.querySelector('input[name="pansou_mode"]:checked')?.value === 'custom' && document.getElementById('pansou-url')) ? document.getElementById('pansou-url').value : '',
-        video_organizer_url: document.getElementById('upload-status-url')?.value.trim() || '', auth:{username:u, password:p}})});
+        vo_nodes: (function(){
+        const names = document.querySelectorAll('.vo-node-name');
+        const urls = document.querySelectorAll('.vo-node-url');
+        const arr = [];
+        if(names && urls) {
+            for(let i=0; i<names.length; i++){
+                if(names[i].value || urls[i].value) {
+                    arr.push({ id: i+1, name: names[i].value.trim(), url: urls[i].value.trim() });
+                }
+            }
+        }
+        return arr;
+    })(), auth:{username:u, password:p}})});
       showToast('核心配置保存成功！');
       authToken = sysConfig.newToken || authToken; localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
       sysConfig = await api('/api/config'); if(sysConfig.newToken) authToken = sysConfig.newToken; populateSelects(); refreshTasks();
@@ -1894,6 +1935,214 @@ function renderTasks(){
             setTimeout(window.fetchVoData, 500);
         } else {
             showToast(r.error || '操作失败', 'error');
+        }
+    };
+
+    
+    // === 终极集群逻辑注入 ===
+    window.fetchVoData = function(){}; // 强制瘫痪旧的单点轮询，防止后台报错
+    
+    let voDashTimer = null;
+    let voTermTimer = null;
+    window.currentTermNodeId = null;
+
+    const _clusterSwitchTab = switchTab;
+    switchTab = function(id, el) {
+        _clusterSwitchTab(id, el);
+        if (voDashTimer) clearInterval(voDashTimer);
+        if (voTermTimer) clearInterval(voTermTimer);
+        if (typeof voPollTimer !== 'undefined' && voPollTimer) clearInterval(voPollTimer);
+        
+        if (id === 'upload_status') {
+            renderVoDashboard(true);
+            voDashTimer = setInterval(renderVoDashboard, 4000);
+        }
+    };
+
+    
+    window.renderVoSettings = function() {
+        const container = document.getElementById('vo-nodes-container');
+        if (!container) return;
+        container.innerHTML = '';
+        const nodes = sysConfig.vo_nodes || [];
+        if (nodes.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px; background:var(--bg-body); border-radius:8px; border:1px solid var(--border-color);">暂无节点，请点击下方按钮添加</div>';
+        }
+        nodes.forEach((node, idx) => {
+            const div = document.createElement('div');
+            div.className = 'vo-node-row';
+            div.style = 'display:flex; gap:15px; align-items:flex-end; background:var(--bg-body); padding:15px; border-radius:8px; border:1px solid var(--border-color);';
+            div.innerHTML = `
+                <div style="flex:1;">
+                    <label style="font-size:12px; color:var(--text-muted); margin-bottom:4px; display:block;">节点名称</label>
+                    <input type="text" class="form-control vo-node-name" placeholder="例如: 香港一号机" value="${node.name || ''}">
+                </div>
+                <div style="flex:2;">
+                    <label style="font-size:12px; color:var(--text-muted); margin-bottom:4px; display:block;">Web控制台地址 (带端口)</label>
+                    <input type="text" class="form-control vo-node-url" placeholder="例如: http://38.45.71.123:10086" value="${node.url || ''}">
+                </div>
+                <div style="flex: 0 0 auto; padding-bottom:1px;">
+                    <button class="btn btn-danger" onclick="removeVoNode(${idx})" style="padding:8px 12px;">🗑️</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    };
+
+    window.addVoNode = function() {
+        if (!sysConfig.vo_nodes) sysConfig.vo_nodes = [];
+        sysConfig.vo_nodes.push({ id: Date.now(), name: '', url: '' });
+        renderVoSettings();
+    };
+
+    window.removeVoNode = function(idx) {
+        sysConfig.vo_nodes.splice(idx, 1);
+        renderVoSettings();
+    };
+
+    window.formatLog = function(l) {
+        let cl = l.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        cl = cl.replace(/(\d{4}[\/\-]\d{2}[\/\-]\d{2}[\sT]\d{2}:\d{2}:\d{2})/g, '<span style="color:#569cd6">$1</span>');
+        cl = cl.replace(/\[(INFO)\]/g, '<span style="color:#4ec9b0; font-weight:bold;">[$1]</span>');
+        cl = cl.replace(/\[(WARN|WARNING)\]/g, '<span style="color:#ce9178; font-weight:bold;">[$1]</span>');
+        cl = cl.replace(/\[(ERROR|ERR)\]/g, '<span style="color:#f14c4c; font-weight:bold;">[$1]</span>');
+        cl = cl.replace(/\[(START|STOP|RESTART|CLEAN)\]/g, '<span style="color:#c586c0; font-weight:bold;">[$1]</span>');
+        return `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cl}</div>`;
+    };
+
+    window.renderVoDashboard = async function(force = false) {
+        if (!document.getElementById('section-upload_status').classList.contains('active')) return;
+        if (!sysConfig.vo_nodes || sysConfig.vo_nodes.length === 0) {
+            document.getElementById('vo-cluster-grid').innerHTML = '<div style="color:var(--text-muted); grid-column: 1 / -1; text-align:center; padding:50px 0;">请先在【全局设置】中添加集群节点</div>';
+            return;
+        }
+        
+        const grid = document.getElementById('vo-cluster-grid');
+        if (force || grid.innerHTML.includes('请先在')) grid.innerHTML = '';
+
+        await Promise.all(sysConfig.vo_nodes.map(async (node) => {
+            let card = document.getElementById('vo-card-' + node.id);
+            if (!card) {
+                card = document.createElement('div');
+                card.id = 'vo-card-' + node.id;
+                card.style = 'background:var(--bg-body); border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.05);';
+                card.innerHTML = `
+                    <div style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color);">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span id="card-badge-${node.id}" style="width:12px; height:12px; border-radius:50%; background:#ccc; display:inline-block;"></span>
+                            <span style="font-weight:bold; font-size:15px; color:var(--text-color);">${node.name}</span>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="openVoTerminal(${node.id}, '${node.name}')" style="padding:4px 10px; font-size:12px; border-radius:4px;">🖥️ 终端</button>
+                    </div>
+                    <div style="padding:10px 15px; display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); background:var(--hover-bg);">
+                        <span>PID: <b id="card-pid-${node.id}" style="color:var(--text-color)">-</b></span>
+                        <span>MEM: <b id="card-mem-${node.id}" style="color:var(--text-color)">-</b></span>
+                        <span>UP: <b id="card-up-${node.id}" style="color:var(--text-color)">-</b></span>
+                    </div>
+                    <div id="card-log-${node.id}" style="background:#1e1e1e; padding:10px 15px; font-family:monospace; font-size:12px; line-height:1.6; color:#aaa; flex:1;">加载中...</div>
+                `;
+                grid.appendChild(card);
+            }
+
+            try {
+                const [sRes, lRes] = await Promise.all([
+                    api('/api/vo/' + node.id + '/status'),
+                    api('/api/vo/' + node.id + '/logs?n=20')
+                ]);
+
+                if (sRes && sRes.running) {
+                    document.getElementById('card-badge-' + node.id).style.background = '#00b894';
+                    document.getElementById('card-pid-' + node.id).innerText = sRes.pid || '-';
+                    document.getElementById('card-mem-' + node.id).innerText = sRes.memory || '-';
+                    document.getElementById('card-up-' + node.id).innerText = sRes.uptime || '-';
+                } else {
+                    document.getElementById('card-badge-' + node.id).style.background = '#d63031';
+                    document.getElementById('card-pid-' + node.id).innerText = '-';
+                    document.getElementById('card-mem-' + node.id).innerText = '-';
+                    document.getElementById('card-up-' + node.id).innerText = '-';
+                }
+
+                const logBox = document.getElementById('card-log-' + node.id);
+                if (lRes && lRes.logs && lRes.logs.length > 0) {
+                    logBox.innerHTML = lRes.logs.map(l => formatLog(l)).join('');
+                } else if (sRes.success === false) {
+                    logBox.innerHTML = `<span style="color:#f14c4c;">⚠️ ${sRes.error}</span>`;
+                } else {
+                    logBox.innerHTML = '暂无日志输出';
+                }
+            } catch (e) {
+                document.getElementById('card-badge-' + node.id).style.background = '#636e72';
+                document.getElementById('card-log-' + node.id).innerHTML = '<span style="color:#f14c4c;">网络故障/失联</span>';
+            }
+        }));
+    };
+
+    window.openVoTerminal = function(id, name) {
+        window.currentTermNodeId = id;
+        document.getElementById('term-node-name').innerText = name + ' 终端';
+        document.getElementById('vo-terminal-modal').style.display = 'flex';
+        document.getElementById('term-log-box').innerHTML = '<div style="color:#888; text-align:center; margin-top:100px;">正在建立加密通道...</div>';
+        
+        if (voDashTimer) clearInterval(voDashTimer);
+        pollVoTerminal();
+        voTermTimer = setInterval(pollVoTerminal, 2000);
+    };
+
+    window.closeVoTerminal = function() {
+        document.getElementById('vo-terminal-modal').style.display = 'none';
+        window.currentTermNodeId = null;
+        if (voTermTimer) clearInterval(voTermTimer);
+        
+        renderVoDashboard(true);
+        voDashTimer = setInterval(renderVoDashboard, 4000);
+    };
+
+    window.pollVoTerminal = async function() {
+        if (!window.currentTermNodeId) return;
+        try {
+            const [sRes, lRes] = await Promise.all([
+                api('/api/vo/' + window.currentTermNodeId + '/status'),
+                api('/api/vo/' + window.currentTermNodeId + '/logs?n=150')
+            ]);
+            
+            const badge = document.getElementById('term-badge');
+            if (sRes && sRes.running) {
+                badge.style.background = '#00b894'; badge.innerText = '● RUNNING';
+                document.getElementById('term-stats').innerText = `PID: ${sRes.pid || '-'} | Mem: ${sRes.memory || '-'} | UP: ${sRes.uptime || '-'}`;
+            } else {
+                badge.style.background = '#d63031'; badge.innerText = '○ STOPPED';
+                document.getElementById('term-stats').innerText = `PID: - | Mem: - | UP: -`;
+            }
+
+            if (lRes && lRes.logs) {
+                const term = document.getElementById('term-log-box');
+                const isBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 30;
+                
+                term.innerHTML = lRes.logs.map(l => {
+                    let cl = l.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    cl = cl.replace(/(\d{4}[\/\-]\d{2}[\/\-]\d{2}[\sT]\d{2}:\d{2}:\d{2})/g, '<span style="color:#569cd6">$1</span>');
+                    cl = cl.replace(/\[(INFO)\]/g, '<span style="color:#4ec9b0; font-weight:bold;">[$1]</span>');
+                    cl = cl.replace(/\[(WARN|WARNING)\]/g, '<span style="color:#ce9178; font-weight:bold;">[$1]</span>');
+                    cl = cl.replace(/\[(ERROR|ERR)\]/g, '<span style="color:#f14c4c; font-weight:bold;">[$1]</span>');
+                    cl = cl.replace(/\[(START|STOP|RESTART|CLEAN)\]/g, '<span style="color:#c586c0; font-weight:bold;">[$1]</span>');
+                    return `<div style="border-bottom:1px solid #2a2a2a; padding:2px 0;">${cl}</div>`;
+                }).join('') || '<div style="color:#888; text-align:center; padding-top:100px;">暂无日志输出</div>';
+                if (isBottom) term.scrollTop = term.scrollHeight;
+            }
+        } catch (e) {
+            document.getElementById('term-badge').style.background = '#636e72';
+            document.getElementById('term-badge').innerText = 'OFFLINE';
+        }
+    };
+
+    window.voAction = async function(nodeId, act) {
+        if (!nodeId) return;
+        const r = await api('/api/vo/' + nodeId + '/' + act, {method: 'POST'});
+        if (r.success) {
+            showToast('✅ 指令已下发');
+            setTimeout(window.currentTermNodeId ? pollVoTerminal : renderVoDashboard, 500);
+        } else {
+            showToast(r.error || '节点操作失败', 'error');
         }
     };
 
