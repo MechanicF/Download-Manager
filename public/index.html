@@ -1001,6 +1001,7 @@
     async function loadConfig(){
       const r = await api('/api/config'); if(r.error) return; sysConfig = r;
       document.getElementById('panel-user').value = r.auth?.username || 'admin';
+      if(document.getElementById('upload-status-url')) document.getElementById('upload-status-url').value = r.video_organizer_url || '';
       
       const isMpCustom = r.moviepilot_url && r.moviepilot_url.length > 0 && r.moviepilot_url !== atob('aHR0cDovLzM4Ljc2LjIwNC4xMTQ6MzAwMA==');
       if (document.querySelector('input[name="mp_mode"][value="custom"]')) {
@@ -1051,7 +1052,8 @@
       const mpToken = mpMode === 'custom' ? document.getElementById('mp-token').value : '';
       const u = document.getElementById('panel-user').value; const p = document.getElementById('panel-pass').value || sysConfig.auth.password;
       
-      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, pansou_url: (document.querySelector('input[name="pansou_mode"]:checked')?.value === 'custom' && document.getElementById('pansou-url')) ? document.getElementById('pansou-url').value : '', auth:{username:u, password:p}})});
+      await api('/api/config',{method:'POST',body:JSON.stringify({aria2, openlist, moviepilot_url:mpUrl, moviepilot_token:mpToken, pansou_url: (document.querySelector('input[name="pansou_mode"]:checked')?.value === 'custom' && document.getElementById('pansou-url')) ? document.getElementById('pansou-url').value : '',
+        video_organizer_url: document.getElementById('upload-status-url')?.value.trim() || '', auth:{username:u, password:p}})});
       showToast('核心配置保存成功！');
       authToken = sysConfig.newToken || authToken; localStorage.setItem('manager_auth_token', authToken); document.getElementById('panel-pass').value='';
       sysConfig = await api('/api/config'); if(sysConfig.newToken) authToken = sysConfig.newToken; populateSelects(); refreshTasks();
@@ -1821,13 +1823,6 @@ function renderTasks(){
     window.addEventListener('drop', e => { dragCounter=0; document.getElementById('drop-zone-overlay').style.display='none'; });
 
     
-    const _orgSaveSettings = saveSettings;
-    saveSettings = async function() {
-        const urlInput = document.getElementById('upload-status-url');
-        if (urlInput) sysConfig.video_organizer_url = urlInput.value.trim();
-        await _orgSaveSettings();
-    };
-
     const _orgLoadConfig = loadConfig;
     loadConfig = async function() {
         await _orgLoadConfig();
