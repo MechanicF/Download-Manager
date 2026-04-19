@@ -439,6 +439,7 @@
         </ul>
         <li class="nav-item" onclick="switchTab('openlist', this)">☁️ 云端文件</li>
         <li class="nav-item" onclick="switchTab('pansou', this)">🔍 全网盘搜</li>
+        <li class="nav-item" onclick="switchTab('upload_status', this)">📊 上传进度</li>
         <div style="margin: 12px 16px; border-top: 1px dashed var(--border-color);"></div><li class="nav-item" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
         <li><div id="sidebar-engines-status" style="padding:16px; font-size:12px; color:var(--text-muted); line-height:2.2;"></div></li>
       </ul>
@@ -499,6 +500,38 @@
         </div>
       </div>
 
+      
+      <div id="section-upload_status" class="section">
+        <div class="toolbar" style="border-left: 4px solid #722ed1;">
+          <h3 style="margin:0;">📊 上传进度控制台</h3>
+          <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+              <span id="vo-status-badge" style="padding:6px 12px; border-radius:20px; font-size:12px; font-weight:bold; background:#636e72; color:white; margin-right:10px;">检查中</span>
+              <button class="btn btn-success" onclick="voAction('start')">▶ 启动</button>
+              <button class="btn btn-danger" onclick="voAction('stop')">⏹ 停止</button>
+              <button class="btn btn-warning" onclick="voAction('restart')" style="color:black;">🔄 重启</button>
+              <button class="btn btn-default" onclick="voAction('clean')">🧹 清理</button>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:15px; margin-bottom:15px;">
+            <div class="config-card" style="flex:1; margin:0; text-align:center;">
+                <div style="font-size:12px;color:var(--text-muted)">进程 PID</div>
+                <div id="vo-pid" style="font-size:18px;font-weight:bold;margin-top:5px;">-</div>
+            </div>
+            <div class="config-card" style="flex:1; margin:0; text-align:center;">
+                <div style="font-size:12px;color:var(--text-muted)">运行时间</div>
+                <div id="vo-uptime" style="font-size:18px;font-weight:bold;margin-top:5px;">-</div>
+            </div>
+            <div class="config-card" style="flex:1; margin:0; text-align:center;">
+                <div style="font-size:12px;color:var(--text-muted)">内存占用</div>
+                <div id="vo-mem" style="font-size:18px;font-weight:bold;margin-top:5px;">-</div>
+            </div>
+        </div>
+
+        <div id="vo-term" style="background:#1e1e1e; color:#d4d4d4; padding:15px; height:calc(100vh - 270px); overflow-y:auto; border-radius:var(--radius-sm); font-family:'Consolas', monospace; font-size:13px; line-height:1.6; border:1px solid #333; box-shadow:inset 0 4px 10px rgba(0,0,0,0.2); word-break: break-all;">
+            <div style="color:#888; text-align:center; margin-top:100px;">正在连接安全网关...</div>
+        </div>
+      </div>
       <div id="section-settings" class="section">
         <div class="toolbar" style="border-left:4px solid var(--primary); justify-content:space-between;"><h3 style="margin:0;">⚙️ 系统核心配置</h3><button class="btn btn-primary" onclick="saveSettings()">💾 保存并应用</button></div>
         <div class="settings-grid">
@@ -541,7 +574,13 @@
                   <input type='password' id='mp-token' class='form-control' placeholder='填写你的 Token'>
               </div>
               <div id="mp-default-tip" style="font-size:12px; color:var(--text-muted); line-height:1.6;">已启用系统内置的 AI 识别引擎，开箱即用，无需配置。</div>
-            </div><h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
+            </div>
+            <h4 style='margin-top:30px; margin-bottom:15px; color:#722ed1;'>📊 上传进度控制台集成</h4>
+            <div class='config-card'>
+              <label style='font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;'>Web 控制台地址 (必须包含端口，例如: http://38.45.71.123:10086)</label>
+              <input type='text' id='upload-status-url' class='form-control' placeholder='请填入完整的 HTTP 地址'>
+            </div>
+            <h4 style="margin-top:30px; margin-bottom:15px; color:var(--danger);">🔒 面板安全设置</h4>
             <div class="config-card">
               <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">登录账号</label>
               <input type="text" id="panel-user" class="form-control" style="margin-bottom:12px;">
@@ -1780,6 +1819,88 @@ function renderTasks(){
     window.addEventListener('dragenter', e => { e.preventDefault(); dragCounter++; document.getElementById('drop-zone-overlay').style.display='flex'; });
     window.addEventListener('dragleave', e => { dragCounter--; if(dragCounter===0) document.getElementById('drop-zone-overlay').style.display='none'; });
     window.addEventListener('drop', e => { dragCounter=0; document.getElementById('drop-zone-overlay').style.display='none'; });
+
+    
+    const _orgSaveSettings = saveSettings;
+    saveSettings = async function() {
+        const urlInput = document.getElementById('upload-status-url');
+        if (urlInput) sysConfig.video_organizer_url = urlInput.value.trim();
+        await _orgSaveSettings();
+    };
+
+    const _orgLoadConfig = loadConfig;
+    loadConfig = async function() {
+        await _orgLoadConfig();
+        const input = document.getElementById('upload-status-url');
+        if (input) input.value = sysConfig.video_organizer_url || '';
+    };
+
+    let voPollTimer = null;
+    const _orgSwitchTab = switchTab;
+    switchTab = function(id, el) {
+        _orgSwitchTab(id, el);
+        if (voPollTimer) clearInterval(voPollTimer);
+        if (id === 'upload_status') {
+            window.fetchVoData();
+            voPollTimer = setInterval(window.fetchVoData, 2000);
+        }
+    };
+
+    window.fetchVoData = async function() {
+        if (!document.getElementById('section-upload_status').classList.contains('active')) return;
+        try {
+            const sRes = await api('/api/vo/status');
+            const badge = document.getElementById('vo-status-badge');
+            
+            if (sRes && sRes.success === false) {
+                badge.style.background = '#d63031'; badge.style.color = '#fff'; badge.innerText = '⚠️ 连接失败';
+                document.getElementById('vo-term').innerHTML = `<div style="color:#f14c4c; text-align:center; padding-top:100px;">⚠️ ${sRes.error} <br><br> ${sRes.details || ''}</div>`;
+                return;
+            }
+
+            if (sRes.running) {
+                badge.style.background = '#00b894'; badge.style.color = '#fff'; badge.innerText = '● 运行中';
+                document.getElementById('vo-pid').innerText = sRes.pid || '-';
+                document.getElementById('vo-uptime').innerText = sRes.uptime || '-';
+                document.getElementById('vo-mem').innerText = sRes.memory || '-';
+            } else {
+                badge.style.background = '#d63031'; badge.style.color = '#fff'; badge.innerText = '○ 已停止';
+                document.getElementById('vo-pid').innerText = '-';
+                document.getElementById('vo-uptime').innerText = '-';
+                document.getElementById('vo-mem').innerText = '-';
+            }
+
+            const lRes = await api('/api/vo/logs?n=150');
+            if (lRes && lRes.logs) {
+                const term = document.getElementById('vo-term');
+                const isBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 30;
+                
+                let logHtml = '';
+                lRes.logs.forEach(l => {
+                    let cl = l.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    cl = cl.replace(/(\d{4}[\/\-]\d{2}[\/\-]\d{2}[\sT]\d{2}:\d{2}:\d{2})/g, '<span style="color:#569cd6">$1</span>');
+                    cl = cl.replace(/\[(INFO)\]/g, '<span style="color:#4ec9b0; font-weight:bold;">[$1]</span>');
+                    cl = cl.replace(/\[(WARN|WARNING)\]/g, '<span style="color:#ce9178; font-weight:bold;">[$1]</span>');
+                    cl = cl.replace(/\[(ERROR|ERR)\]/g, '<span style="color:#f14c4c; font-weight:bold;">[$1]</span>');
+                    cl = cl.replace(/\[(START|STOP|RESTART|CLEAN)\]/g, '<span style="color:#c586c0; font-weight:bold;">[$1]</span>');
+                    logHtml += `<div style="border-bottom:1px solid #2a2a2a; padding:2px 0;">${cl}</div>`;
+                });
+                
+                term.innerHTML = logHtml || '<div style="color:#888; text-align:center; padding-top:100px;">暂无日志输出</div>';
+                if (isBottom) term.scrollTop = term.scrollHeight;
+            }
+        } catch (e) {}
+    };
+
+    window.voAction = async function(act) {
+        const r = await api('/api/vo/' + act, {method: 'POST'});
+        if (r.success) {
+            showToast('✅ 指令已下发');
+            setTimeout(window.fetchVoData, 500);
+        } else {
+            showToast(r.error || '操作失败', 'error');
+        }
+    };
 
     initApp();
   </script>

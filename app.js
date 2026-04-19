@@ -28,7 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 function loadConfig() { 
-  let cfg = { auth: { username: 'admin', password: 'password' }, aria2: [], openlist: [] };
+  let cfg = { auth: { username: 'admin', password: 'password' }, aria2: [], openlist: [], video_organizer_url: "" };
   try { 
       if (fs.existsSync(CONFIG_FILE)) cfg = { ...cfg, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }; 
   } catch (e) { console.error('配置加载异常:', e.message); } 
@@ -402,5 +402,27 @@ function shutdownGracefully() {
 }
 process.on('SIGTERM', shutdownGracefully);
 process.on('SIGINT', shutdownGracefully);
+
+
+// === 视频整理 (上传进度) BFF 代理网关 ===
+app.all('/api/vo/:action', async (req, res) => {
+    const voUrl = config.video_organizer_url;
+    if (!voUrl) return res.json({ success: false, error: '未配置远端 URL，请在全局设置中填写' });
+    
+    const targetUrl = (voUrl.startsWith('http') ? voUrl : 'http://' + voUrl).replace(/\/$/, '') + '/api/' + req.params.action;
+    
+    try {
+        const response = await axios({
+            method: req.method,
+            url: targetUrl,
+            params: req.query,
+            data: req.body,
+            timeout: 5000
+        });
+        res.json(response.data);
+    } catch (e) {
+        res.status(200).json({ success: false, error: '远端服务无法连接', details: e.message });
+    }
+});
 
 app.listen(PORT, () => console.log('🚀 API Running on ' + PORT));
