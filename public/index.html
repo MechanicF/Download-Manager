@@ -594,7 +594,7 @@
   </div>
 
   <div class="modal-overlay" id="task-detail-modal">
-    <div class="modal" style="width: 500px;">
+    <div class="modal" style="width: 680px; max-width: 95vw;">
       <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;">ℹ️ 任务底层数据</h3><button class="btn btn-default btn-sm" onclick="hideModal('task-detail-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
       <div id="task-detail-content" style="font-size: 13px;"></div>
     </div>
@@ -609,23 +609,46 @@
   </div>
   
   <div class="modal-overlay" id="rename-modal">
-    <div class="modal" style="width: 500px;">
+    <div class="modal" style="width: 680px; max-width: 95vw;">
       <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:15px;"><h3 style="margin:0;" id="rename-title">✏️ 重命名</h3><button class="btn btn-default btn-sm" onclick="hideModal('rename-modal')" style="border:none;background:none;font-size:16px;">✖</button></div>
-      <div style="display:flex; gap:15px; margin-bottom:15px;" id="rename-mode-selector">
-          <button class='btn btn-default btn-sm' id='btn-ai-recognize' onclick='aiSmartRecognize()' style='border-color:#ff9c6e; color:#ff9c6e; font-weight:bold; margin-right:10px;'>✨ AI 智能识别</button>
-          <label style="cursor:pointer; font-weight:600;"><input type="radio" name="rn_type" id="rn-type-replace" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; updateRenamePreview();"> 替换/单文件</label>
-          <label style="cursor:pointer; font-weight:600; margin-left:10px;"><input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 序列化</label>
+      
+  <div id="rename-mode-selector" style="display:flex; flex-direction:column; gap:12px; margin-bottom:15px;">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; background:var(--bg-body); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); gap:15px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+              <input type="number" id="tmdb-assist" placeholder="TMDB ID" class="form-control" style="width:110px; padding:6px 10px; font-size:13px; margin:0;">
+              <button class='btn btn-default btn-sm' id='btn-ai-recognize' onclick='aiSmartRecognize()' style='border-color:#ff9c6e; color:#ff9c6e; font-weight:bold; padding:6px 12px; margin:0;'>✨ AI 智能识别</button>
+          </div>
+          <div style="width:1px; height:20px; background:var(--border-color); margin:0;"></div>
+          <div style="display:flex; align-items:center; gap:12px;">
+              <label style="cursor:pointer; font-weight:600; font-size:13px; display:flex; align-items:center; gap:4px; margin:0;">
+                  <input type="radio" name="rn_type" id="rn-type-replace" value="replace" checked onchange="document.getElementById('rn-replace-box').style.display='block'; document.getElementById('rn-seq-box').style.display='none'; updateRenamePreview();"> 单文件 / 替换
+              </label>
+              <label style="cursor:pointer; font-weight:600; font-size:13px; display:flex; align-items:center; gap:4px; margin:0;">
+                  <input type="radio" name="rn_type" value="seq" onchange="document.getElementById('rn-replace-box').style.display='none'; document.getElementById('rn-seq-box').style.display='block'; updateRenamePreview();"> 批量序列化
+              </label>
+          </div>
       </div>
-      <div id="rn-replace-box">
-          <input type="text" id="rn-search" class="form-control" placeholder="查找内容" style="margin-bottom:10px;" oninput="updateRenamePreviewDebounced()">
-          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除)" oninput="updateRenamePreviewDebounced()">
+  </div>
+  
+  <div id="rn-replace-box" style="background:var(--hover-bg); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px;">
+      <div style="display:flex; gap:10px;">
+          <input type="text" id="rn-search" class="form-control" placeholder="查找内容 (匹配旧名称)" style="margin:0; flex:1;" oninput="updateRenamePreviewDebounced()">
+          <div style="color:var(--text-muted); display:flex; align-items:center; font-size:12px;">➜</div>
+          <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除查找字串)" style="margin:0; flex:1;" oninput="updateRenamePreviewDebounced()">
       </div>
-      <div id="rn-seq-box" style="display:none;">
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; background:var(--hover-bg); padding:8px; border-radius:4px;">变量: <code>{n}</code> 代表递增数字，<code>{ext}</code> 代表原后缀</div>
-          <input type="text" id="rn-format" class="form-control" placeholder="例如: 剧集.S01.E{n}{ext}" style="margin-bottom:10px;" oninput="updateRenamePreviewDebounced()">
-          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始数字" oninput="updateRenamePreviewDebounced()">
+  </div>
+  
+  <div id="rn-seq-box" style="display:none; background:var(--hover-bg); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px;">
+      <div style="display:flex; gap:10px; margin-bottom:10px;">
+          <input type="text" id="rn-format" class="form-control" placeholder="重命名格式 (如: 剧集名称.S01.E{n}{ext})" style="flex:1; margin:0;" oninput="updateRenamePreviewDebounced()">
+          <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始" title="未嗅探到集数时的默认起始序号" style="width:80px; margin:0;" oninput="updateRenamePreviewDebounced()">
       </div>
-      <div id="rn-preview-box" style="margin-top:15px; max-height:180px; overflow-y:auto; background:var(--bg-body); border-radius:4px; padding:10px; border:1px solid var(--input-border); font-size:12px; display:none;"></div>
+      <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+          <span>💡 变量说明：</span><code style="background:var(--bg-body); padding:2px 6px; border-radius:4px; font-weight:bold;">{n}</code><span>智能集数提取</span>
+          <code style="background:var(--bg-body); padding:2px 6px; border-radius:4px; font-weight:bold;">{ext}</code><span>原文件后缀</span>
+      </div>
+  </div>
+  <div id="rn-preview-box" style="margin-top:15px; max-height:260px; overflow-y:auto; background:#1e1e1e; color:#d4d4d4; border-radius:var(--radius-sm); padding:14px; border:1px solid var(--border-color); font-size:13px; font-family:'Consolas', monospace; display:none; box-shadow:inset 0 4px 10px rgba(0,0,0,0.2);"></div>
       <div style="text-align:right; margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;">
           <button class="btn btn-default" onclick="hideModal('rename-modal')" style="margin-right:10px;">取消</button>
           <button class="btn btn-primary" onclick="submitRename()">保存修改</button>
@@ -1129,7 +1152,7 @@ function renderTasks(){
       const updateTxt = (id, txt) => { const el = document.getElementById(id); if(el && el.textContent !== String(txt)) el.textContent = txt; };
       updateTxt('cnt-all', tasks.length > 0 ? `(${tasks.length})` : ''); updateTxt('cnt-dl', dl > 0 ? `(${dl})` : ''); updateTxt('cnt-wt', wt > 0 ? `(${wt})` : ''); updateTxt('cnt-cp', cp > 0 ? `(${cp})` : '');
 
-      const list = document.getElementById('task-list'); let filtered = getFilteredTasks();
+      const list = document.getElementById('task-list'); let filtered = getFilteredTasks(); if(document.getElementById('sidebar-engines-status').innerHTML.includes('离线')) { filtered.forEach(t => { if(t.status==='downloading'||t.status==='waiting') { t.status='error'; t.speed=0; } }); }
       
       filtered.sort((a,b)=>{
         let c=0;
@@ -1467,7 +1490,21 @@ function renderTasks(){
       const sortedNames = Array.from(olSelected).sort((a,b)=>a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
       sortedNames.forEach(n => {
         let newName = n;
-        if(mode==='replace' && search) newName = n.split(search).join(replace); else if(mode==='seq' && fmt) { const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : ''; newName = fmt.replace('{ext}', ext).replace('{n}', startNum++); }
+        if(mode==='replace' && search) newName = n.split(search).join(replace); else if(mode==='seq' && fmt) { 
+            const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : ''; 
+            let ep = null;
+            // 清洗掉年份和分辨率，防止误伤
+            let cleanFn = n.replace(/(19|20)\d{2}/g, '').replace(/1080p|720p|2160p|4k/gi, '');
+            // 暴力正则：匹配 S01E01, E01, 第1集, [01], - 01 等各种奇葩命名
+            let epMatch = cleanFn.match(/[Ee][Pp]?\s*(\d{1,4})/) || cleanFn.match(/[Ss]\d+[Ee](\d{1,4})/) || cleanFn.match(/第\s*(\d{1,4})\s*[集话]/) || cleanFn.match(/\[\s*(\d{1,3})\s*\]/) || cleanFn.match(/【\s*(\d{1,3})\s*】/) || cleanFn.match(/\s-\s*(\d{1,3})\b/);
+            
+            if(epMatch) ep = parseInt(epMatch[1], 10);
+            else { let fb = cleanFn.match(/\b(\d{2,3})\b/); if(fb) ep = parseInt(fb[1], 10); }
+            
+            // 核心修复：如果提取到了真实集数，就用真实的；如果真没提取到，再退化回计数器。且强制两位数补零 (01, 02)
+            let numStr = String(ep !== null ? ep : startNum++).padStart(2, '0');
+            newName = fmt.replace('{ext}', ext).replace('{n}', numStr); 
+        }
         if (newName !== n) pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--danger); text-decoration:line-through; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;" title="${n}">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--success); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%; font-weight:bold;" title="${newName}">${newName}</span></div>`;
         else pHtml += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px dashed var(--border-color); padding-bottom:4px; gap: 10px;"><span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">${n}</span> <span style="color:var(--text-muted);">➜</span> <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%;">(无变化)</span></div>`;
       });
@@ -1485,7 +1522,21 @@ function renderTasks(){
         let newName = n;
         if(olSelected.size===1) newName = replace || search;
         else if(mode==='replace' && search) newName = n.split(search).join(replace);
-        else if(mode==='seq' && fmt) { const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : ''; newName = fmt.replace('{ext}', ext).replace('{n}', startNum++); }
+        else if(mode==='seq' && fmt) { 
+            const ext = n.includes('.') ? n.substring(n.lastIndexOf('.')) : ''; 
+            let ep = null;
+            // 清洗掉年份和分辨率，防止误伤
+            let cleanFn = n.replace(/(19|20)\d{2}/g, '').replace(/1080p|720p|2160p|4k/gi, '');
+            // 暴力正则：匹配 S01E01, E01, 第1集, [01], - 01 等各种奇葩命名
+            let epMatch = cleanFn.match(/[Ee][Pp]?\s*(\d{1,4})/) || cleanFn.match(/[Ss]\d+[Ee](\d{1,4})/) || cleanFn.match(/第\s*(\d{1,4})\s*[集话]/) || cleanFn.match(/\[\s*(\d{1,3})\s*\]/) || cleanFn.match(/【\s*(\d{1,3})\s*】/) || cleanFn.match(/\s-\s*(\d{1,3})\b/);
+            
+            if(epMatch) ep = parseInt(epMatch[1], 10);
+            else { let fb = cleanFn.match(/\b(\d{2,3})\b/); if(fb) ep = parseInt(fb[1], 10); }
+            
+            // 核心修复：如果提取到了真实集数，就用真实的；如果真没提取到，再退化回计数器。且强制两位数补零 (01, 02)
+            let numStr = String(ep !== null ? ep : startNum++).padStart(2, '0');
+            newName = fmt.replace('{ext}', ext).replace('{n}', numStr); 
+        }
         if(newName !== n) globalRenameQueue.push({ oldName: n, newName: newName, path: parentPath==='/'?`/${n}`:`${parentPath}/${n}`, idx: idx });
       }
       if(globalRenameQueue.length === 0) return showToast('没有文件名称发生变化');
@@ -1599,7 +1650,7 @@ function renderTasks(){
         
         btn.disabled = true; btn.textContent = '🕵️ 识别中...';
         try {
-            const r = await api('/api/moviepilot/recognize', { method: 'POST', body: JSON.stringify({ filename: selected[0] }) });
+            const r = await api('/api/moviepilot/recognize', { method: 'POST', body: JSON.stringify({ filename: selected[0], tmdbid: document.getElementById('tmdb-assist')?.value ? parseInt(document.getElementById('tmdb-assist').value) : undefined }) });
             if (r.success) {
                 const mode = document.querySelector('input[name="rn_type"]:checked').value;
                 let ext = selected[0].includes('.') ? selected[0].substring(selected[0].lastIndexOf('.')) : '';

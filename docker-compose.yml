@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  download-manager:
+    build: .
+    container_name: download-manager
+    restart: always
+    ports:
+      - "1111:1111"    # Web API 端口
+      - "28080:28080"  # WebSocket 端口
+    volumes:
+      - ./config.json:/app/config.json
+      - ./downloads.db:/app/downloads.db
+      - /root/downloads:/downloads  # 你的真实下载目录映射
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai

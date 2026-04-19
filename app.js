@@ -133,22 +133,66 @@ app.post('/api/pansou/search', async (req, res) => {
 });
 
 app.post('/api/moviepilot/recognize', async (req, res) => {
-    const { filename } = req.body;
-    const mpUrl = config.moviepilot_url || _decAES('ca53a0178343bb444e9092c44723c06a0f88c238e150834834b6504e5cf9584b');
-    const mpToken = config.moviepilot_token || _decAES('6371af74c2571e734821681e59f7010f058882afde99b457cff17ef2dfac6278');
-    try {
-        const r = await axios.get(mpUrl.replace(/\/$/, '') + '/api/v1/media/recognize2', { params: { title: filename, token: mpToken }, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36' } });
-        const d = r.data;
-        if (d && d.media_info) {
-            let name = d.media_info.title || d.meta_info?.title || '';
-            if (name) name = name.replace(/\s+/g, '.').replace(/[\(\)]/g, '');
-            if (d.media_info.year) name += '.' + d.media_info.year;
-            if (d.meta_info && d.meta_info.begin_season != null) name += '.S' + String(d.meta_info.begin_season).padStart(2,'0');
-            if (d.meta_info && d.meta_info.begin_episode != null) name += '.E' + String(d.meta_info.begin_episode).padStart(2,'0');
-            res.json({ success: true, cleanName: name });
-        } else { res.json({ success: false, error: '未能识别出媒体信息' }); }
-    } catch (e) { res.json({ success: false, error: e.response?.status ? 'MP报错(' + e.response.status + ')' : '请求失败' }); }
-});
+            const { filename } = req.body;
+            const tid = req.body.tmdbid || req.body.tmdbId;
+            const mpUrl = config.moviepilot_url || _decAES('ca53a0178343bb444e9092c44723c06a0f88c238e150834834b6504e5cf9584b');
+            const mpToken = config.moviepilot_token || _decAES('6371af74c2571e734821681e59f7010f058882afde99b457cff17ef2dfac6278');
+            const baseMp = mpUrl.replace(/\/$/, '');
+            const hdrs = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' };
+            
+            try {
+                // 战术核心：如果输入了 TMDB ID，直接走 MP 的底层查询接口！
+                if (tid) {
+                    try {
+                        // 注意：接口必须是单数的 movie 和 tv！
+                        let infoRes = await axios.get(baseMp + '/api/v1/tmdb/movie/' + tid, { params: { token: mpToken }, headers: hdrs }).catch(()=>null);
+                        if (!infoRes || !infoRes.data || !infoRes.data.title) { 
+                            infoRes = await axios.get(baseMp + '/api/v1/tmdb/tv/' + tid, { params: { token: mpToken }, headers: hdrs }).catch(()=>null); 
+                        }
+                        
+                        if (infoRes && infoRes.data && (infoRes.data.title || infoRes.data.name)) {
+                            let name = infoRes.data.title || infoRes.data.name;
+                            let year = infoRes.data.year || (infoRes.data.release_date ? infoRes.data.release_date.substring(0, 4) : '') || (infoRes.data.first_air_date ? infoRes.data.first_air_date.substring(0, 4) : '');
+                            
+                            if (name) name = name.replace(/\s+/g, '.').replace(/[\(\)]/g, '');
+                            let finalName = name;
+                            if (year) finalName += '.' + year;
+                            
+                            // 智能补充：如果是剧集（有 name 字段），强行从原文件抢救 SxxExx
+                            if (infoRes.data.name) {
+                                let s = '01'; let e = null;
+                                let cleanFn = filename.replace(/(19|20)\d{2}/g, '').replace(/1080p|720p|2160p|4k/gi, '');
+                                let sMatch = cleanFn.match(/[Ss](\d+)/); if(sMatch) s = sMatch[1];
+                                let eMatch = cleanFn.match(/[Ee](\d+)/) || cleanFn.match(/第\s*(\d{1,4})\s*[集话]/) || cleanFn.match(/[\[【]\s*(\d{1,3})\s*[\]】]/) || cleanFn.match(/\s-\s*(\d{1,3})\b/);
+                                if(eMatch) e = eMatch[1];
+                                else { let fb = cleanFn.match(/\b(\d{2,3})\b/); if(fb) e = fb[1]; }
+                                
+                                if(e) finalName += '.S' + String(s).padStart(2, '0') + '.E' + String(e).padStart(2, '0');
+                            }
+                            return res.json({ success: true, cleanName: finalName });
+                        }
+                    } catch(e) {}
+                }
+                
+                // 战术降级：没有 ID 的时候，或者 API 抽风，走常规搜索
+                // 这里加了个小魔法：把 [tmdbid=xxx] 强行塞进文件名里，尝试触发 MP 的内置正则
+                let queryTitle = tid ? filename + " [tmdbid=" + tid + "]" : filename;
+                let rx = await axios.get(baseMp + '/api/v1/media/recognize2', { params: { title: queryTitle, token: mpToken }, headers: hdrs }).catch(()=>null);
+                let d = rx ? rx.data : null;
+                
+                if (d && d.media_info) {
+                    let name = d.media_info.title || d.meta_info?.title || '';
+                    if (name) name = name.replace(/\s+/g, '.').replace(/[\(\)]/g, '');
+                    if (d.media_info.year) name += '.' + d.media_info.year;
+                    if (d.meta_info && d.meta_info.begin_season != null) name += '.S' + String(d.meta_info.begin_season).padStart(2,'0');
+                    if (d.meta_info && d.meta_info.begin_episode != null) name += '.E' + String(d.meta_info.begin_episode).padStart(2,'0');
+                    return res.json({ success: true, cleanName: name });
+                }
+                res.json({ success: false, error: '未能识别出媒体信息' });
+            } catch (e) {
+                res.json({ success: false, error: e.response && e.response.status ? 'MP报错(' + e.response.status + ')' : '请求失败' });
+            }
+        });
 
 app.get('/api/tasks/:id/details', async (req, res) => {
   try {
