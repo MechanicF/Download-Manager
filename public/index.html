@@ -424,6 +424,25 @@
             .vo-term-ctrls { flex-wrap: wrap; justify-content: flex-end; }
         }
     </style>
+
+    <script>
+    (function(){
+        const _fetch = window.fetch.bind(window);
+        window.fetch = async (...args) => {
+            const u = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+            if (u.includes('jsonrpc') || u.includes('aria2') || u.includes('status')) {
+                const controller = new AbortController();
+                const tid = setTimeout(() => controller.abort(), 5000);
+                args[1] = { ...(args[1] || {}), signal: controller.signal };
+                try {
+                    const r = await _fetch(...args);
+                    clearTimeout(tid); return r;
+                } catch(e) { clearTimeout(tid); throw e; }
+            }
+            return _fetch(...args);
+        };
+    })();
+    </script>
 </head>
 <body>
 
@@ -749,7 +768,7 @@
       const h = {'Content-Type':'application/json'}; if(authToken) h['Authorization']='Bearer '+authToken;
       const r = await fetch(u, {headers:h, ...o});
       if(r.status===401){ document.getElementById('login-screen').style.display='flex'; return {error:'Unauthorized'}; }
-      return r.json();
+      const txt = await r.text(); try { return JSON.parse(txt); } catch(e) { throw new Error('HTTP ' + r.status + ' ' + txt.substring(0,40)); }
     }
 
     async function doLogin(){
@@ -1120,7 +1139,8 @@
 
     async function refreshTasks(){
       const s = await api('/api/global-stats');
-      if(s.error) return; // 避免未授权报错
+      if(s.error) return;
+      window.aria2NodeStatus = s.aria2Nodes || [];
       if (document.getElementById('global-speed')) document.getElementById('global-speed').innerHTML = `⬇️ ${formatSize(s.globalDlSpeed)}/s <span style="color:var(--border-color);margin:0 5px;">|</span> ⬆️ ${formatSize(s.globalUpSpeed)}/s`;
       
       let html = '';
@@ -1151,7 +1171,18 @@
     function filterTasks(f, el){ document.querySelectorAll('.sub-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); currentTaskFilter = f; selectedTasks.clear(); renderTasks(); switchTab('downloads', document.querySelector('.sidebar-menu .nav-item')); closeMobileMenu(); }
     function toggleTask(id, c) { if(c) selectedTasks.add(id); else selectedTasks.delete(id); document.getElementById('task-select-all').checked = getFilteredTasks().length>0 && selectedTasks.size===getFilteredTasks().length;}
     function toggleAllTasks(c) { const f = getFilteredTasks(); if(c) f.forEach(t=>selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
-    function getFilteredTasks() { return tasks.filter(t => currentTaskFilter==='all' || (currentTaskFilter==='downloading' && t.status==='downloading') || (currentTaskFilter==='waiting' && (t.status==='waiting'||t.status==='paused')) || (currentTaskFilter==='complete' && (t.status==='complete'||t.status==='error'))); }
+    
+    window.getTaskComputedState = (t) => {
+        let st = t.status; let sp = t.speed;
+        if(t.engine && t.engine.startsWith('aria2_')) {
+            const idx = parseInt(t.engine.split('_')[1]);
+            if(window.aria2NodeStatus && window.aria2NodeStatus[idx] && window.aria2NodeStatus[idx].online === false) {
+                if(st === 'downloading' || st === 'waiting') { st = 'error'; sp = 0; }
+            }
+        }
+        return { ...t, status: st, speed: sp };
+    };
+function getFilteredTasks() { return tasks.map(window.getTaskComputedState).filter(t => currentTaskFilter==='all' || (currentTaskFilter==='downloading' && t.status==='downloading') || (currentTaskFilter==='waiting' && (t.status==='waiting'||t.status==='paused')) || (currentTaskFilter==='complete' && (t.status==='complete'||t.status==='error'))); }
 
     
     let globalTaskDeleteQueue = []; let isTaskDeleting = false; let taskDeleteStats = { total: 0, current: 0, success: 0, fail: 0 };
@@ -1230,11 +1261,25 @@
     }
     
 function renderTasks(){
-      const dl = tasks.filter(t => t.status === 'downloading').length; const wt = tasks.filter(t => t.status === 'waiting' || t.status === 'paused').length; const cp = tasks.filter(t => t.status === 'complete' || t.status === 'error').length;
+      
+      const getTaskComputedState = (t) => {
+          let st = t.status; let sp = t.speed;
+          if(t.engine && t.engine.startsWith('aria2_')) {
+              const idx = parseInt(t.engine.split('_')[1]);
+              if(window.aria2NodeStatus && window.aria2NodeStatus[idx] && window.aria2NodeStatus[idx].online === false) {
+                  if(st === 'downloading' || st === 'waiting') { st = 'error'; sp = 0; }
+              }
+          }
+          return { ...t, status: st, speed: sp };
+      };
+      const computedTasks = tasks.map(window.getTaskComputedState);
+      const dl = computedTasks.filter(t => t.status === 'downloading').length; 
+      const wt = computedTasks.filter(t => t.status === 'waiting' || t.status === 'paused').length; 
+      const cp = computedTasks.filter(t => t.status === 'complete' || t.status === 'error').length;
       const updateTxt = (id, txt) => { const el = document.getElementById(id); if(el && el.textContent !== String(txt)) el.textContent = txt; };
       updateTxt('cnt-all', tasks.length > 0 ? `(${tasks.length})` : ''); updateTxt('cnt-dl', dl > 0 ? `(${dl})` : ''); updateTxt('cnt-wt', wt > 0 ? `(${wt})` : ''); updateTxt('cnt-cp', cp > 0 ? `(${cp})` : '');
 
-      const list = document.getElementById('task-list'); let filtered = getFilteredTasks(); if(document.getElementById('sidebar-engines-status').innerHTML.includes('离线')) { filtered.forEach(t => { if(t.status==='downloading'||t.status==='waiting') { t.status='error'; t.speed=0; } }); }
+      const list = document.getElementById('task-list'); let filtered = getFilteredTasks(); 
       
       filtered.sort((a,b)=>{
         let c=0;
@@ -1756,7 +1801,7 @@ function renderTasks(){
           connectWS(); 
           setInterval(refreshTasks, 6000); 
       } catch(e) {
-          showToast('无法连接后端服务，请检查 app.js 是否宕机！', 'error');
+          showToast('无法连接: ' + (e.message || e), 'error');
           document.getElementById('ws-status').textContent = '🔴 服务宕机';
           document.getElementById('ws-status').style.color = 'var(--danger)';
       }

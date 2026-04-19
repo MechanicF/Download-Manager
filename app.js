@@ -281,22 +281,29 @@ const getAllTasksStmt = db.prepare('SELECT id, engine FROM tasks');
 async function syncDatabase() {
   let aTasks = []; let aNodesInfo = []; let globalDlSpeed = 0; let globalUpSpeed = 0;
   if (config.aria2) {
-    for(let i=0; i<config.aria2.length; i++) {
-      try {
-        const [a, w, s, stat] = await Promise.all([
-          aria2.call(i,'tellActive'), aria2.call(i,'tellWaiting',[0,200]), aria2.call(i,'tellStopped',[0,200]), aria2.call(i,'getGlobalStat')
-        ]);
-        const allTasks = [...a, ...w, ...s];
-        aTasks = aTasks.concat(allTasks.filter(t=>t.status!=='removed').map(t=>({...t, _eng:`aria2_${i}`, _uid:`${i}_${t.gid}`})));
-        let totalDl = 0; let totalUp = 0;
-        allTasks.forEach(t => { totalDl += parseInt(t.completedLength)||0; totalUp += parseInt(t.uploadLength)||0; });
-        const dlSpeed = parseInt(stat.downloadSpeed)||0; const upSpeed = parseInt(stat.uploadSpeed)||0;
-        globalDlSpeed += dlSpeed; globalUpSpeed += upSpeed;
-        const h = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?').get(`aria2_${i}`);
-        const finalDl = totalDl + (h ? h.historical_dl : 0); const finalUp = totalUp + (h ? h.historical_up : 0);
-        aNodesInfo.push({ online: true, name: config.aria2[i].name, dlSpeed, upSpeed, totalDl: finalDl, totalUp: finalUp });
-      } catch(e){ aNodesInfo.push({ online: false, name: config.aria2[i].name, dlSpeed:0, upSpeed:0, totalDl:0, totalUp:0 }); }
-    }
+    const nodePromises = config.aria2.map(async (srv, i) => {
+          try {
+            const [a, w, s, stat] = await Promise.all([
+              aria2.call(i,'tellActive'), aria2.call(i,'tellWaiting',[0,200]), aria2.call(i,'tellStopped',[0,200]), aria2.call(i,'getGlobalStat')
+            ]);
+            const allTasks = [...a, ...w, ...s];
+            const tasksToPush = allTasks.filter(t=>t.status!=='removed').map(t=>({...t, _eng:`aria2_${i}`, _uid:`${i}_${t.gid}`}));
+            let totalDl = 0, totalUp = 0;
+            allTasks.forEach(t => { totalDl += parseInt(t.completedLength)||0; totalUp += parseInt(t.uploadLength)||0; });
+            const dlSpeed = parseInt(stat.downloadSpeed)||0, upSpeed = parseInt(stat.uploadSpeed)||0;
+            const h = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?').get(`aria2_${i}`);
+            const finalDl = totalDl + (h ? h.historical_dl : 0), finalUp = totalUp + (h ? h.historical_up : 0);
+            return { idx: i, online: true, name: srv.name, dlSpeed, upSpeed, totalDl: finalDl, totalUp: finalUp, tasks: tasksToPush };
+          } catch(e) {
+            return { idx: i, online: false, name: srv.name, dlSpeed: 0, upSpeed: 0, totalDl: 0, totalUp: 0, tasks: [] };
+          }
+        });
+        const results = await Promise.all(nodePromises);
+        results.sort((x, y) => x.idx - y.idx).forEach(r => {
+            aNodesInfo.push({ online: r.online, name: r.name, dlSpeed: r.dlSpeed, upSpeed: r.upSpeed, totalDl: r.totalDl, totalUp: r.totalUp });
+            globalDlSpeed += r.dlSpeed; globalUpSpeed += r.upSpeed;
+            aTasks = aTasks.concat(r.tasks);
+        });
   }
 
   try {
