@@ -236,7 +236,28 @@
             #term-node-name { white-space: nowrap; }
         }
 
-    </style>
+    
+  /* 🧩 区块图谱原生渲染样式 */
+  .piece-map-container { background: #161b22; padding: 8px; border-radius: 6px; max-height: 180px; overflow-y: auto; border: 1px solid #30363d; box-shadow: inset 0 2px 8px rgba(0,0,0,0.2); }
+  .piece-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8px, 1fr)); gap: 1px; }
+  .piece { height: 8px; background: #30363d; border-radius: 1px; }
+  .piece.done { background: var(--success); box-shadow: 0 0 2px var(--success); }
+  .peer-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .peer-table th, .peer-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; }
+  .peer-table th { background: var(--hover-bg); color: var(--text-muted); position: sticky; top: 0; }
+
+  /* 🧩 AriaNg 风格 Piece Map */
+  .piece-container { background: #0d1117; padding: 12px; border-radius: 8px; border: 1px solid #30363d; margin: 15px 0; }
+  .piece-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6px, 1fr)); gap: 1px; }
+  .p-tile { height: 6px; background: #21262d; border-radius: 1px; }
+  .p-tile.done { background: #3fb950; box-shadow: 0 0 2px #3fb950; }
+  
+  /* 🌐 Peer 列表样式 */
+  .peer-list { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .peer-list th { text-align: left; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding: 8px; }
+  .peer-list td { padding: 8px; border-bottom: 1px solid var(--border-color); }
+
+</style>
 
 <style id="mobile-header-debug-css">
     @media screen and (max-width: 768px) {
@@ -517,6 +538,74 @@
       .modern-switch-title { font-size: 14px; font-weight: 700; color: var(--text-main); }
       .modern-switch-desc { font-size: 12px; color: var(--text-muted); }
     </style>
+
+
+
+<style id="ultimate-ui-polish">
+  /* ✂️ 优雅两行截断 */
+  .task-title .nm { display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: normal !important; line-height: 1.5; word-break: break-all; }
+  
+  /* 🍞 Toast 底部消散进度条 */
+  .toast { position: relative; overflow: hidden; }
+  .toast::after { content: ''; position: absolute; bottom: 0; left: 0; height: 3px; background: var(--success); width: 100%; opacity: 0.6; animation: toastProgress 3s linear forwards; }
+  .toast.error::after { background: var(--danger); }
+  .toast.warning::after { background: var(--warning); }
+  @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
+
+  /* 📱 手机底栏终极物理防御 */
+  .mobile-bottom-bar { display: none !important; }
+  @media screen and (max-width: 768px) {
+      .menu-toggle { display: none !important; }
+      .sidebar { display: none !important; }
+      
+      /* 核心：强行垫高主容器底部，防止列表最后一条被底栏遮挡 */
+      .content { padding-bottom: 90px !important; }
+
+      .mobile-bottom-bar {
+          display: flex !important; position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+          height: 65px !important; background: rgba(255, 255, 255, 0.95) !important;
+          backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+          border-top: 1px solid rgba(0,0,0,0.08) !important; 
+          z-index: 2147483647 !important; /* 拉到浏览器的极限最顶层 */
+          justify-content: space-around; align-items: center; 
+          padding-bottom: env(safe-area-inset-bottom);
+          box-shadow: 0 -4px 20px rgba(0,0,0,0.06) !important;
+      }
+      [data-theme="dark"] .mobile-bottom-bar { background: rgba(22, 27, 34, 0.95) !important; border-top: 1px solid rgba(255,255,255,0.1) !important; }
+
+      .mobile-bottom-bar .tab-btn {
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          flex: 1; height: 100%; color: var(--text-muted); font-size: 11px; font-weight: 600; gap: 4px;
+          transition: all 0.2s; cursor: pointer; user-select: none;
+      }
+      .mobile-bottom-bar .tab-btn.active { color: var(--primary); }
+      .mobile-bottom-bar .tab-btn i { font-size: 22px; font-style: normal; margin-bottom: 2px; }
+  }
+
+  
+</style>
+
+<script id="dynamic-bottom-bar">
+    // 🚀 使用原生 JS 强行把底栏塞进 body，彻底杜绝替换失败
+    document.addEventListener('DOMContentLoaded', function() {
+        if(document.getElementById('mobile-bottom-bar')) return; 
+        const bar = document.createElement('div');
+        bar.id = 'mobile-bottom-bar';
+        bar.className = 'mobile-bottom-bar';
+        bar.innerHTML = `
+            <div class="tab-btn active" onclick="switchTab('downloads'); updateBottomBar(this)"><i>📥</i>下载</div>
+            <div class="tab-btn" onclick="switchTab('openlist'); updateBottomBar(this)"><i>☁️</i>云盘</div>
+            <div class="tab-btn" onclick="switchTab('pansou'); updateBottomBar(this)"><i>🔍</i>盘搜</div>
+            <div class="tab-btn" onclick="switchTab('upload_status'); updateBottomBar(this)"><i>📊</i>监控</div>
+            <div class="tab-btn" onclick="switchTab('settings'); updateBottomBar(this)"><i>⚙️</i>设置</div>
+        `;
+        document.body.appendChild(bar);
+    });
+    function updateBottomBar(el) {
+        document.querySelectorAll('.mobile-bottom-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
+        if(el) el.classList.add('active');
+    }
+</script>
 </head>
 <body>
 
@@ -1167,7 +1256,7 @@
 
     function changeTaskSort() { 
       const val = document.getElementById('task-sort-select').value; localStorage.setItem('dm_task_sort', val); 
-      const parts = val.split('_'); taskSortDesc = parts.pop() === 'desc'; taskSortBy = parts.join('_'); renderTasks(); 
+      const parts = val.split('_'); taskSortDesc = parts.pop() === 'desc'; taskSortBy = parts.join('_'); renderTasks(); triggerListAnimation(); 
     }
 
     async function loadConfig(){
@@ -1298,7 +1387,7 @@
       if (document.getElementById('sidebar-engines-status')) document.getElementById('sidebar-engines-status').innerHTML = html || '<div style="text-align:center; padding:20px; color:var(--warning); border:1px dashed var(--warning); border-radius:var(--radius-sm);">未配置任何引擎节点</div>';
     }
 
-    function filterTasks(f, el){ document.querySelectorAll('.sub-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); currentTaskFilter = f; selectedTasks.clear(); renderTasks(); switchTab('downloads', document.querySelector('.sidebar-menu .nav-item')); closeMobileMenu(); }
+    function filterTasks(f, el){ document.querySelectorAll('.sub-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); currentTaskFilter = f; selectedTasks.clear(); renderTasks(); triggerListAnimation(); switchTab('downloads', document.querySelector('.sidebar-menu .nav-item')); closeMobileMenu(); }
     function toggleTask(id, c) { if(c) selectedTasks.add(id); else selectedTasks.delete(id); document.getElementById('task-select-all').checked = getFilteredTasks().length>0 && selectedTasks.size===getFilteredTasks().length;}
     function toggleAllTasks(c) { const f = getFilteredTasks(); if(c) f.forEach(t=>selectedTasks.add(t.id)); else selectedTasks.clear(); renderTasks(); }
     
@@ -1391,7 +1480,16 @@ function getFilteredTasks() { return tasks.map(window.getTaskComputedState).filt
       }, 4000);
     }
     
-function renderTasks(){
+
+    function triggerListAnimation() {
+        const list = document.getElementById('task-list');
+        if(list) {
+            list.style.animation = 'none';
+            void list.offsetWidth; // 触发重排，重置动画状态
+            list.style.animation = 'slideFadeIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
+        }
+    }
+    function renderTasks(){
       
       const getTaskComputedState = (t) => {
           let st = t.status; let sp = t.speed;
@@ -1482,7 +1580,11 @@ function renderTasks(){
             else if(t.status==='waiting') stHtml = '<span style="display:inline-block;animation:float 2s ease-in-out infinite;margin-right:4px;">⏳</span><span style="color:var(--warning);">等待中</span>';
             else if(t.status==='paused') stHtml = '<span style="display:inline-block;animation:blink 1.5s infinite;margin-right:4px;">⏸️</span><span style="color:var(--warning);">已暂停</span>';
             else if(t.status==='complete') stHtml = '<span style="margin-right:4px;">✅</span><span style="color:var(--success);">已完成</span>';
-            else stHtml = '<span style="margin-right:4px;">❌</span><span style="color:var(--danger);">节点异常</span>';
+            else {
+            const isNodeOff = t.engine && t.engine.startsWith('aria2_') && window.aria2NodeStatus && window.aria2NodeStatus[parseInt(t.engine.split('_')[1])]?.online === false;
+            if (isNodeOff) stHtml = '<span style="margin-right:4px;">🔌</span><span style="color:var(--danger);">节点离线</span>';
+            else stHtml = '<span style="margin-right:4px;">❌</span><span style="color:var(--danger);">任务异常</span>';
+        }
             card.querySelector('.st').innerHTML = stHtml;
             
             let opHtml = `<button class="btn btn-info btn-sm" onclick="showTaskDetails('${t.id}')">详情</button>`;
@@ -1495,19 +1597,105 @@ function renderTasks(){
       });
     }
 
-    async function showTaskDetails(id){
-      document.getElementById('task-detail-content').innerHTML = '<div style="text-align:center; padding: 20px; color: var(--primary);">正在抓取底层数据...</div>';
-      showModal('task-detail-modal');
-      const r = await api(`/api/tasks/${id}/details`); const c = document.getElementById('task-detail-content');
-      if(r.success && r.data){
-        let h = `<div class="detail-row"><div class="detail-label">物理引擎</div><div class="detail-value">🟣 ${r.engine}</div></div><div class="detail-row"><div class="detail-label">保存路径</div><div class="detail-value">${r.data.dir}</div></div><div class="detail-row"><div class="detail-label">并发连接数</div><div class="detail-value">${r.data.connections} 个线程</div></div><div class="detail-row"><div class="detail-label">文件切片数</div><div class="detail-value">${r.data.numPieces} 块</div></div><div class="detail-row"><div class="detail-label">InfoHash</div><div class="detail-value" style="font-size:11px;">${r.data.infoHash||'无'}</div></div><div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;"><strong style="color:var(--text-main);">📁 包含的文件列表：</strong></div><div style="max-height:200px; overflow-y:auto; background:var(--bg-body); padding:10px; margin-top:10px; border-radius:var(--radius-sm); border:1px solid var(--input-border);">`;
-        if(!r.files || r.files.length===0) h+=`<div style="text-align:center; color:var(--text-muted);">暂无文件信息</div>`;
-        (r.files||[]).forEach(f => h+=`<div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-color); padding:6px 0;"><span style="word-break:break-all;">${f.name}</span><span style="color:var(--text-muted); flex-shrink:0; margin-left:10px;">${formatSize(f.size)}</span></div>`);
-        c.innerHTML = h + `</div>`;
-      } else { c.innerHTML = `<div style="color:var(--danger);text-align:center;padding:20px;">无法获取详情: ${r.error||'任务已被彻底抹除'}</div>`; }
+    
+    function parseBitfield(hex, total) {
+        if (!hex || !total) return '';
+        let bin = '';
+        for (let i = 0; i < hex.length; i++) {
+            bin += parseInt(hex[i], 16).toString(2).padStart(4, '0');
+        }
+        let tiles = '';
+        for (let i = 0; i < total; i++) {
+            tiles += `<div class="p-tile ${bin[i] === '1' ? 'done' : ''}"></div>`;
+        }
+        return tiles;
     }
 
-    async function addDownload(){
+async function showTaskDetails(id){
+  document.getElementById('task-detail-content').innerHTML = '<div style="text-align:center; padding: 40px; color: var(--primary);"><span style="display:inline-block;animation:spin-slow 2s linear infinite;font-size:24px;">⚙️</span><br><br>正在抓取底层全量数据...</div>';
+  showModal('task-detail-modal');
+  const r = await api(`/api/tasks/${id}/details`); const c = document.getElementById('task-detail-content');
+  if(r.success && r.data){
+    
+    // 核心算法：将 Aria2 的 Hex 字符串转换为二进制区块图
+    let piecesHtml = '';
+    if (r.data.bitfield && r.data.numPieces > 0) {
+        let binaryStr = '';
+        for(let i=0; i<r.data.bitfield.length; i++) {
+            binaryStr += parseInt(r.data.bitfield[i], 16).toString(2).padStart(4, '0');
+        }
+        for(let i=0; i<r.data.numPieces; i++) {
+            piecesHtml += `<div class="piece ${binaryStr[i] === '1' ? 'done' : ''}"></div>`;
+        }
+    } else if (r.data.numPieces > 0) {
+        piecesHtml = '<div style="color:var(--text-muted); grid-column: 1 / -1; font-size: 12px;">(图谱生成中或尚未获得区块数据)</div>';
+    } else {
+        piecesHtml = '<div style="color:var(--text-muted); grid-column: 1 / -1; font-size: 12px;">该类型任务不支持区块图谱</div>';
+    }
+
+    // 渲染 Peers 节点表
+    let peersHtml = '';
+    if (r.peers && r.peers.length > 0) {
+        peersHtml += `<div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);"><table class="peer-table">
+            <tr><th>IP 地址</th><th>⬇️ 下载速度</th><th>⬆️ 上传速度</th></tr>`;
+        r.peers.forEach(p => {
+            peersHtml += `<tr>
+                <td style="font-family:monospace;">${p.ip}:${p.port}</td>
+                <td style="color:var(--primary); font-weight:bold;">${formatSize(p.downloadSpeed)}/s</td>
+                <td style="color:var(--warning);">${formatSize(p.uploadSpeed)}/s</td>
+            </tr>`;
+        });
+        peersHtml += '</table></div>';
+    } else {
+        peersHtml = '<div style="color:var(--text-muted); padding: 10px; text-align: center; border: 1px dashed var(--border-color); border-radius: 6px;">暂未连接到任何 Peer 节点</div>';
+    }
+
+    let filesHtml = `<div style="max-height:150px; overflow-y:auto; background:var(--bg-body); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">`;
+    (r.files||[]).forEach(f => {
+        let progress = f.size > 0 ? ((f.completed/f.size)*100).toFixed(1) : 0;
+        filesHtml += `<div style="display:flex; flex-direction:column; border-bottom:1px dashed var(--border-color); padding:6px 0;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="word-break:break-all; font-weight:600;">${f.name}</span>
+                <span style="color:var(--primary); font-size:11px;">${progress}%</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:11px;">
+                <span>${formatSize(f.completed)} / ${formatSize(f.size)}</span>
+            </div>
+        </div>`;
+    });
+    filesHtml += '</div>';
+
+    c.innerHTML = `
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+          <div style="background:var(--hover-bg); padding:12px; border-radius:8px;">
+              <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;">切片总数 / 碎片大小</div>
+              <div style="font-size:16px; font-weight:bold;">${r.data.numPieces} 块 / ${formatSize(r.data.pieceLength)}</div>
+          </div>
+          <div style="background:var(--hover-bg); padding:12px; border-radius:8px;">
+              <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;">当前连接数</div>
+              <div style="font-size:16px; font-weight:bold; color:var(--success);">${r.data.connections} 线程</div>
+          </div>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+          <strong style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">🧩 实时区块图谱 (Piece Map)</strong>
+          <div class="piece-map-container"><div class="piece-grid">${piecesHtml}</div></div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+          <strong style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">🌐 连通节点分布 (Peers)</strong>
+          ${peersHtml}
+      </div>
+
+      <div>
+          <strong style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">📁 文件列表详情</strong>
+          ${filesHtml}
+      </div>
+    `;
+  } else { c.innerHTML = `<div style="color:var(--danger);text-align:center;padding:20px;">无法获取详情: ${r.error||'任务已被彻底抹除'}</div>`; }
+}
+
+async function addDownload(){
       const eng = document.getElementById('task-engine-select').value; const type = document.querySelector('input[name="task_type"]:checked').value;
       const btn = event.currentTarget; btn.disabled = true; btn.textContent = '投递中...';
       if(type==='url'){

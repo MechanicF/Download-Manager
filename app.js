@@ -14,8 +14,8 @@ const https = require('https');
 
 // 🌟 建立持久化连接池，避免每 1.5 秒疯狂进行 TCP 三次握手
 const rpcClient = axios.create({
-  httpAgent: new http.Agent({ keepAlive: true, maxSockets: 100 }),
-  httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 100 })
+  httpAgent: new http.Agent({ keepAlive: false, maxSockets: 100 }),
+  httpsAgent: new https.Agent({ keepAlive: false, maxSockets: 100 })
 });
 
 function getSecureToken() {
@@ -255,16 +255,41 @@ app.post('/api/moviepilot/recognize', async (req, res) => {
 
 app.get('/api/tasks/:id/details', async (req, res) => {
   try {
-    const id = req.params.id; const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(id);
+    const id = req.params.id;
+    const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(id);
     if (!t) return res.json({ success: false, error: '任务不存在或已被彻底清除' });
-    const idx = parseInt(t.engine.split('_')[1]); const status = await aria2.call(idx, 'tellStatus', [t.gid]);
+    
+    const idx = parseInt(t.engine.split('_')[1]); 
+    const status = await aria2.call(idx, 'tellStatus', [t.gid]);
+    
+    let peers = [];
+    if (status.bittorrent) {
+        try { peers = await aria2.call(idx, 'getPeers', [t.gid]); } catch(e) {}
+    }
+    
     const files = (status.files || []).map(f => {
         let name = f.path ? f.path.split(/[\\/]/).pop() : '未知文件';
         if (!f.path && f.uris && f.uris.length > 0) name = decodeURIComponent(f.uris[0].uri.split('/').pop().split('?')[0]);
-        return { name: name, size: parseInt(f.length) || 0 };
+        return { name: name, size: parseInt(f.length) || 0, completed: parseInt(f.completedLength) || 0 };
     });
-    res.json({ success: true, engine: config.aria2[idx] ? config.aria2[idx].name : t.engine, data: { dir: status.dir || '未知', connections: status.connections || 0, numPieces: status.numPieces || 0, infoHash: status.infoHash || '' }, files: files });
-  } catch (e) { res.json({ success: false, error: '查询失败: ' + e.message }); }
+    
+    res.json({ 
+        success: true, 
+        engine: config.aria2[idx] ? config.aria2[idx].name : t.engine, 
+        data: { 
+            dir: status.dir || '未知', 
+            connections: status.connections || 0, 
+            numPieces: parseInt(status.numPieces) || 0, 
+            pieceLength: parseInt(status.pieceLength) || 0,
+            bitfield: status.bitfield || '', 
+            infoHash: status.infoHash || '' 
+        }, 
+        files: files,
+        peers: peers
+    });
+  } catch (e) { 
+    res.json({ success: false, error: '查询失败: ' + e.message }); 
+  }
 });
 
 app.post('/api/tasks/:id/:act', async (req, res) => {
@@ -273,7 +298,10 @@ app.post('/api/tasks/:id/:act', async (req, res) => {
     const idx = parseInt(t.engine.split('_')[1]);
     if(req.params.act==='pause') await aria2.call(idx, 'pause', [t.gid]);
     else if(req.params.act==='resume') await aria2.call(idx, 'unpause', [t.gid]);
-    else if(req.params.act==='delete') await aria2.call(idx, 'remove', [t.gid]);
+    else if(req.params.act==='delete') {
+      try { await aria2.call(idx, 'remove', [t.gid]); } 
+      catch(e) { try { await aria2.call(idx, 'removeDownloadResult', [t.gid]); } catch(e2){} }
+    }
   } catch(e){} 
   if(req.params.act==='pause') db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(t.id);
   if(req.params.act==='resume') db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(t.id);
@@ -289,7 +317,13 @@ app.post('/api/tasks/batch', async (req, res) => {
       const idx = parseInt(t.engine.split('_')[1]);
       if(action==='pause') { const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); if(tk) await aria2.call(idx, 'pause', [tk.gid]); }
       else if(action==='resume') { const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); if(tk) await aria2.call(idx, 'unpause', [tk.gid]); }
-      else if(action==='delete') { const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); if(tk) await aria2.call(idx, 'remove', [tk.gid]); }
+      else if(action==='delete') { 
+      const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); 
+      if(tk) {
+          try { await aria2.call(idx, 'remove', [tk.gid]); } 
+          catch(e) { try { await aria2.call(idx, 'removeDownloadResult', [tk.gid]); } catch(e2){} }
+      }
+    }
     } catch(e){}
     if(action==='pause') db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(id);
     if(action==='resume') db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(id);
@@ -342,83 +376,75 @@ let _syncPromise = null;
 async function syncDatabase() {
   if(_syncPromise) return await _syncPromise;
   _syncPromise = (async () => {
-  let aTasks = []; let aNodesInfo = []; let globalDlSpeed = 0; let globalUpSpeed = 0;
-  if (config.aria2) {
-    const nodePromises = config.aria2.map(async (srv, i) => {
-          try {
-            const [a, w, s, stat] = await Promise.all([
-              aria2.call(i,'tellActive'), aria2.call(i,'tellWaiting',[0,1000]), aria2.call(i,'tellStopped',[0,1000]), aria2.call(i,'getGlobalStat')
-            ]);
-            const allTasks = [...a, ...w, ...s];
-            const tasksToPush = allTasks.filter(t=>t.status!=='removed').map(t=>({...t, _eng:`aria2_${i}`, _uid:`${i}_${t.gid}`}));
-            let totalDl = 0, totalUp = 0;
-            allTasks.forEach(t => { totalDl += parseInt(t.completedLength)||0; totalUp += parseInt(t.uploadLength)||0; });
-            const dlSpeed = parseInt(stat.downloadSpeed)||0, upSpeed = parseInt(stat.uploadSpeed)||0;
-            const h = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?').get(`aria2_${i}`);
-            const finalDl = totalDl + (h ? h.historical_dl : 0), finalUp = totalUp + (h ? h.historical_up : 0);
-            return { idx: i, online: true, name: srv.name, dlSpeed, upSpeed, totalDl: finalDl, totalUp: finalUp, tasks: tasksToPush };
-          } catch(e) {
-            return { idx: i, online: false, name: srv.name, dlSpeed: 0, upSpeed: 0, totalDl: 0, totalUp: 0, tasks: [] };
-          }
-        });
-        const results = await Promise.all(nodePromises);
-        results.sort((x, y) => x.idx - y.idx).forEach(r => {
-            aNodesInfo.push({ online: r.online, name: r.name, dlSpeed: r.dlSpeed, upSpeed: r.upSpeed, totalDl: r.totalDl, totalUp: r.totalUp });
-            globalDlSpeed += r.dlSpeed; globalUpSpeed += r.upSpeed;
-            aTasks = aTasks.concat(r.tasks);
-        });
-  }
-
-  try {
-    db.transaction(() => {
-      const curIds = new Set();
-      aTasks.forEach(t => {
-        curIds.add(t._uid); 
-        const total = parseInt(t.totalLength)||0, comp = parseInt(t.completedLength)||0;
-        const speed = parseInt(t.downloadSpeed)||0, prog = total ? (comp/total*100) : 0;
-        const st = t.status==='active' ? 'downloading' : t.status;
-        
-        let fn = '解析中...';
+    let aNodesInfo = []; let globalDlSpeed = 0; let globalUpSpeed = 0;
+    let liveTasks = []; // 🟢 热数据：Aria2 内存直出
+    
+    if (config.aria2) {
+      const nodePromises = config.aria2.map(async (srv, i) => {
         try {
-          if (t.bittorrent && t.bittorrent.info && t.bittorrent.info.name) fn = t.bittorrent.info.name;
-          else if (t.files && t.files.length > 0 && t.files[0].path) fn = t.files[0].path.split(/[\\/]/).pop();
-          else if (t.files && t.files.length > 0 && t.files[0].uris && t.files[0].uris.length > 0) { const uri = t.files[0].uris[0].uri; if(uri.startsWith('magnet:')) { const m = uri.match(/dn=([^&]+)/); fn = m ? decodeURIComponent(m[1].replace(/\+/g, '%20')) : '种子元数据下载中...'; } else { fn = decodeURIComponent(uri.split('/').pop().split('?')[0]); } }
-        } catch(e) {}
-        if (!fn || fn === '[METADATA]' || fn === '') fn = '种子元数据下载中...';
-        const up = parseInt(t.uploadLength)||0;
-        insertTaskStmt.run(t._uid, t.gid, fn, total, comp, up, speed, prog, st, t._eng);
-      });
-      
-      getAllTasksStmt.all().forEach(row => {
-        if(!curIds.has(row.id)) {
-          // 🛡️ 15秒新手保护期（防早期误删）
-          if (row.created_at) {
-              const age = Date.now() - new Date(row.created_at.replace(' ', 'T') + 'Z').getTime();
-              if (age < 15000) return; 
-          }
-          
-          // 🌟 终极历史护盾：如果任务已经完成(complete)或报错(error)
-          // 绝对不因为 Aria2 把它挤出列表或被 MP 删除而清理本地数据库！
-          if (row.status === 'complete' || row.status === 'error') {
-              return; 
-          }
-
-          // 只有活动中的任务突然失踪，且节点在线，才执行物理删除
-          if (row.engine && row.engine.startsWith('aria2_')) {
-            const idx = parseInt(row.engine.split('_')[1]);
-            if (!aNodesInfo[idx] || aNodesInfo[idx].online) safeDeleteTask('id', row.id);
-          } else { safeDeleteTask('id', row.id); }
+          const [a, w, s, stat] = await Promise.all([
+            aria2.call(i,'tellActive'), aria2.call(i,'tellWaiting',[0,1000]), aria2.call(i,'tellStopped',[0,1000]), aria2.call(i,'getGlobalStat')
+          ]);
+          const allTasks = [...a, ...w, ...s];
+          let totalDl = 0, totalUp = 0;
+          allTasks.forEach(t => { totalDl += parseInt(t.completedLength)||0; totalUp += parseInt(t.uploadLength)||0; });
+          const dlSpeed = parseInt(stat.downloadSpeed)||0, upSpeed = parseInt(stat.uploadSpeed)||0;
+          const h = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?').get(`aria2_${i}`);
+          return { idx: i, online: true, name: srv.name, dlSpeed, upSpeed, totalDl: totalDl + (h?h.historical_dl:0), totalUp: totalUp + (h?h.historical_up:0), tasks: allTasks };
+        } catch(e) {
+          return { idx: i, online: false, name: srv.name, dlSpeed: 0, upSpeed: 0, totalDl: 0, totalUp: 0, tasks: [] };
         }
       });
-    })();
-  } catch (err) {}
-  
-  return { aria2Nodes: aNodesInfo, globalDlSpeed, globalUpSpeed };
+      const results = await Promise.all(nodePromises);
+      
+      results.sort((x, y) => x.idx - y.idx).forEach(r => {
+          aNodesInfo.push({ online: r.online, name: r.name, dlSpeed: r.dlSpeed, upSpeed: r.upSpeed, totalDl: r.totalDl, totalUp: r.totalUp });
+          globalDlSpeed += r.dlSpeed; globalUpSpeed += r.upSpeed;
+          
+          // 🚀 组装热数据：完全模拟 AriaNg 的无状态读取
+          r.tasks.forEach(t => {
+              const total = parseInt(t.totalLength)||0, comp = parseInt(t.completedLength)||0;
+              const speed = parseInt(t.downloadSpeed)||0, prog = total ? (comp/total*100) : 0;
+              
+              let st = t.status === 'active' ? 'downloading' : t.status;
+              if (t.status === 'error' || (t.errorCode && String(t.errorCode) !== '0')) st = 'error';
+              if (t.status === 'removed') st = (total > 0 && comp >= total) ? 'complete' : 'error';
+              
+              let fn = '解析中...';
+              try {
+                if (t.bittorrent && t.bittorrent.info && t.bittorrent.info.name) fn = t.bittorrent.info.name;
+                else if (t.files && t.files.length > 0) {
+                    const file = t.files[0];
+                    if (file.path) fn = file.path.split(/[\\/]/).pop();
+                    else if (file.uris && file.uris.length > 0) fn = decodeURIComponent(file.uris[0].uri.split('/').pop().split('?')[0]) || '未知任务';
+                }
+              } catch(e) {}
+              if (!fn || fn === '[METADATA]') fn = '种子元数据下载中...';
+              
+              const up = parseInt(t.uploadLength)||0;
+              const uid = `${r.idx}_${t.gid}`;
+              
+              const taskObj = { id: uid, gid: t.gid, filename: fn, total_size: total, downloaded_size: comp, uploaded_size: up, speed: speed, progress: prog, status: st, engine: `aria2_${r.idx}`, created_at: new Date().toISOString().replace('T',' ').substring(0,19) };
+              liveTasks.push(taskObj);
+              
+              // 🧊 只有任务彻底死去(完成/报错)，才写入冷板凳数据库永久保存
+              if (st === 'complete' || st === 'error') {
+                  try { insertTaskStmt.run(uid, t.gid, fn, total, comp, up, speed, prog, st, `aria2_${r.idx}`); } catch(err){}
+              }
+          });
+      });
+    }
+    
+    // 🔗 无缝拼合：Aria2 内存热数据 + SQLite 冷历史记录
+    
+    // 🚀 100% 纯内存模式：废弃 SQLite 历史拼合，列表与 Aria2 底层绝对一致
+
+    return { aria2Nodes: aNodesInfo, globalDlSpeed, globalUpSpeed, finalTasks: liveTasks };
   })();
   try { return await _syncPromise; } finally { _syncPromise = null; }
 }
 
-app.get('/api/tasks', async (req, res) => { await syncDatabase(); res.json(db.prepare('SELECT * FROM tasks ORDER BY created_at DESC').all()); });
+app.get('/api/tasks', async (req, res) => { const s = await syncDatabase(); res.json(s.finalTasks); });
 app.get('/api/global-stats', async (req, res) => { res.json(await syncDatabase()); });
 
 app.post('/api/force_kill_task', async (req, res) => {
@@ -501,8 +527,7 @@ setInterval(async () => {
   isSyncing = true;
   try {
       const stats = await syncDatabase();
-      const dbTasks = db.prepare("SELECT * FROM tasks ORDER BY created_at DESC LIMIT 1000").all();
-      const payload = JSON.stringify({ tasks: dbTasks, stats: stats });
+      const payload = JSON.stringify({ tasks: stats.finalTasks, stats: stats });
       if (payload !== lastBroadcastPayload) {
           lastBroadcastPayload = payload;
           wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN && client.isAuthenticated) client.send(payload); });
