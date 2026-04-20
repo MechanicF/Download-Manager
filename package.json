@@ -15,6 +15,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "form-data": "^4.0.5",
+    "parse-torrent-title": "^2.1.0",
     "ssh2": "^1.17.0",
     "ws": "^8.20.0"
   }

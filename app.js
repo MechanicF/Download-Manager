@@ -132,6 +132,60 @@ app.post('/api/pansou/search', async (req, res) => {
     try { const targetUrl = pUrl.replace('{k}', encodeURIComponent(keyword)); const r = await axios.get(targetUrl, { timeout: 15000 }); res.json({ success: true, data: r.data }); } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
+
+app.post('/api/llm/recognize', async (req, res) => {
+    const { filename } = req.body;
+    const l = config.llm;
+    if (!l || !l.enabled || !l.key) return res.json({ success: false, error: 'LLM 插件未启用或配置不全' });
+
+    try {
+        const response = await axios.post(l.url.replace(/\/$/, '') + '/chat/completions', {
+            model: l.model,
+            messages: [
+                { 
+                    role: "system", 
+                    content: "你是一个极其严格的无感情影视命名引擎。你的唯一任务是从凌乱的文件名中提取'剧名/电影名'、'年份'、'季数(Sxx)'、'集数(Exx)'，并严格按固定格式输出。\n\n【严格规则】\n1. 格式必须为 '名称.年份' 或 '名称.年份.SxxExx'。\n2. 绝对禁止输出任何问候语、解释说明、前缀后缀或 markdown 符号(如 ``` )。\n3. 自动过滤掉分辨率(4k/1080p)、压制组、编码(H265)、音频等无用信息。\n4. 优先提取中文译名，如果原文件缺失年份，允许利用你的知识库补全。\n\n【示例学习】\n输入：[幻樱字幕组] 葬送的芙莉莲 Sousou no Frieren - 12 [1080p][HEVC][GB_MP4]\n输出：葬送的芙莉莲.2023.S01.E12\n\n输入：Inception.2010.BluRay.1080p.DTS-HD.MA.5.1.x265.10bit-ALT\n输出：Inception.2010" 
+                },
+                { role: "user", content: filename }
+            ],
+            temperature: 0.1, // 📉 极低温度，剥夺聊天欲望，强制精准输出
+            stream: true // 🚀 开启底层流式传输
+        }, {
+            headers: { 'Authorization': `Bearer ${l.key}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', // axios 接收流
+            timeout: 60000
+        });
+
+        // 打通管道，将上游的打字机流原封不动地发给前端
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        response.data.pipe(res);
+    } catch (e) {
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.write(`data: {"error": "LLM API 连接异常: ${e.response ? e.response.status : e.message}"}\n\n`);
+        res.end();
+    }
+});
+
+
+app.post('/api/local/recognize', (req, res) => {
+    try {
+        const ptt = require('parse-torrent-title');
+        const parsed = ptt.parse(req.body.filename);
+        if (!parsed.title) return res.json({success: false, error: '未能匹配到标题'});
+        
+        let name = parsed.title.replace(/\s+/g, '.').replace(/[\(\)]/g, '');
+        if (parsed.year) name += '.' + parsed.year;
+        if (parsed.season !== undefined) name += '.S' + String(parsed.season).padStart(2, '0');
+        if (parsed.episode !== undefined) name += '.E' + String(parsed.episode).padStart(2, '0');
+        
+        res.json({ success: true, cleanName: name });
+    } catch (e) {
+        res.json({ success: false, error: '后端库未安装或异常: ' + e.message });
+    }
+});
+
 app.post('/api/moviepilot/recognize', async (req, res) => {
             const { filename } = req.body;
             const tid = req.body.tmdbid || req.body.tmdbId;
@@ -276,7 +330,7 @@ app.post('/api/upload', async (req, res) => {
 
 // 🌟 预编译 SQL 语句，避免每次循环重复解析 AST 语法树，数据库写入性能暴增
 const insertTaskStmt = db.prepare('INSERT INTO tasks (id, gid, filename, total_size, downloaded_size, uploaded_size, speed, progress, status, engine) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET filename=excluded.filename, total_size=excluded.total_size, downloaded_size=excluded.downloaded_size, uploaded_size=excluded.uploaded_size, speed=excluded.speed, progress=excluded.progress, status=excluded.status');
-const getAllTasksStmt = db.prepare('SELECT id, engine FROM tasks');
+const getAllTasksStmt = db.prepare('SELECT id, engine, created_at, status FROM tasks');
 
 let _syncPromise = null;
 async function syncDatabase() {
@@ -287,7 +341,7 @@ async function syncDatabase() {
     const nodePromises = config.aria2.map(async (srv, i) => {
           try {
             const [a, w, s, stat] = await Promise.all([
-              aria2.call(i,'tellActive'), aria2.call(i,'tellWaiting',[0,200]), aria2.call(i,'tellStopped',[0,200]), aria2.call(i,'getGlobalStat')
+              aria2.call(i,'tellActive'), aria2.call(i,'tellWaiting',[0,1000]), aria2.call(i,'tellStopped',[0,1000]), aria2.call(i,'getGlobalStat')
             ]);
             const allTasks = [...a, ...w, ...s];
             const tasksToPush = allTasks.filter(t=>t.status!=='removed').map(t=>({...t, _eng:`aria2_${i}`, _uid:`${i}_${t.gid}`}));
@@ -322,7 +376,7 @@ async function syncDatabase() {
         try {
           if (t.bittorrent && t.bittorrent.info && t.bittorrent.info.name) fn = t.bittorrent.info.name;
           else if (t.files && t.files.length > 0 && t.files[0].path) fn = t.files[0].path.split(/[\\/]/).pop();
-          else if (t.files && t.files.length > 0 && t.files[0].uris && t.files[0].uris.length > 0) fn = decodeURIComponent(t.files[0].uris[0].uri.split('/').pop().split('?')[0]);
+          else if (t.files && t.files.length > 0 && t.files[0].uris && t.files[0].uris.length > 0) { const uri = t.files[0].uris[0].uri; if(uri.startsWith('magnet:')) { const m = uri.match(/dn=([^&]+)/); fn = m ? decodeURIComponent(m[1].replace(/\+/g, '%20')) : '种子元数据下载中...'; } else { fn = decodeURIComponent(uri.split('/').pop().split('?')[0]); } }
         } catch(e) {}
         if (!fn || fn === '[METADATA]' || fn === '') fn = '种子元数据下载中...';
         const up = parseInt(t.uploadLength)||0;
@@ -331,6 +385,19 @@ async function syncDatabase() {
       
       getAllTasksStmt.all().forEach(row => {
         if(!curIds.has(row.id)) {
+          // 🛡️ 15秒新手保护期（防早期误删）
+          if (row.created_at) {
+              const age = Date.now() - new Date(row.created_at.replace(' ', 'T') + 'Z').getTime();
+              if (age < 15000) return; 
+          }
+          
+          // 🌟 终极历史护盾：如果任务已经完成(complete)或报错(error)
+          // 绝对不因为 Aria2 把它挤出列表或被 MP 删除而清理本地数据库！
+          if (row.status === 'complete' || row.status === 'error') {
+              return; 
+          }
+
+          // 只有活动中的任务突然失踪，且节点在线，才执行物理删除
           if (row.engine && row.engine.startsWith('aria2_')) {
             const idx = parseInt(row.engine.split('_')[1]);
             if (!aNodesInfo[idx] || aNodesInfo[idx].online) safeDeleteTask('id', row.id);
@@ -428,7 +495,7 @@ setInterval(async () => {
   isSyncing = true;
   try {
       const stats = await syncDatabase();
-      const dbTasks = db.prepare("SELECT * FROM tasks ORDER BY created_at DESC").all();
+      const dbTasks = db.prepare("SELECT * FROM tasks ORDER BY created_at DESC LIMIT 1000").all();
       const payload = JSON.stringify({ tasks: dbTasks, stats: stats });
       if (payload !== lastBroadcastPayload) {
           lastBroadcastPayload = payload;
@@ -444,6 +511,8 @@ wss.on('connection', (ws, req) => {
   const token = new URL(req.url, 'http://x').searchParams.get('token');
   if(token !== getSecureToken()) return ws.close();
   ws.isAuthenticated = true; ws.isAlive = true;
+  // 🚀 终极修复：新客户端连入时，无视数据变化，强制补发一份最新全量包裹！消灭刷新白屏！
+  if (lastBroadcastPayload) ws.send(lastBroadcastPayload);
   ws.on('pong', () => { ws.isAlive = true; });
 });
 
