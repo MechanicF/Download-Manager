@@ -105,7 +105,7 @@ const aria2 = {
   async call(idx, method, params = []) {
     const srv = config.aria2[idx];
     if(!srv) throw new Error('Aria2节点未配置');
-    const r = await rpcClient.post(srv.url, { jsonrpc:'2.0', id:Date.now(), method:`aria2.${method}`, params:[`token:${srv.secret}`, ...params] }, {timeout:15000});
+    const r = await rpcClient.post(srv.url, { jsonrpc:'2.0', id:Date.now(), method:`aria2.${method}`, params:[`token:${srv.secret}`, ...params] }, {timeout:2000});
     if (r.data.error) throw new Error(r.data.error.message);
     return r.data.result;
   }
@@ -278,7 +278,10 @@ app.post('/api/upload', async (req, res) => {
 const insertTaskStmt = db.prepare('INSERT INTO tasks (id, gid, filename, total_size, downloaded_size, uploaded_size, speed, progress, status, engine) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET filename=excluded.filename, total_size=excluded.total_size, downloaded_size=excluded.downloaded_size, uploaded_size=excluded.uploaded_size, speed=excluded.speed, progress=excluded.progress, status=excluded.status');
 const getAllTasksStmt = db.prepare('SELECT id, engine FROM tasks');
 
+let _syncPromise = null;
 async function syncDatabase() {
+  if(_syncPromise) return await _syncPromise;
+  _syncPromise = (async () => {
   let aTasks = []; let aNodesInfo = []; let globalDlSpeed = 0; let globalUpSpeed = 0;
   if (config.aria2) {
     const nodePromises = config.aria2.map(async (srv, i) => {
@@ -330,7 +333,7 @@ async function syncDatabase() {
         if(!curIds.has(row.id)) {
           if (row.engine && row.engine.startsWith('aria2_')) {
             const idx = parseInt(row.engine.split('_')[1]);
-            if (aNodesInfo[idx] && aNodesInfo[idx].online) safeDeleteTask('id', row.id);
+            if (!aNodesInfo[idx] || aNodesInfo[idx].online) safeDeleteTask('id', row.id);
           } else { safeDeleteTask('id', row.id); }
         }
       });
@@ -338,35 +341,12 @@ async function syncDatabase() {
   } catch (err) {}
   
   return { aria2Nodes: aNodesInfo, globalDlSpeed, globalUpSpeed };
+  })();
+  try { return await _syncPromise; } finally { _syncPromise = null; }
 }
 
 app.get('/api/tasks', async (req, res) => { await syncDatabase(); res.json(db.prepare('SELECT * FROM tasks ORDER BY created_at DESC').all()); });
 app.get('/api/global-stats', async (req, res) => { res.json(await syncDatabase()); });
-
-// 🌟 开启 WebSocket 底层帧压缩，针对庞大的任务列表节约 80% 核心带宽
-const wss = new WebSocket.Server({ 
-  port: WS_PORT,
-  perMessageDeflate: { zlibDeflateOptions: { level: 4 }, threshold: 1024 }
-});
-let lastBroadcastPayload = ""; 
-
-setInterval(async () => {
-  if (wss.clients.size === 0) return; 
-  await syncDatabase();
-  const payload = JSON.stringify(db.prepare("SELECT * FROM tasks ORDER BY created_at DESC").all());
-  if (payload === lastBroadcastPayload) return; 
-  lastBroadcastPayload = payload;
-  wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN && client.isAuthenticated) client.send(payload); });
-}, 1500);
-
-const interval = setInterval(() => { wss.clients.forEach(ws => { if (ws.isAlive === false) return ws.terminate(); ws.isAlive = false; ws.ping(); }); }, 30000);
-wss.on('close', () => clearInterval(interval));
-wss.on('connection', (ws, req) => {
-  const token = new URL(req.url, 'http://x').searchParams.get('token');
-  if(token !== getSecureToken()) return ws.close();
-  ws.isAuthenticated = true; ws.isAlive = true;
-  ws.on('pong', () => { ws.isAlive = true; }); 
-});
 
 app.post('/api/force_kill_task', async (req, res) => {
     const { url, secret, gid } = req.body;
@@ -434,4 +414,37 @@ app.all('/api/vo/:id/:action', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log('🚀 API Running on ' + PORT));
+
+
+// === 终极架构：HTTP & WS 共享端口 + 防并发雪崩锁 ===
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: '/ws/tasks', perMessageDeflate: { zlibDeflateOptions: { level: 4 }, threshold: 1024 } });
+
+let lastBroadcastPayload = "";
+let isSyncing = false;
+
+setInterval(async () => {
+  if (wss.clients.size === 0 || isSyncing) return;
+  isSyncing = true;
+  try {
+      const stats = await syncDatabase();
+      const dbTasks = db.prepare("SELECT * FROM tasks ORDER BY created_at DESC").all();
+      const payload = JSON.stringify({ tasks: dbTasks, stats: stats });
+      if (payload !== lastBroadcastPayload) {
+          lastBroadcastPayload = payload;
+          wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN && client.isAuthenticated) client.send(payload); });
+      }
+  } catch (e) {}
+  finally { isSyncing = false; }
+}, 1500);
+
+const interval = setInterval(() => { wss.clients.forEach(ws => { if (ws.isAlive === false) return ws.terminate(); ws.isAlive = false; ws.ping(); }); }, 30000);
+wss.on('close', () => clearInterval(interval));
+wss.on('connection', (ws, req) => {
+  const token = new URL(req.url, 'http://x').searchParams.get('token');
+  if(token !== getSecureToken()) return ws.close();
+  ws.isAuthenticated = true; ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+});
+
+server.listen(PORT, () => console.log('🚀 API & WS Cluster Unified on PORT ' + PORT));
