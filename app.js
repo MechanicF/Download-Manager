@@ -1,6 +1,8 @@
 require('dotenv').config();
 const xss = require('xss');
 const express = require('express');
+require('events').EventEmitter.defaultMaxListeners = 100; // 🚀 解除高并发 KeepAlive 下的 Socket 监听器数量限制
+
 const axios = require('axios');
 const WebSocket = require('ws');
 const Database = require('better-sqlite3');
@@ -518,6 +520,7 @@ wss.on('connection', (ws, req) => {
   // 🚀 终极修复：新客户端连入时，无视数据变化，强制补发一份最新全量包裹！消灭刷新白屏！
   if (lastBroadcastPayload) ws.send(lastBroadcastPayload);
   ws.on('pong', () => { ws.isAlive = true; });
+  ws.on('error', (err) => { /* 静默丢弃底层的网络中断报错 */ });
 });
 
 server.listen(PORT, () => console.log('🚀 API & WS Cluster Unified on PORT ' + PORT));

@@ -10,13 +10,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "axios": "^1.15.0",
-    "better-sqlite3": "^12.8.0",
+    "axios": "^1.15.1",
+    "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "form-data": "^4.0.5",
     "parse-torrent-title": "^2.1.0",
     "ssh2": "^1.17.0",
-    "ws": "^8.20.0"
+    "ws": "^8.20.0",
+    "xss": "^1.0.15"
   }
 }
