@@ -54,13 +54,10 @@ install_app() {
     echo -e "${GREEN}      🚀 Download Manager 一键部署向导            ${RESET}"
     echo -e "${GREEN}==================================================${RESET}"
     
-    read -p "👉 请设置 Web 面板访问端口 [默认: 1111]: " HTTP_PORT
+    read -p "👉 请设置 Web 面板访问端口 (HTTP & WS 共享) [默认: 1111]: " HTTP_PORT
     HTTP_PORT=${HTTP_PORT:-1111}
-    
-    read -p "👉 请设置 WebSocket 通讯端口 [默认: 28080]: " WS_PORT
-    WS_PORT=${WS_PORT:-28080}
 
-    echo -e "\n${YELLOW}▶ 确认配置：面板端口 [${HTTP_PORT}] | WS端口 [${WS_PORT}]${RESET}\n"
+    echo -e "\n${YELLOW}▶ 确认配置：面板统一端口 [${HTTP_PORT}]${RESET}\n"
     sleep 2
 
     install_env
@@ -76,7 +73,6 @@ install_app() {
     cat << EOF > .env
 # === Manager Pro 环境变量配置 ===
 PORT=${HTTP_PORT}
-WS_PORT=${WS_PORT}
 
 # 默认账号密码 (建议修改)
 AUTH_USER=admin
@@ -89,7 +85,6 @@ AES_IV=e27aa5b2a97546aa693e17a7df4993a8
 EOF
 
     echo -e "${YELLOW}>> 正在安装 Node.js 核心依赖 (这可能需要几分钟)...${RESET}"
-    # 新增 dotenv 和 xss 依赖
     npm install express cors axios ws better-sqlite3 form-data ssh2 dotenv xss
 
     echo -e "${YELLOW}>> 正在启动服务并配置开机自启...${RESET}"
