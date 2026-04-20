@@ -1,3 +1,5 @@
+require('dotenv').config();
+const xss = require('xss');
 const express = require('express');
 const axios = require('axios');
 const WebSocket = require('ws');
@@ -15,10 +17,11 @@ const rpcClient = axios.create({
 });
 
 function getSecureToken() {
-  return crypto.createHmac('sha256', 'ManagerPro_Sec_2026').update(config.auth.username + ':' + config.auth.password).digest('hex');
+  return crypto.createHmac('sha256', process.env.SEC_TOKEN_SALT || 'ManagerPro_Sec_2026').update(config.auth.username + ':' + config.auth.password).digest('hex');
 }
 
 const app = express();
+app.set('trust proxy', true); // 信任反代，获取真实 IP
 const PORT = 1111;
 const WS_PORT = 28080;
 
@@ -62,7 +65,7 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 app.post('/api/login', (req, res) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = req.ip;
   const attempts = failedAttempts.get(ip) || { count: 0, lockUntil: 0 };
   if (Date.now() < attempts.lockUntil) return res.status(429).json({ success: false, error: '错误次数过多，IP已被封禁 15 分钟' });
   if (req.body.username === config.auth.username && req.body.password === config.auth.password) {
@@ -323,7 +326,8 @@ app.post('/api/upload', async (req, res) => {
   try {
     const idx = parseInt(target.split('_')[1]);
     const gid = await aria2.call(idx, 'addTorrent', [fileBase64]);
-    db.prepare("INSERT OR REPLACE INTO tasks (id, filename, engine, status) VALUES (?, ?, ?, 'waiting')").run(gid, filename || '本地种子.torrent', target);
+    const cleanFilename = xss(filename || '本地种子.torrent');
+    db.prepare("INSERT OR REPLACE INTO tasks (id, filename, engine, status) VALUES (?, ?, ?, 'waiting')").run(gid, cleanFilename, target);
     res.json({ success: true, message:'种子已上传' });
   } catch(e) { res.json({ success: false, error: e.message }); }
 });

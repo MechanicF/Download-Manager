@@ -70,13 +70,27 @@ install_app() {
     git clone "$REPO_URL" "$INSTALL_DIR"
     cd "$INSTALL_DIR" || exit
 
-    echo -e "${YELLOW}>> 正在配置自定义端口...${RESET}"
-    sed -i "s/const PORT = 1111;/const PORT = ${HTTP_PORT};/g" app.js
-    sed -i "s/const WS_PORT = 28080;/const WS_PORT = ${WS_PORT};/g" app.js
-    sed -i "s/:28080/:${WS_PORT}/g" app.js
+    echo -e "${YELLOW}>> 正在生成安全环境变量配置 (.env)...${RESET}"
+    # 自动生成 32 位随机字符作为防篡改盐值
+    RANDOM_SALT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+    cat << EOF > .env
+# === Manager Pro 环境变量配置 ===
+PORT=${HTTP_PORT}
+WS_PORT=${WS_PORT}
+
+# 默认账号密码 (建议修改)
+AUTH_USER=admin
+AUTH_PASS=password
+
+# 加密与哈希盐值 (已自动生成随机安全值)
+SEC_TOKEN_SALT=${RANDOM_SALT}
+AES_KEY=8ab732d0ef2afc4bdcd9ddebe87b264cef1f1dd4e3f7d4227379d80b84290bdc
+AES_IV=e27aa5b2a97546aa693e17a7df4993a8
+EOF
 
     echo -e "${YELLOW}>> 正在安装 Node.js 核心依赖 (这可能需要几分钟)...${RESET}"
-    npm install express cors axios ws better-sqlite3 form-data ssh2
+    # 新增 dotenv 和 xss 依赖
+    npm install express cors axios ws better-sqlite3 form-data ssh2 dotenv xss
 
     echo -e "${YELLOW}>> 正在启动服务并配置开机自启...${RESET}"
     chmod +x manager.sh 2>/dev/null || true
@@ -108,30 +122,21 @@ update_app() {
     echo -e "\n${YELLOW}>> 开始从 GitHub 拉取最新版本...${RESET}"
     cd "$INSTALL_DIR" || exit
     
-    echo -e "${YELLOW}>> 正在停止后台服务，保护数据库文件...${RESET}"
+    echo -e "${YELLOW}>> 正在停止后台服务，保护数据库与配置...${RESET}"
     pm2 stop "$APP_NAME" >/dev/null 2>&1
     
-    HTTP_PORT=$(grep "const PORT =" app.js | grep -o '[0-9]\+')
-    WS_PORT=$(grep "const WS_PORT =" app.js | grep -o '[0-9]\+')
-    
-    echo -e "当前端口保护: HTTP=${HTTP_PORT}, WS=${WS_PORT}"
-    
-    echo -e "${YELLOW}>> 正在备份本地数据库...${RESET}"
+    echo -e "${YELLOW}>> 正在备份本地数据库与环境变量...${RESET}"
     mkdir -p /tmp/dm_db_backup
     cp -f downloads.db* /tmp/dm_db_backup/ 2>/dev/null || true
+    cp -f .env /tmp/dm_db_backup/ 2>/dev/null || true
     
     git fetch --all
     git reset --hard origin/main
     git pull
     
-    echo -e "${YELLOW}>> 正在还原本地数据库...${RESET}"
+    echo -e "${YELLOW}>> 正在还原本地数据库与环境变量...${RESET}"
     cp -f /tmp/dm_db_backup/downloads.db* ./ 2>/dev/null || true
-    
-    if [ -n "$HTTP_PORT" ] && [ -n "$WS_PORT" ]; then
-        sed -i "s/const PORT = 1111;/const PORT = ${HTTP_PORT};/g" app.js
-        sed -i "s/const WS_PORT = 28080;/const WS_PORT = ${WS_PORT};/g" app.js
-        sed -i "s/:28080/:${WS_PORT}/g" app.js
-    fi
+    cp -f /tmp/dm_db_backup/.env ./ 2>/dev/null || true
     
     chmod +x manager.sh 2>/dev/null || true
     if [ -f "$INSTALL_DIR/manager.sh" ]; then
