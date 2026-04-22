@@ -466,6 +466,7 @@ const insertTaskStmt = db.prepare('INSERT INTO tasks (id, gid, filename, total_s
 const getHistoricalStatStmt = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?');
 
 let _syncPromise = null;
+const _nodeTaskCache = {}; // 🛡️ UI 防闪烁：节点任务状态缓存
 async function syncDatabase() {
   if(_syncPromise) return await _syncPromise;
   _syncPromise = (async () => {
@@ -483,9 +484,10 @@ async function syncDatabase() {
           allTasks.forEach(t => { totalDl += parseInt(t.completedLength)||0; totalUp += parseInt(t.uploadLength)||0; });
           const dlSpeed = parseInt(stat.downloadSpeed)||0, upSpeed = parseInt(stat.uploadSpeed)||0;
           const h = getHistoricalStatStmt.get(`aria2_${i}`);
+          _nodeTaskCache[i] = allTasks;
           return { idx: i, online: true, name: srv.name, dlSpeed, upSpeed, totalDl: totalDl + (h?h.historical_dl:0), totalUp: totalUp + (h?h.historical_up:0), tasks: allTasks };
         } catch(e) {
-          return { idx: i, online: false, name: srv.name, dlSpeed: 0, upSpeed: 0, totalDl: 0, totalUp: 0, tasks: [] };
+          return { idx: i, online: false, name: srv.name, dlSpeed: 0, upSpeed: 0, totalDl: 0, totalUp: 0, tasks: (_nodeTaskCache[i] || []) };
         }
       });
       const results = await Promise.all(nodePromises);
