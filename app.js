@@ -1,12 +1,11 @@
-require('dotenv').config();
-const xss = require('xss');
+require('dotenv').config({ path: __dirname + '/.env' }); // 🌍 强制绑定当前代码目录的 .env
 
 // 🛡️ 生产级防御：启动时严格校验核心环境变量
 const requiredEnvVars = ['JWT_SECRET', 'AES_KEY', 'AES_IV'];
 requiredEnvVars.forEach(envVar => {
   if (!process.env[envVar]) {
-    logger.error(`\n❌ 致命错误: 缺少系统级环境变量 [${envVar}]`);
-    logger.error('请检查 .env 文件是否配置正确，系统已强制停止启动以保证安全。\n');
+    console.error('\n❌ 致命错误: 缺少系统级环境变量 [' + envVar + ']');
+    console.error('请检查 .env 文件是否配置正确，系统已强制停止启动以保证安全。\n');
     process.exit(1);
   }
 });
