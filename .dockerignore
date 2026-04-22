@@ -1,8 +1,8 @@
 node_modules
 npm-debug.log
-.git
 .env
 config.json
-downloads.db
-downloads.db-wal
-downloads.db-shm
+downloads.db*
+logs/
+.git
+*.tar.gz

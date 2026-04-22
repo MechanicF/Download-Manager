@@ -1,17 +1,18 @@
 version: '3.8'
 
 services:
-  download-manager:
-    build: .
-    container_name: download-manager
-    restart: always
+  manager-pro:
+    image: mechanicf/download-manager:v3.0.0
+    container_name: download-manager-pro
+    restart: unless-stopped
     ports:
-      - "1111:1111"    # Web API 端口
-      - "28080:28080"  # WebSocket 端口
+      - "1111:1111"
+    # 强制注入安全密钥
+    env_file: 
+      - .env
     volumes:
-      - ./config.json:/app/config.json
-      - ./downloads.db:/app/downloads.db
-      - /root/downloads:/downloads  # 你的真实下载目录映射
+      - ./config.json:/opt/Download-Manager/config.json
+      - ./downloads.db:/opt/Download-Manager/downloads.db
+      - ./logs:/opt/Download-Manager/logs
     environment:
-      - NODE_ENV=production
       - TZ=Asia/Shanghai
