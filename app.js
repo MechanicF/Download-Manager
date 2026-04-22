@@ -1,6 +1,34 @@
 require('dotenv').config();
 const xss = require('xss');
+
+// 🛡️ 生产级防御：启动时严格校验核心环境变量
+const requiredEnvVars = ['JWT_SECRET', 'AES_KEY', 'AES_IV'];
+requiredEnvVars.forEach(envVar => {
+  if (!process.env[envVar]) {
+    logger.error(`\n❌ 致命错误: 缺少系统级环境变量 [${envVar}]`);
+    logger.error('请检查 .env 文件是否配置正确，系统已强制停止启动以保证安全。\n');
+    process.exit(1);
+  }
+});
+
 const express = require('express');
+const logger = require('./utils/logger');
+const promClient = require('prom-client');
+promClient.collectDefaultMetrics(); // 开启底层物理指标收集
+
+const Joi = require('joi');
+
+// 🛡️ API 请求体校验工厂 (防御非法注入)
+const validate = (schema) => (req, res, next) => {
+    const { error } = schema.validate(req.body);
+    if (error) {
+        logger.warn('⚠️ 拦截到非法请求:', error.message);
+        return res.status(400).json({ success: false, error: '请求格式不合法', details: error.message });
+    }
+    next();
+};
+
+const jwt = require('jsonwebtoken');
 require('events').EventEmitter.defaultMaxListeners = 100; // 🚀 解除高并发 KeepAlive 下的 Socket 监听器数量限制
 
 const axios = require('axios');
@@ -19,7 +47,7 @@ const rpcClient = axios.create({
 });
 
 function getSecureToken() {
-  return crypto.createHmac('sha256', process.env.SEC_TOKEN_SALT || 'ManagerPro_Sec_2026').update(config.auth.username + ':' + config.auth.password).digest('hex');
+  return jwt.sign({ username: config.auth.username }, process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026', { expiresIn: '7d' });
 }
 
 const app = express();
@@ -36,13 +64,13 @@ function loadConfig() {
   let cfg = { auth: { username: 'admin', password: 'password' }, aria2: [], openlist: [], video_organizer_url: "", vo_nodes: [] };
   try { 
       if (fs.existsSync(CONFIG_FILE)) cfg = { ...cfg, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }; 
-  } catch (e) { console.error('配置加载异常:', e.message); } 
+  } catch (e) { logger.error('配置加载异常:', e.message); } 
   return cfg;
 }
 const saveConfig = (c) => fs.writeFileSync(CONFIG_FILE, JSON.stringify(c, null, 2));
 
-const _aesK = Buffer.from('8ab732d0ef2afc4bdcd9ddebe87b264cef1f1dd4e3f7d4227379d80b84290bdc', 'hex');
-const _aesI = Buffer.from('e27aa5b2a97546aa693e17a7df4993a8', 'hex');
+const _aesK = Buffer.from(process.env.AES_KEY || '8ab732d0ef2afc4bdcd9ddebe87b264cef1f1dd4e3f7d4227379d80b84290bdc', 'hex');
+const _aesI = Buffer.from(process.env.AES_IV || 'e27aa5b2a97546aa693e17a7df4993a8', 'hex');
 function _decAES(hex) {
     const decipher = crypto.createDecipheriv('aes-256-cbc', _aesK, _aesI);
     let dec = decipher.update(hex, 'hex', 'utf8');
@@ -55,7 +83,8 @@ let config = loadConfig();
 function checkAuth(req) {
   const auth = req.headers.authorization;
   if (!auth) return false;
-  return auth.split(' ')[1] === getSecureToken();
+  try { jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026'); return true; } 
+  catch(e) { return false; }
 }
 
 const failedAttempts = new Map();
@@ -66,7 +95,7 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', validate(Joi.object({ username: Joi.string().required(), password: Joi.string().required() }).unknown(true)), (req, res) => {
   const ip = req.ip;
   const attempts = failedAttempts.get(ip) || { count: 0, lockUntil: 0 };
   if (Date.now() < attempts.lockUntil) return res.status(429).json({ success: false, error: '错误次数过多，IP已被封禁 15 分钟' });
@@ -81,9 +110,39 @@ app.post('/api/login', (req, res) => {
   }
 });
 
+
+// 🏥 微服务健康探针端点
+app.get('/health', (req, res) => {
+  const healthCheck = { uptime: process.uptime(), timestamp: Date.now(), checks: { database: 'OK', system: 'OK' } };
+  try {
+    db.prepare('SELECT 1').get();
+  } catch (e) {
+    healthCheck.checks.database = 'ERROR';
+    return res.status(503).json(healthCheck);
+  }
+  res.status(200).json(healthCheck);
+});
+
+
+// 📊 Prometheus 性能监控指标端点
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', promClient.register.contentType);
+  res.end(await promClient.register.metrics());
+});
+
 app.use('/api', (req, res, next) => { if(checkAuth(req)) next(); else res.status(401).send(); });
 
 const db = new Database('downloads.db');
+
+try {
+  // ⚡ 性能优化：创建任务状态与时间的复合索引，应对万级历史记录查询
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_tasks_status_engine ON tasks(status, engine);
+    CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at DESC);
+  `);
+  logger.info('✅ SQLite 性能索引挂载完成');
+} catch(e) { logger.error('索引创建失败', e); }
+
 db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
 db.pragma('temp_store = MEMORY');
@@ -95,15 +154,17 @@ db.exec(`CREATE TABLE IF NOT EXISTS global_stats (engine TEXT PRIMARY KEY, histo
 try { db.exec('ALTER TABLE tasks ADD COLUMN uploaded_size INTEGER DEFAULT 0'); } catch(e){}
 
 function safeDeleteTask(field, value) {
-  if (field !== 'id' && field !== 'gid') return;
+  const allowedFields = ['id', 'gid'];
+  if (!allowedFields.includes(field)) return;
+  const safeField = allowedFields.find(f => f === field); // 白名单映射，彻底阻断注入
   try {
-    const t = db.prepare(`SELECT * FROM tasks WHERE ${field}=?`).get(value);
+    const t = db.prepare(`SELECT * FROM tasks WHERE ${safeField}=?`).get(value);
     if(t) {
         const dl = t.downloaded_size || 0; const up = t.uploaded_size || 0;
         db.prepare(`INSERT INTO global_stats (engine, historical_dl, historical_up) VALUES (?, ?, ?) ON CONFLICT(engine) DO UPDATE SET historical_dl=historical_dl+?, historical_up=historical_up+?`).run(t.engine, dl, up, dl, up);
-        db.prepare(`DELETE FROM tasks WHERE ${field}=?`).run(value);
+        db.prepare(`DELETE FROM tasks WHERE ${safeField}=?`).run(value);
     }
-  } catch(e) { console.error('安全删除任务失败:', e.message); }
+  } catch(e) { logger.error('安全删除任务失败:', e.message); }
 }
 
 const aria2 = {
@@ -296,16 +357,13 @@ app.post('/api/tasks/:id/:act', async (req, res) => {
   const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(req.params.id); if(!t) return res.json({success:false});
   try {
     const idx = parseInt(t.engine.split('_')[1]);
-    if(req.params.act==='pause') await aria2.call(idx, 'pause', [t.gid]);
-    else if(req.params.act==='resume') await aria2.call(idx, 'unpause', [t.gid]);
+    if(req.params.act==='pause') { await aria2.call(idx, 'pause', [t.gid]); db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(t.id); }
+    else if(req.params.act==='resume') { await aria2.call(idx, 'unpause', [t.gid]); db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(t.id); }
     else if(req.params.act==='delete') {
-      try { await aria2.call(idx, 'remove', [t.gid]); } 
-      catch(e) { try { await aria2.call(idx, 'removeDownloadResult', [t.gid]); } catch(e2){} }
+      try { await aria2.call(idx, 'remove', [t.gid]); } catch(e) { try { await aria2.call(idx, 'removeDownloadResult', [t.gid]); } catch(e2){} }
+      safeDeleteTask('id', t.id);
     }
   } catch(e){} 
-  if(req.params.act==='pause') db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(t.id);
-  if(req.params.act==='resume') db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(t.id);
-  if(req.params.act==='delete') safeDeleteTask('id', t.id);
   res.json({success:true});
 });
 
@@ -315,19 +373,13 @@ app.post('/api/tasks/batch', async (req, res) => {
     const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(id); if(!t) continue;
     try {
       const idx = parseInt(t.engine.split('_')[1]);
-      if(action==='pause') { const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); if(tk) await aria2.call(idx, 'pause', [tk.gid]); }
-      else if(action==='resume') { const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); if(tk) await aria2.call(idx, 'unpause', [tk.gid]); }
+      if(action==='pause') { await aria2.call(idx, 'pause', [t.gid]); db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(id); }
+      else if(action==='resume') { await aria2.call(idx, 'unpause', [t.gid]); db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(id); }
       else if(action==='delete') { 
-      const tk = db.prepare('SELECT gid FROM tasks WHERE id=?').get(id); 
-      if(tk) {
-          try { await aria2.call(idx, 'remove', [tk.gid]); } 
-          catch(e) { try { await aria2.call(idx, 'removeDownloadResult', [tk.gid]); } catch(e2){} }
+          try { await aria2.call(idx, 'remove', [t.gid]); } catch(e) { try { await aria2.call(idx, 'removeDownloadResult', [t.gid]); } catch(e2){} }
+          safeDeleteTask('id', id);
       }
-    }
     } catch(e){}
-    if(action==='pause') db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(id);
-    if(action==='resume') db.prepare("UPDATE tasks SET status='downloading' WHERE id=?").run(id);
-    if(action==='delete') safeDeleteTask('id', id);
   }
   res.json({success:true});
 });
@@ -370,7 +422,8 @@ app.post('/api/upload', async (req, res) => {
 
 // 🌟 预编译 SQL 语句，避免每次循环重复解析 AST 语法树，数据库写入性能暴增
 const insertTaskStmt = db.prepare('INSERT INTO tasks (id, gid, filename, total_size, downloaded_size, uploaded_size, speed, progress, status, engine) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET filename=excluded.filename, total_size=excluded.total_size, downloaded_size=excluded.downloaded_size, uploaded_size=excluded.uploaded_size, speed=excluded.speed, progress=excluded.progress, status=excluded.status');
-const getAllTasksStmt = db.prepare('SELECT id, engine, created_at, status FROM tasks');
+
+const getHistoricalStatStmt = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?');
 
 let _syncPromise = null;
 async function syncDatabase() {
@@ -389,7 +442,7 @@ async function syncDatabase() {
           let totalDl = 0, totalUp = 0;
           allTasks.forEach(t => { totalDl += parseInt(t.completedLength)||0; totalUp += parseInt(t.uploadLength)||0; });
           const dlSpeed = parseInt(stat.downloadSpeed)||0, upSpeed = parseInt(stat.uploadSpeed)||0;
-          const h = db.prepare('SELECT historical_dl, historical_up FROM global_stats WHERE engine=?').get(`aria2_${i}`);
+          const h = getHistoricalStatStmt.get(`aria2_${i}`);
           return { idx: i, online: true, name: srv.name, dlSpeed, upSpeed, totalDl: totalDl + (h?h.historical_dl:0), totalUp: totalUp + (h?h.historical_up:0), tasks: allTasks };
         } catch(e) {
           return { idx: i, online: false, name: srv.name, dlSpeed: 0, upSpeed: 0, totalDl: 0, totalUp: 0, tasks: [] };
@@ -482,7 +535,7 @@ app.post('/api/force_kill_task', async (req, res) => {
 
 // --- 优雅退出机制 (Graceful Shutdown) ---
 function shutdownGracefully() {
-    console.log('\n[系统] 接收到退出信号，正在安全关闭数据库连接...');
+    logger.info('\n[系统] 接收到退出信号，正在安全关闭数据库连接...');
     try { if (db) db.close(); } catch(e) {}
     process.exit(0);
 }
@@ -516,21 +569,80 @@ app.all('/api/vo/:id/:action', async (req, res) => {
 
 
 // === 终极架构：HTTP & WS 共享端口 + 防并发雪崩锁 ===
+
+// 🛡️ 全局异常捕获中间件与兜底防线
+app.use((err, req, res, next) => {
+    logger.error('🔥 [系统异常捕获]:', err.message);
+    res.status(err.status || 500).json({ success: false, error: '服务器内部处理异常', msg: err.message });
+});
+
+// 彻底封杀导致 PM2 重启的终极元凶
+process.on('uncaughtException', (err) => { 
+    logger.error('💥 未捕获的严重异常 (已被安全拦截):', err); 
+});
+process.on('unhandledRejection', (reason) => { 
+    logger.error('💥 未处理的 Promise 拒绝 (已被安全拦截):', reason); 
+});
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws/tasks', perMessageDeflate: { zlibDeflateOptions: { level: 4 }, threshold: 1024 } });
 
-let lastBroadcastPayload = "";
+// 🚀 V3.0 企业级状态引擎：WebSocket 增量 Diff 同步
+let lastFullPayload = "";
 let isSyncing = false;
+let previousTasksMap = new Map();
 
 setInterval(async () => {
   if (wss.clients.size === 0 || isSyncing) return;
   isSyncing = true;
   try {
       const stats = await syncDatabase();
-      const payload = JSON.stringify({ tasks: stats.finalTasks, stats: stats });
-      if (payload !== lastBroadcastPayload) {
-          lastBroadcastPayload = payload;
-          wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN && client.isAuthenticated) client.send(payload); });
+      const currentTasks = stats.finalTasks || [];
+      
+      let added = [], updated = [], removed = [];
+      const currentIds = new Set();
+      
+      // 1. 计算新增与更新 (Diff 算法核心)
+      currentTasks.forEach(t => {
+          currentIds.add(t.id);
+          const prev = previousTasksMap.get(t.id);
+          if (!prev) {
+              added.push(t);
+          } else if (
+              prev.status !== t.status || 
+              prev.progress !== t.progress || 
+              prev.speed !== t.speed || 
+              prev.downloaded_size !== t.downloaded_size
+          ) {
+              updated.push(t);
+          }
+      });
+      
+      // 2. 计算被移除的任务
+      for (const id of previousTasksMap.keys()) {
+          if (!currentIds.has(id)) removed.push(id);
+      }
+      
+      const hasChanges = added.length > 0 || updated.length > 0 || removed.length > 0;
+      
+      // 永远维护一份全量快照，供新连接的客户端使用
+      lastFullPayload = JSON.stringify({ type: 'full', tasks: currentTasks, stats: stats });
+      
+      // 3. 只有发生变化，才下发增量包 (大幅节省带宽)
+      if (hasChanges) {
+          const diffPayload = JSON.stringify({ type: 'diff', changes: { added, updated, removed }, stats: stats });
+          wss.clients.forEach(client => { 
+              if (client.readyState === WebSocket.OPEN && client.isAuthenticated) client.send(diffPayload); 
+          });
+          // 更新状态树
+          previousTasksMap.clear();
+          currentTasks.forEach(t => previousTasksMap.set(t.id, t));
+      } else {
+          // 哪怕任务没变化，也只发送极小的全局速度心跳包
+          const heartbeat = JSON.stringify({ type: 'heartbeat', stats: stats });
+          wss.clients.forEach(client => { 
+              if (client.readyState === WebSocket.OPEN && client.isAuthenticated) client.send(heartbeat); 
+          });
       }
   } catch (e) {}
   finally { isSyncing = false; }
@@ -540,12 +652,13 @@ const interval = setInterval(() => { wss.clients.forEach(ws => { if (ws.isAlive 
 wss.on('close', () => clearInterval(interval));
 wss.on('connection', (ws, req) => {
   const token = new URL(req.url, 'http://x').searchParams.get('token');
-  if(token !== getSecureToken()) return ws.close();
+  try { jwt.verify(token, process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026'); } catch(e) { return ws.close(); }
   ws.isAuthenticated = true; ws.isAlive = true;
-  // 🚀 终极修复：新客户端连入时，无视数据变化，强制补发一份最新全量包裹！消灭刷新白屏！
-  if (lastBroadcastPayload) ws.send(lastBroadcastPayload);
+  
+  // ⚡ 新客户端接入时，下发当前全量快照
+  if (lastFullPayload) ws.send(lastFullPayload);
   ws.on('pong', () => { ws.isAlive = true; });
   ws.on('error', (err) => { /* 静默丢弃底层的网络中断报错 */ });
 });
 
-server.listen(PORT, () => console.log('🚀 API & WS Cluster Unified on PORT ' + PORT));
+server.listen(PORT, () => logger.info('🚀 API & WS Cluster Unified on PORT ' + PORT));

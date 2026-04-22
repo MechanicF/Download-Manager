@@ -1,9 +1,17 @@
+# 📦 依赖与缓存
 node_modules/
-downloads.db
+npm-debug.log*
+
+# 🔐 核心机密配置 (绝对不能开源)
+.env
 config.json
-qbit_cookie.txt
-*.db-shm
-*.db-shm
-*.db-wal
-downloads.db*
-downloads.db*
+
+# 🗄️ 数据库与日志
+downloads.db
+downloads.db-journal
+logs/
+
+# 🗑️ 垃圾文件与打包产物
+*.tar
+*.tar.gz
+.DS_Store
