@@ -1,3 +1,4 @@
+const { version } = require('./package.json');
 // 🌟 [OOBE 引导引擎] 必须在系统加载任何模块前运行，确保新设备开箱即用
 const _fs = require('fs');
 const _path = require('path');
@@ -217,7 +218,7 @@ const aria2 = {
   }
 };
 
-app.get('/api/config', (req, res) => res.json(config));
+app.get('/api/config', (req, res) => res.json({ ...config, version }));
 app.post('/api/config', (req, res) => { config = req.body; saveConfig(config); res.json({success:true, newToken: getSecureToken()}); });
 app.get('/api/engine/aria2/:id/config', async (req, res) => { 
   try { res.json({ success: true, data: await aria2.call(parseInt(req.params.id), 'getGlobalOption') }); } catch(e) { res.json({success:false, error:e.message}); } 

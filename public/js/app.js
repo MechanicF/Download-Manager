@@ -1870,3 +1870,10 @@ async function localFastRecognize() {
         origSend.apply(this, arguments);
     };
 })();
+
+/* 🌟 自动填充版本号 */
+fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+    .then(r => r.json())
+    .then(data => {
+        if (data.version) document.getElementById("ui-version").innerText = 'v' + data.version;
+    }).catch(()=>{});
