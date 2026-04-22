@@ -1,3 +1,41 @@
+// 🌟 [OOBE 引导引擎] 必须在系统加载任何模块前运行，确保新设备开箱即用
+const _fs = require('fs');
+const _path = require('path');
+
+// 1. 修复 Winston 日志目录缺失导致崩溃
+if (!_fs.existsSync(_path.join(__dirname, 'logs'))) {
+    _fs.mkdirSync(_path.join(__dirname, 'logs'));
+    console.log('🌱 [系统引导] 已自动创建 logs 目录');
+}
+
+// 2. 补齐新环境缺失的 .env
+const _envPath = _path.join(__dirname, '.env');
+if (!_fs.existsSync(_envPath)) {
+    _fs.writeFileSync(_envPath, "JWT_SECRET=ManagerPro_Super_Secret_Change_Me\nAES_KEY=8ab732c8b82937d92847a983b928374928374a928374b928374c928374d92837\nAES_IV=e27b928374a928374b928374c928374d\nLOG_LEVEL=info\n");
+    console.log('🌱 [系统引导] 已自动生成默认 .env 安全配置');
+}
+
+// 3. 防御 Docker 错把 config.json 挂载为目录的史诗级大坑
+const _cfgPath = _path.join(__dirname, 'config.json');
+if (_fs.existsSync(_cfgPath) && _fs.statSync(_cfgPath).isDirectory()) {
+    console.error('\n❌ [Docker 挂载严重错误] config.json 被 Docker 错误地创建成了文件夹！');
+    console.error('👉 请在宿主机执行 \'rm -rf config.json\' 和 \'touch config.json\' 后再重启容器！\n');
+    process.exit(1);
+} else if (!_fs.existsSync(_cfgPath)) {
+    _fs.writeFileSync(_cfgPath, JSON.stringify({ auth: { username: 'admin', password: 'password' }, aria2: [], openlist: [], video_organizer_url: "", vo_nodes: [] }, null, 2));
+    console.log('🌱 [系统引导] 已自动生成默认 config.json');
+}
+
+// 4. 防御 downloads.db 被挂载为目录
+const _dbPath = _path.join(__dirname, 'downloads.db');
+if (_fs.existsSync(_dbPath) && _fs.statSync(_dbPath).isDirectory()) {
+    console.error('\n❌ [Docker 挂载严重错误] downloads.db 被 Docker 错误地创建成了文件夹！');
+    console.error('👉 请在宿主机执行 \'rm -rf downloads.db\' 和 \'touch downloads.db\' 后再重启容器！\n');
+    process.exit(1);
+}
+// =========================================================================
+
+/* OOBE 引导结束 */
 require('dotenv').config({ path: __dirname + '/.env' }); // 🌍 强制绑定当前代码目录的 .env
 
 // 🛡️ 生产级防御：启动时严格校验核心环境变量
