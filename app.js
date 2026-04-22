@@ -172,6 +172,15 @@ app.use('/api', (req, res, next) => { if(checkAuth(req)) next(); else res.status
 
 const db = new Database('downloads.db');
 
+
+
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('temp_store = MEMORY');
+db.pragma('mmap_size = 268435456');
+
+db.exec(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, gid TEXT, url TEXT, filename TEXT, total_size INTEGER, downloaded_size INTEGER, speed INTEGER, progress REAL, status TEXT, engine TEXT, hash TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+try { db.exec('ALTER TABLE tasks ADD COLUMN url TEXT'); } catch(e){}
 try {
   // ⚡ 性能优化：创建任务状态与时间的复合索引，应对万级历史记录查询
   db.exec(`
@@ -181,13 +190,6 @@ try {
   logger.info('✅ SQLite 性能索引挂载完成');
 } catch(e) { logger.error('索引创建失败', e); }
 
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
-db.pragma('temp_store = MEMORY');
-db.pragma('mmap_size = 268435456');
-
-db.exec(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, gid TEXT, url TEXT, filename TEXT, total_size INTEGER, downloaded_size INTEGER, speed INTEGER, progress REAL, status TEXT, engine TEXT, hash TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-try { db.exec('ALTER TABLE tasks ADD COLUMN url TEXT'); } catch(e){}
 db.exec(`CREATE TABLE IF NOT EXISTS global_stats (engine TEXT PRIMARY KEY, historical_dl INTEGER DEFAULT 0, historical_up INTEGER DEFAULT 0)`);
 try { db.exec('ALTER TABLE tasks ADD COLUMN uploaded_size INTEGER DEFAULT 0'); } catch(e){}
 
