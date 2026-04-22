@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ================= 颜色与变量定义 =================
+# ================= 颜色与变量 =================
 GREEN="\033[32m"
 YELLOW="\033[33m"
 RED="\033[31m"
@@ -11,186 +11,110 @@ APP_NAME="DownloadManager"
 INSTALL_DIR="/opt/Download-Manager"
 REPO_URL="https://github.com/MechanicF/Download-Manager.git"
 
-# ================= 权限检查 =================
 if [ "$EUID" -ne 0 ]; then
-  echo -e "${RED}[错误] 请使用 root 用户运行此脚本！(可以使用 sudo -i 切换)${RESET}"
+  echo -e "${RED}[错误] 请使用 root 用户运行此脚本！${RESET}"
   exit 1
 fi
 
-# ================= 1. 环境安装模块 =================
 install_env() {
-    echo -e "${YELLOW}>> 正在检查并安装基础组件 (Node.js / Git / PM2)...${RESET}"
-    
-    if ! command -v git &> /dev/null; then
-        if command -v apt-get &> /dev/null; then
-            apt-get update && apt-get install -y git
-        elif command -v yum &> /dev/null; then
-            yum install -y git
-        fi
+    clear
+    echo -e "${GREEN}>> 正在检查并安装基础依赖环境...${RESET}"
+    if ! command -v curl &> /dev/null || ! command -v git &> /dev/null; then
+        if command -v apt-get &> /dev/null; then apt-get update && apt-get install -y curl git; 
+        elif command -v yum &> /dev/null; then yum install -y curl git; fi
     fi
-    
     if ! command -v node &> /dev/null; then
-        if command -v apt-get &> /dev/null; then
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt-get install -y nodejs
-        elif command -v yum &> /dev/null; then
-            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-            yum install -y nodejs
-        else
-            echo -e "${RED}[错误] 无法识别包管理器，请手动安装 Node.js 20+${RESET}"
-            exit 1
-        fi
+        if command -v apt-get &> /dev/null; then curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs;
+        elif command -v yum &> /dev/null; then curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && yum install -y nodejs; fi
     fi
-    
-    if ! command -v pm2 &> /dev/null; then
-        npm install -g pm2
-    fi
+    if ! command -v pm2 &> /dev/null; then npm install -g pm2; fi
 }
 
-# ================= 2. 首次安装模块 =================
 install_app() {
-    clear
+    install_env
+    echo -e "\n${GREEN}==================================================${RESET}"
+    echo -e "${GREEN}      🚀 Download Manager 初始安装配置            ${RESET}"
     echo -e "${GREEN}==================================================${RESET}"
-    echo -e "${GREEN}      🚀 Download Manager 一键部署向导            ${RESET}"
-    echo -e "${GREEN}==================================================${RESET}"
-    
-    read -p "👉 请设置 Web 面板访问端口 (HTTP & WS 共享) [默认: 1111]: " HTTP_PORT
+    read -p "👉 请设置 Web 面板访问端口 [默认: 1111]: " HTTP_PORT
     HTTP_PORT=${HTTP_PORT:-1111}
 
-    echo -e "\n${YELLOW}▶ 确认配置：面板统一端口 [${HTTP_PORT}]${RESET}\n"
-    sleep 2
-
-    install_env
-
     echo -e "\n${YELLOW}>> 开始克隆项目到 ${INSTALL_DIR}...${RESET}"
-    rm -rf "$INSTALL_DIR"
-    git clone "$REPO_URL" "$INSTALL_DIR"
-    cd "$INSTALL_DIR" || exit
+    rm -rf "$INSTALL_DIR" && git clone "$REPO_URL" "$INSTALL_DIR" && cd "$INSTALL_DIR" || exit
 
-    echo -e "${YELLOW}>> 正在生成安全环境变量配置 (.env)...${RESET}"
-    # 自动生成 32 位随机字符作为防篡改盐值
+    echo -e "${YELLOW}>> 正在生成默认环境配置 (.env)...${RESET}"
     RANDOM_SALT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    cat << EOF > .env
-# === Manager Pro 环境变量配置 ===
+    cat << ENV_EOF > .env
 PORT=${HTTP_PORT}
-
-# 默认账号密码 (建议修改)
 AUTH_USER=admin
 AUTH_PASS=password
-
-# 加密与哈希盐值 (已自动生成随机安全值)
+JWT_SECRET=ManagerPro_${RANDOM_SALT}
 SEC_TOKEN_SALT=${RANDOM_SALT}
-AES_KEY=8ab732d0ef2afc4bdcd9ddebe87b264cef1f1dd4e3f7d4227379d80b84290bdc
-AES_IV=e27aa5b2a97546aa693e17a7df4993a8
-EOF
+AES_KEY=8ab732c8b82937d92847a983b928374928374a928374b928374c928374d92837
+AES_IV=e27b928374a928374b928374c928374d
+LOG_LEVEL=info
+ENV_EOF
 
-    echo -e "${YELLOW}>> 正在安装 Node.js 核心依赖 (这可能需要几分钟)...${RESET}"
-    npm install express cors axios ws better-sqlite3 form-data ssh2 dotenv xss
+    echo -e "${YELLOW}>> 正在安装 Node.js 依赖...${RESET}"
+    npm install --production
 
-    echo -e "${YELLOW}>> 正在启动服务并配置开机自启...${RESET}"
+    echo -e "${YELLOW}>> 正在启动服务并设置开机自启...${RESET}"
     chmod +x manager.sh 2>/dev/null || true
-    
-    if [ -f "$INSTALL_DIR/manager.sh" ]; then
-        ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
-        chmod +x /usr/local/bin/dm
-    fi
+    ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
+    chmod +x /usr/local/bin/dm
 
-    pm2 start app.js --name "$APP_NAME"
-    pm2 save
+    pm2 start app.js --name "$APP_NAME" && pm2 save
     env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1
 
     IP=$(curl -s ifconfig.me)
-    echo -e "\n${GREEN}==================================================${RESET}"
-    echo -e "${GREEN}🎉 安装部署完全成功！${RESET}"
-    echo -e "🔗 访问地址: ${YELLOW}http://${IP}:${HTTP_PORT}${RESET}"
-    echo -e "👤 默认账号: ${YELLOW}admin${RESET}"
-    echo -e "🔑 默认密码: ${YELLOW}password${RESET}"
-    echo -e "\n⚙️  管理面板: 以后随时在任意目录输入 ${CYAN}dm${RESET} 即可呼出菜单！"
-    echo -e "⚠️  为了安全，请务必在登录后前往【全局设置】修改默认密码！"
-    echo -e "${GREEN}==================================================${RESET}"
-    
+    echo -e "\n${GREEN}🎉 安装部署成功！访问地址: http://${IP}:${HTTP_PORT}${RESET}"
+    echo -e "⚙️  以后随时在终端输入 ${CYAN}dm${RESET} 即可呼出管理菜单！\n"
     read -p "按回车键进入管理菜单..."
 }
 
-# ================= 3. 更新模块 (防弹修复版) =================
 update_app() {
     echo -e "\n${YELLOW}>> 开始从 GitHub 拉取最新版本...${RESET}"
     cd "$INSTALL_DIR" || exit
-    
-    echo -e "${YELLOW}>> 正在停止后台服务，保护数据库与配置...${RESET}"
     pm2 stop "$APP_NAME" >/dev/null 2>&1
     
-    echo -e "${YELLOW}>> 正在备份本地数据库与环境变量...${RESET}"
     mkdir -p /tmp/dm_db_backup
-    cp -f downloads.db* /tmp/dm_db_backup/ 2>/dev/null || true
-    cp -f .env /tmp/dm_db_backup/ 2>/dev/null || true
+    cp -f downloads.db* .env /tmp/dm_db_backup/ 2>/dev/null || true
     
-    git fetch --all
-    git reset --hard origin/main
-    git pull
+    git fetch --all && git reset --hard origin/main && git pull
     
-    echo -e "${YELLOW}>> 正在还原本地数据库与环境变量...${RESET}"
-    cp -f /tmp/dm_db_backup/downloads.db* ./ 2>/dev/null || true
-    cp -f /tmp/dm_db_backup/.env ./ 2>/dev/null || true
+    cp -f /tmp/dm_db_backup/downloads.db* /tmp/dm_db_backup/.env ./ 2>/dev/null || true
     
     chmod +x manager.sh 2>/dev/null || true
-    if [ -f "$INSTALL_DIR/manager.sh" ]; then
-        ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
-        chmod +x /usr/local/bin/dm
-    fi
-
-    echo -e "${YELLOW}>> 更新可能存在的新依赖...${RESET}"
-    npm install
+    ln -sf "$INSTALL_DIR/manager.sh" /usr/local/bin/dm
     
-    pm2 restart "$APP_NAME"
-    echo -e "${GREEN}🎉 更新完成，服务已安全重启！${RESET}"
+    npm install --production
+    pm2 restart "$APP_NAME" --update-env
+    echo -e "${GREEN}🎉 更新完成，服务已重启！${RESET}"
     read -p "按回车键返回菜单..."
 }
 
-# ================= 4. 卸载模块 =================
 uninstall_app() {
-    echo -e "\n${RED}⚠️ 警告：这将彻底删除面板的所有数据、配置和运行环境！${RESET}"
+    echo -e "\n${RED}⚠️ 警告：这将彻底删除面板的所有数据、配置和环境！${RESET}"
     read -p "确定要继续卸载吗？[y/N]: " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}>> 正在停止并删除后台守护进程...${RESET}"
-        pm2 delete "$APP_NAME" &>/dev/null
-        pm2 save --force
-        
-        echo -e "${YELLOW}>> 正在清理全局命令和项目文件夹...${RESET}"
-        rm -f /usr/local/bin/dm
-        rm -rf "$INSTALL_DIR"
-        
-        echo -e "${GREEN}✅ 卸载完成！江湖再见！${RESET}"
+        pm2 delete "$APP_NAME" &>/dev/null && pm2 save --force
+        rm -f /usr/local/bin/dm && rm -rf "$INSTALL_DIR"
+        echo -e "${GREEN}✅ 卸载完成！${RESET}"
         exit 0
-    else
-        echo -e "已取消卸载操作。"
-        read -p "按回车键返回菜单..."
     fi
 }
 
-# ================= 入口逻辑判定 =================
-if [ ! -d "$INSTALL_DIR" ] || [ ! -f "$INSTALL_DIR/app.js" ]; then
-    install_app
-fi
+if [ ! -d "$INSTALL_DIR" ] || [ ! -f "$INSTALL_DIR/app.js" ]; then install_app; fi
 
-# ================= 5. 管理菜单主循环 =================
 while true; do
     clear
+    APP_VERSION=$(grep -m1 '"version":' "$INSTALL_DIR/package.json" 2>/dev/null | cut -d'"' -f4 || echo "未知")
+    STATUS=$(pm2 jlist 2>/dev/null | grep -o "\"name\":\"$APP_NAME\".*\"status\":\"[^\"]*\"" | grep -o "\"status\":\"[^\"]*\"" | cut -d'"' -f4)
+    
     echo -e "${CYAN}=========================================${RESET}"
     echo -e "       \033[1;37m🚀 Download Manager 控制台\033[0m"
     echo -e "${CYAN}=========================================${RESET}"
-    
-    if command -v pm2 &> /dev/null; then
-        STATUS=$(pm2 jlist | grep -o "\"name\":\"$APP_NAME\".*\"status\":\"[^\"]*\"" | grep -o "\"status\":\"[^\"]*\"" | cut -d'"' -f4)
-    else
-        STATUS=""
-    fi
-    
-    if [ "$STATUS" == "online" ]; then
-        echo -e "   当前后台状态: ${GREEN}[运行中 🟢]${RESET}"
-    else
-        echo -e "   当前后台状态: ${RED}[已停止 🔴]${RESET}"
-    fi
+    echo -e "   当前程序版本: ${YELLOW}v${APP_VERSION}${RESET}"
+    if [ "$STATUS" == "online" ]; then echo -e "   当前运行状态: ${GREEN}[运行中 🟢]${RESET}"; else echo -e "   当前运行状态: ${RED}[已停止 🔴]${RESET}"; fi
     echo -e "${CYAN}=========================================${RESET}"
     echo -e "  ${GREEN}1.${RESET} ▶️  启动面板服务"
     echo -e "  ${RED}2.${RESET} ⏹️  停止面板服务"
@@ -199,52 +123,19 @@ while true; do
     echo -e "  ${CYAN}5.${RESET} ⚙️  设置开机自动启动"
     echo -e "  ${YELLOW}6.${RESET} ⬇️  一键更新至最新版本"
     echo -e "  ${RED}7.${RESET} 🗑️  彻底卸载本面板"
-    echo -e "  \033[37m0.\033[0m ❌ 退出菜单"
+    echo -e "  \033[37m0.\033[0m ❌ 退出控制台"
     echo -e "${CYAN}=========================================${RESET}"
-    
     read -p "请输入序号选择操作 (0-7): " choice
 
     case $choice in
-        1)
-            echo -e "\n${GREEN}启动中...${RESET}"
-            cd "$INSTALL_DIR" || exit
-            pm2 start app.js --name "$APP_NAME"
-            read -p "按回车键返回菜单..."
-            ;;
-        2)
-            echo -e "\n${RED}停止中...${RESET}"
-            pm2 stop "$APP_NAME"
-            read -p "按回车键返回菜单..."
-            ;;
-        3)
-            echo -e "\n${YELLOW}重启中...${RESET}"
-            pm2 restart "$APP_NAME"
-            read -p "按回车键返回菜单..."
-            ;;
-        4)
-            echo -e "\n${CYAN}[日志模式] 按 Ctrl+C 可以退出日志查看${RESET}"
-            pm2 logs "$APP_NAME"
-            ;;
-        5)
-            echo -e "\n${CYAN}配置开机自启中...${RESET}"
-            env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1
-            pm2 save
-            echo -e "${GREEN}设置成功！服务器重启后面板会自动运行。${RESET}"
-            read -p "按回车键返回菜单..."
-            ;;
-        6)
-            update_app
-            ;;
-        7)
-            uninstall_app
-            ;;
-        0)
-            echo -e "\n已退出控制台。\n"
-            exit 0
-            ;;
-        *)
-            echo -e "\n${RED}无效的输入，请重新选择！${RESET}"
-            read -p "按回车键返回菜单..."
-            ;;
+        1) pm2 start app.js --name "$APP_NAME"; read -p "按回车键返回菜单..." ;;
+        2) pm2 stop "$APP_NAME"; read -p "按回车键返回菜单..." ;;
+        3) pm2 restart "$APP_NAME" --update-env; read -p "按回车键返回菜单..." ;;
+        4) echo -e "${CYAN}[日志模式] 按 Ctrl+C 退出${RESET}"; pm2 logs "$APP_NAME" ;;
+        5) env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root >/dev/null 2>&1 && pm2 save; echo -e "${GREEN}设置成功！${RESET}"; read -p "按回车键返回菜单..." ;;
+        6) update_app ;;
+        7) uninstall_app ;;
+        0) echo -e "\n已退出控制台。\n"; exit 0 ;;
+        *) echo -e "\n${RED}无效的输入，请重新选择！${RESET}"; read -p "按回车键返回菜单..." ;;
     esac
 done
