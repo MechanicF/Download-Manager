@@ -136,6 +136,7 @@ setInterval(() => {
 
 app.post('/api/login', validate(Joi.object({ username: Joi.string().required(), password: Joi.string().required() }).unknown(true)), (req, res) => {
   const ip = req.ip;
+  if (failedAttempts.size > 2000) failedAttempts.clear(); // 🛡️ 防内存雪崩：达到阀值直接清空丢弃
   const attempts = failedAttempts.get(ip) || { count: 0, lockUntil: 0 };
   if (Date.now() < attempts.lockUntil) return res.status(429).json({ success: false, error: '错误次数过多，IP已被封禁 15 分钟' });
   if (req.body.username === config.auth.username && req.body.password === config.auth.password) {
@@ -179,6 +180,7 @@ db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
 db.pragma('temp_store = MEMORY');
 db.pragma('mmap_size = 268435456');
+setInterval(() => { try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e){} }, 12 * 3600 * 1000); // 🧹 每12小时自动清理 WAL 磁盘膨胀
 
 db.exec(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, gid TEXT, url TEXT, filename TEXT, total_size INTEGER, downloaded_size INTEGER, speed INTEGER, progress REAL, status TEXT, engine TEXT, hash TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
 try { db.exec('ALTER TABLE tasks ADD COLUMN url TEXT'); } catch(e){}
@@ -246,6 +248,8 @@ app.post('/api/llm/recognize', async (req, res) => {
     if (!l || !l.enabled || !l.key) return res.json({ success: false, error: 'LLM 插件未启用或配置不全' });
 
     try {
+        const abortCtrl = new AbortController();
+        req.on('close', () => abortCtrl.abort()); // 🛑 前端断开立刻掐断 LLM，防止 Token 资金泄漏
         const response = await axios.post(l.url.replace(/\/$/, '') + '/chat/completions', {
             model: l.model,
             messages: [
@@ -260,7 +264,8 @@ app.post('/api/llm/recognize', async (req, res) => {
         }, {
             headers: { 'Authorization': `Bearer ${l.key}`, 'Content-Type': 'application/json' },
             responseType: 'stream', // axios 接收流
-            timeout: 60000
+            timeout: 60000,
+            signal: abortCtrl.signal
         });
 
         // 打通管道，将上游的打字机流原封不动地发给前端
@@ -635,8 +640,8 @@ let lastFullPayload = "";
 let isSyncing = false;
 let previousTasksMap = new Map();
 
-setInterval(async () => {
-  if (wss.clients.size === 0 || isSyncing) return;
+const runSyncLoop = async () => {
+  if (wss.clients.size === 0 || isSyncing) { setTimeout(runSyncLoop, 1500); return; }
   isSyncing = true;
   try {
       const stats = await syncDatabase();
@@ -688,8 +693,9 @@ setInterval(async () => {
           });
       }
   } catch (e) {}
-  finally { isSyncing = false; }
-}, 1500);
+  finally { isSyncing = false; setTimeout(runSyncLoop, 1500); }
+};
+runSyncLoop(); // 🚀 递归拉取，永不漂移
 
 const interval = setInterval(() => { wss.clients.forEach(ws => { if (ws.isAlive === false) return ws.terminate(); ws.isAlive = false; ws.ping(); }); }, 30000);
 wss.on('close', () => clearInterval(interval));
