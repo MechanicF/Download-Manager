@@ -81,8 +81,8 @@ const https = require('https');
 
 // 🌟 建立持久化连接池，避免每 1.5 秒疯狂进行 TCP 三次握手
 const rpcClient = axios.create({
-  httpAgent: new http.Agent({ keepAlive: false, maxSockets: 100 }),
-  httpsAgent: new https.Agent({ keepAlive: false, maxSockets: 100 })
+  httpAgent: new http.Agent({ keepAlive: true, maxSockets: 100 }),
+  httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 100 })
 });
 
 function getSecureToken() {
@@ -415,8 +415,8 @@ app.post('/api/tasks/:id/:act', async (req, res) => {
 
 app.post('/api/tasks/batch', async (req, res) => {
   const { ids, action } = req.body;
-  for (const id of ids) {
-    const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(id); if(!t) continue;
+  await Promise.allSettled(ids.map(async (id) => {
+    const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(id); if(!t) return;
     try {
       const idx = parseInt(t.engine.split('_')[1]);
       if(action==='pause') { await aria2.call(idx, 'pause', [t.gid]); db.prepare("UPDATE tasks SET status='paused' WHERE id=?").run(id); }
@@ -426,7 +426,7 @@ app.post('/api/tasks/batch', async (req, res) => {
           safeDeleteTask('id', id);
       }
     } catch(e){}
-  }
+  }));
   res.json({success:true});
 });
 
@@ -641,11 +641,12 @@ let isSyncing = false;
 let previousTasksMap = new Map();
 
 const runSyncLoop = async () => {
-  if (wss.clients.size === 0 || isSyncing) { setTimeout(runSyncLoop, 1500); return; }
+  if (isSyncing) { setTimeout(runSyncLoop, 1500); return; }
   isSyncing = true;
   try {
       const stats = await syncDatabase();
       const currentTasks = stats.finalTasks || [];
+      if (wss.clients.size === 0) return; // 🛡️ 只要没人在看UI，立刻中止 Diff 计算和下发，但刚才的 syncDatabase 已经成功将完成的任务落盘！
       
       let added = [], updated = [], removed = [];
       const currentIds = new Set();
