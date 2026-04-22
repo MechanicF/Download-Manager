@@ -139,7 +139,7 @@
         <li class="nav-item" onclick="switchTab('pansou', this)">🔍 全网盘搜</li>
         <li class="nav-item" onclick="switchTab('upload_status', this)">📊 上传进度</li>
         <div style="margin: 12px 16px; border-top: 1px dashed var(--border-color);"></div><li class="nav-item" onclick="switchTab('settings', this)">⚙️ 全局设置</li>
-        <li><div id="sidebar-engines-status" style="padding:16px; font-size:12px; color:var(--text-muted); line-height:2.2;"></div></li>
+        <li><div id="sidebar-engines-status" style="padding:16px; font-size:13px; font-weight:bold; letter-spacing: 1px;; color:var(--text-muted); line-height:2.2;"></div></li>
       </ul>
     </aside>
 
@@ -193,7 +193,7 @@
           <div style="text-align:center; padding:100px 20px; color:var(--text-muted);">
             <div style="font-size:50px; margin-bottom:20px; opacity:0.8;">🌐</div>
             <div style="font-size:16px; font-weight:bold; color:var(--text-main);">全网资源聚合搜索</div>
-            <div style="font-size:12px; margin-top:10px;">输入关键字，检索各大网盘资源</div>
+            <div style="font-size:13px; font-weight:bold; letter-spacing: 1px;; margin-top:10px;">输入关键字，检索各大网盘资源</div>
           </div>
         </div>
       </div>
@@ -217,22 +217,22 @@
               <div class="vo-term-header" style="background:#2d2d2d; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #111;">
                   <div class="vo-term-info" style="display:flex; align-items:center; gap:15px;">
                       <span id="term-node-name" style="color:#fff; font-weight:bold; font-size:16px;">节点终端</span>
-                      <span id="term-badge" style="padding:4px 10px; border-radius:4px; font-size:12px; font-weight:bold; background:#636e72; color:white;">检查中</span>
-                      <span id="term-stats" style="color:#aaa; font-size:12px; font-family:monospace;">PID: - | Mem: - | UP: -</span>
+                      <span id="term-badge" style="padding:4px 10px; border-radius:4px; font-size:13px; font-weight:bold; letter-spacing: 1px;; font-weight:bold; background:#636e72; color:white;">检查中</span>
+                      <span id="term-stats" style="color:#aaa; font-size:13px; font-weight:bold; letter-spacing: 1px;; font-family:monospace;">PID: - | Mem: - | UP: -</span>
                   </div>
                   <div class="vo-term-ctrls" style="display:flex; gap:8px; align-items:center;">
-                      <button class="btn btn-sm btn-success" onclick="voAction(currentTermNodeId, 'start')" style="padding:4px 10px; font-size:12px;">▶ 启动</button>
-                      <button class="btn btn-sm btn-danger" onclick="voAction(currentTermNodeId, 'stop')" style="padding:4px 10px; font-size:12px;">⏹ 停止</button>
-                      <button class="btn btn-sm btn-warning" onclick="voAction(currentTermNodeId, 'restart')" style="padding:4px 10px; font-size:12px; color:black;">🔄 重启</button>
-                      <button class="btn btn-sm btn-default" onclick="voAction(currentTermNodeId, 'clean')" style="padding:4px 10px; font-size:12px;">🧹 清理</button>
+                      <button class="btn btn-sm btn-success" onclick="voAction(currentTermNodeId, 'start')" style="padding:4px 10px; font-size:13px; font-weight:bold; letter-spacing: 1px;;">▶ 启动</button>
+                      <button class="btn btn-sm btn-danger" onclick="voAction(currentTermNodeId, 'stop')" style="padding:4px 10px; font-size:13px; font-weight:bold; letter-spacing: 1px;;">⏹ 停止</button>
+                      <button class="btn btn-sm btn-warning" onclick="voAction(currentTermNodeId, 'restart')" style="padding:4px 10px; font-size:13px; font-weight:bold; letter-spacing: 1px;; color:black;">🔄 重启</button>
+                      <button class="btn btn-sm btn-default" onclick="voAction(currentTermNodeId, 'clean')" style="padding:4px 10px; font-size:13px; font-weight:bold; letter-spacing: 1px;;">🧹 清理</button>
                       <div class="vo-term-divider" style="width:1px; height:20px; background:#555; margin:0 5px;"></div>
                       <button class="vo-term-close" onclick="closeVoTerminal()" style="background:transparent; border:none; color:#fff; font-size:28px; cursor:pointer; line-height:1;">×</button>
                   </div>
               </div>
               
               <div style="background:#252526; padding:8px 20px; display:flex; gap:10px; border-bottom:1px solid #111; align-items:center; flex-wrap:wrap;">
-                  <input type="text" id="vo-custom-dir" class="form-control" style="flex:1; min-width:150px; height:28px; font-size:12px; background:#1e1e1e; color:#ccc; border:1px solid #444;" placeholder="输入指定处理的目录 (例如: /root/downloads)">
-                  <button class="btn btn-sm" onclick="startVoWithDir()" style="background:#00b894; color:#fff; border:none; padding:4px 12px; font-size:12px; border-radius:4px; cursor:pointer; white-space:nowrap;">📂 指定目录</button>
+                  <input type="text" id="vo-custom-dir" class="form-control" style="flex:1; min-width:150px; height:28px; font-size:13px; font-weight:bold; letter-spacing: 1px;; background:#1e1e1e; color:#ccc; border:1px solid #444;" placeholder="输入指定处理的目录 (例如: /root/downloads)">
+                  <button class="btn btn-sm" onclick="startVoWithDir()" style="background:#00b894; color:#fff; border:none; padding:4px 12px; font-size:13px; font-weight:bold; letter-spacing: 1px;; border-radius:4px; cursor:pointer; white-space:nowrap;">📂 指定目录</button>
               </div>
               <div id="term-log-box" style="flex:1; padding:15px; overflow-y:auto; font-family:'Consolas', monospace; font-size:13px; line-height:1.6; color:#d4d4d4; word-break:break-all;">
                   <div style="color:#888; text-align:center; margin-top:100px;">正在连接安全网关...</div>
@@ -345,7 +345,7 @@
         </div>
         <div id="engine-config-visual" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 30px; overflow-y: auto;"></div>
         <div id="engine-config-raw" style="display:none; flex-direction:column; flex:1;">
-           <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">⚠️ 源码模式：直接修改 Aria2 底层 JSON 配置，支持全量参数，格式错误会导致崩溃，请谨慎操作。</div>
+           <div style="font-size:13px; font-weight:bold; letter-spacing: 1px;; color:var(--text-muted); margin-bottom:10px;">⚠️ 源码模式：直接修改 Aria2 底层 JSON 配置，支持全量参数，格式错误会导致崩溃，请谨慎操作。</div>
            <textarea id="engine-config-json-input" class="form-control" style="flex:1; font-family: monospace; resize: none;"></textarea>
         </div>
       </div>
@@ -360,7 +360,7 @@
         <label style="cursor:pointer; font-weight:600;"><input type="radio" name="task_type" value="url" checked onchange="toggleTaskType()"> 🔗 链接直链</label>
         <label style="cursor:pointer; font-weight:600; color:var(--primary);"><input type="radio" name="task_type" value="torrent" onchange="toggleTaskType()"> 📄 种子上传</label>
       </div>
-      <div id="box-url"><textarea id="url-input" class="form-control" style="height:140px; font-family:monospace; font-size:12px;" placeholder="支持批量，每行一条 (HTTP/HTTPS/FTP/Magnet)"></textarea></div>
+      <div id="box-url"><textarea id="url-input" class="form-control" style="height:140px; font-family:monospace; font-size:13px; font-weight:bold; letter-spacing: 1px;;" placeholder="支持批量，每行一条 (HTTP/HTTPS/FTP/Magnet)"></textarea></div>
       <div id="box-torrent" style="display:none; padding:30px; border:2px dashed var(--primary); border-radius:var(--radius-sm); text-align:center; background:var(--primary-light);">
         <input type="file" id="torrent-file" accept=".torrent" style="display:none;" onclick="this.value=null;" onchange="document.getElementById('t-name').innerText=this.files[0]?this.files[0].name:'未选择文件';">
         <div id="t-name" style="margin-bottom:15px; color:var(--primary); font-weight:bold; font-size:14px;">未选择文件</div>
@@ -414,7 +414,7 @@
   <div id="rn-replace-box" style="background:var(--hover-bg); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px;">
       <div style="display:flex; gap:10px;">
           <input type="text" id="rn-search" class="form-control" placeholder="查找内容 (匹配旧名称)" style="margin:0; flex:1;" oninput="updateRenamePreviewDebounced()">
-          <div style="color:var(--text-muted); display:flex; align-items:center; font-size:12px;">➜</div>
+          <div style="color:var(--text-muted); display:flex; align-items:center; font-size:13px; font-weight:bold; letter-spacing: 1px;;">➜</div>
           <input type="text" id="rn-replace" class="form-control" placeholder="替换为 (留空则删除查找字串)" style="margin:0; flex:1;" oninput="updateRenamePreviewDebounced()">
       </div>
   </div>
@@ -424,7 +424,7 @@
           <input type="text" id="rn-format" class="form-control" placeholder="重命名格式 (如: 剧集名称.S01.E{n}{ext})" style="flex:1; margin:0;" oninput="updateRenamePreviewDebounced()">
           <input type="number" id="rn-start" class="form-control" value="1" placeholder="起始" title="未嗅探到集数时的默认起始序号" style="width:80px; margin:0;" oninput="updateRenamePreviewDebounced()">
       </div>
-      <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+      <div style="font-size:13px; font-weight:bold; letter-spacing: 1px;; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
           <span>💡 变量说明：</span><code style="background:var(--bg-body); padding:2px 6px; border-radius:4px; font-weight:bold;">{n}</code><span>智能集数提取</span>
           <code style="background:var(--bg-body); padding:2px 6px; border-radius:4px; font-weight:bold;">{ext}</code><span>原文件后缀</span>
       </div>
@@ -445,7 +445,7 @@
     <div style="padding:8px 16px; background:#2d2d2d; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #000;">
       <span style="font-weight:bold; color:#4fc1ff; font-family:monospace; font-size:13px;">🐞 开发者控制台 (全链路监控)</span>
       <div style="display:flex; gap:10px;">
-        <label style="display:flex; align-items:center; gap:4px; color:#ccc; font-size:12px; cursor:pointer; margin:0;">
+        <label style="display:flex; align-items:center; gap:4px; color:#ccc; font-size:13px; font-weight:bold; letter-spacing: 1px;; cursor:pointer; margin:0;">
           <input type="checkbox" id="ignore-stats" checked> 过滤心跳包
         </label>
         <button id="btn-pause" class="btn btn-warning btn-sm" onclick="window.isDebugPaused=!window.isDebugPaused; this.innerText=window.isDebugPaused?'▶️ 继续记录':'⏸️ 暂停拦截'" style="color:#000; font-weight:bold;">⏸️ 暂停拦截</button>
@@ -454,9 +454,9 @@
         <button class="btn btn-danger btn-sm" onclick="toggleDebugPanel()">关闭面板</button>
       </div>
     </div>
-    <div id="debug-content" style="flex:1; overflow-y:auto; padding:10px; font-family:monospace; font-size:12px; line-height:1.6; color:#d4d4d4;"></div>
+    <div id="debug-content" style="flex:1; overflow-y:auto; padding:10px; font-family:monospace; font-size:13px; font-weight:bold; letter-spacing: 1px;; line-height:1.6; color:#d4d4d4;"></div>
   </div>
 
 
-<div id="ui-version" style="position:fixed;bottom:10px;right:15px;font-size:12px;color:rgba(255,255,255,0.3);z-index:9999;pointer-events:none;"></div></body>
+<div id="ui-version" style="position:fixed;bottom:10px;right:15px;font-size:13px; font-weight:bold; letter-spacing: 1px;;color:#9e9e9e;z-index:9999;pointer-events:none;"></div></body>
 </html>
