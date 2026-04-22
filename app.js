@@ -10,8 +10,9 @@ if (!_fs.existsSync(_path.join(__dirname, 'logs'))) {
 
 // 2. 补齐新环境缺失的 .env
 const _envPath = _path.join(__dirname, '.env');
-if (!_fs.existsSync(_envPath)) {
-    _fs.writeFileSync(_envPath, "JWT_SECRET=ManagerPro_Super_Secret_Change_Me\nAES_KEY=8ab732c8b82937d92847a983b928374928374a928374b928374c928374d92837\nAES_IV=e27b928374a928374b928374c928374d\nLOG_LEVEL=info\n");
+let _envContent = _fs.existsSync(_envPath) ? _fs.readFileSync(_envPath, 'utf8') : '';
+if (!_envContent.includes('JWT_SECRET=')) {
+    _fs.appendFileSync(_envPath, "\n" +  "JWT_SECRET=ManagerPro_Super_Secret_Change_Me\nAES_KEY=8ab732c8b82937d92847a983b928374928374a928374b928374c928374d92837\nAES_IV=e27b928374a928374b928374c928374d\nLOG_LEVEL=info\n");
     console.log('🌱 [系统引导] 已自动生成默认 .env 安全配置');
 }
 
