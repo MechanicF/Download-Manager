@@ -1798,3 +1798,75 @@ async function localFastRecognize() {
     };
 
     initApp();
+
+
+/* =========================================================
+ * 🛡️ OOBE_AUTO_REFRESH_INTERCEPTOR: 全局网络防脱节探针
+ * ========================================================= */
+(function() {
+    const isTargetApi = (url) => url && (url.includes('/api/openlist/rename') || url.includes('/api/openlist/remove'));
+
+    function triggerUIRefresh() {
+        // 延迟 500ms 等待后端 Alist 状态彻底落盘
+        setTimeout(() => {
+            // 方案 A：尝试寻找全局刷新函数
+            const possibleFuncs = ['loadOpenList', 'fetchOpenList', 'getOpenList', 'refreshList', 'loadDir'];
+            let called = false;
+            for (let fn of possibleFuncs) {
+                if (typeof window[fn] === 'function') {
+                    window[fn]();
+                    called = true; break;
+                }
+            }
+            
+            // 方案 B：如果没找到函数，暴力寻找页面上的【刷新】按钮并模拟点击
+            if (!called) {
+                const btns = Array.from(document.querySelectorAll('button, div, a, i')).filter(el => 
+                    (el.innerText && el.innerText.includes('刷新')) || 
+                    (el.title && el.title.includes('刷新')) ||
+                    (el.className && (typeof el.className === 'string') && (el.className.includes('refresh') || el.className.includes('sync')))
+                );
+                for (let btn of btns) {
+                    if (btn.offsetParent !== null) { // 确保按钮在屏幕上是可见的
+                        btn.click();
+                        break;
+                    }
+                }
+            }
+        }, 500); 
+    }
+
+    // 1. 劫持原生 Fetch 请求
+    if (window.fetch) {
+        const origFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const res = await origFetch.apply(this, args);
+            const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url);
+            if (isTargetApi(url)) {
+                res.clone().json().then(data => {
+                    if (data && data.success !== false) triggerUIRefresh();
+                }).catch(()=>{});
+            }
+            return res;
+        };
+    }
+
+    // 2. 劫持 XMLHttpRequest (兼容 Axios 与旧版 Ajax)
+    const origOpen = XMLHttpRequest.prototype.open;
+    const origSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function(method, url) {
+        this._reqUrl = typeof url === 'string' ? url : url.href;
+        origOpen.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function() {
+        this.addEventListener('load', function() {
+            if (isTargetApi(this._reqUrl) && this.status >= 200 && this.status < 300) {
+                try {
+                    const data = JSON.parse(this.responseText);
+                    if (data && data.success !== false) triggerUIRefresh();
+                } catch(e) {}
+            }
+        });
+        origSend.apply(this, arguments);
+    };
+})();
