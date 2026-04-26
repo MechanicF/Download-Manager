@@ -72,6 +72,7 @@ require('events').EventEmitter.defaultMaxListeners = 100; // 🚀 解除高并�
 
 const axios = require('axios');
 const WebSocket = require('ws');
+const xss = require('xss');
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
@@ -86,7 +87,7 @@ const rpcClient = axios.create({
 });
 
 function getSecureToken() {
-  return jwt.sign({ username: config.auth.username }, process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026', { expiresIn: '7d' });
+  return jwt.sign({ username: config.auth.username }, (process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026'), { expiresIn: '2h' });
 }
 
 const app = express();
@@ -122,7 +123,7 @@ let config = loadConfig();
 function checkAuth(req) {
   const auth = req.headers.authorization;
   if (!auth) return false;
-  try { jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026'); return true; } 
+  try { jwt.verify(auth.split(' ')[1], (process.env.JWT_SECRET || 'ManagerPro_JWT_Secret_2026')); return true; } 
   catch(e) { return false; }
 }
 
@@ -226,7 +227,9 @@ app.get('/api/engine/aria2/:id/config', async (req, res) => {
   try { res.json({ success: true, data: await aria2.call(parseInt(req.params.id), 'getGlobalOption') }); } catch(e) { res.json({success:false, error:e.message}); } 
 });
 app.post('/api/engine/aria2/:id/config', async (req, res) => { 
-  try { await aria2.call(parseInt(req.params.id), 'changeGlobalOption', [req.body]); res.json({success:true}); } catch(e) { res.json({success:false, error:e.message}); } 
+  try { await aria2.call(parseInt(req.params.id), 'changeGlobalOption', [req.body]); await syncDatabase();
+  await syncDatabase();
+  res.json({success:true}); } catch(e) { res.json({success:false, error:e.message}); } 
 });
 
 function getOlConf(idx) { return config.openlist[idx || 0]; }
@@ -461,7 +464,7 @@ app.post('/api/upload', async (req, res) => {
     const idx = parseInt(target.split('_')[1]);
     const gid = await aria2.call(idx, 'addTorrent', [fileBase64]);
     const cleanFilename = xss(filename || '本地种子.torrent');
-    db.prepare("INSERT OR REPLACE INTO tasks (id, filename, engine, status) VALUES (?, ?, ?, 'waiting')").run(gid, cleanFilename, target);
+    db.prepare("INSERT OR REPLACE INTO tasks (id,filename,engine,status) VALUES (?,?,?,'waiting')").run(gid, filename, target);
     res.json({ success: true, message:'种子已上传' });
   } catch(e) { res.json({ success: false, error: e.message }); }
 });
@@ -573,7 +576,7 @@ app.post('/api/force_kill_task', async (req, res) => {
     const removeRes = await makeReq('aria2.removeDownloadResult', [gid]);
     try { 
         if(typeof db !== 'undefined') { 
-            try{ db.prepare('DELETE FROM downloads WHERE gid=?').run(gid); }catch(e){} 
+            try{ db.prepare('DELETE FROM tasks WHERE gid=?').run(gid); }catch(e){} 
             safeDeleteTask('gid', gid);
         } 
     } catch(e){}
