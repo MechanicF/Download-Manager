@@ -845,6 +845,7 @@ async function addDownload(){
       document.getElementById('btn-ol-download').style.display = displayState; 
       document.getElementById('btn-ol-rename').style.display = displayState; 
       document.getElementById('btn-ol-delete').style.display = displayState;
+            if(document.getElementById('btn-ol-move')) document.getElementById('btn-ol-move').style.display = document.getElementById('btn-ol-delete').style.display;
     }
 
     function toggleOlItem(name, cbId, e) {
@@ -1155,6 +1156,118 @@ if(r.code === 200 && r.data){
 }
 
     let globalDeleteQueue = []; let isDeleting = false; let deleteStats = { total: 0, current: 0, success: 0, fail: 0 };
+    
+/* 🛡️ 终极防线：全局防注入转义函数 */
+window.escapeHtml = function(unsafe) {
+    return (unsafe || '').toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+};
+var escapeHtml = window.escapeHtml;
+
+/* --- 🌟 新增：可视化弹窗目录选择与移动逻辑 --- */
+let mfTasks = [];
+let mfIdx = 0;
+let mfSrcDir = "";
+
+async function moveSelectedFiles() {
+    const tasksToProcess = Array.from(olSelected);
+    if(tasksToProcess.length === 0) return showToast("请先勾选要移动的文件或文件夹", "error");
+    mfIdx = document.getElementById("ol-account-select").value;
+    mfSrcDir = currentOpenListPath;
+    mfTasks = tasksToProcess;
+    document.getElementById('mf-modal').style.display = 'flex';
+    loadMfDir('/');
+}
+
+async function loadMfDir(path) {
+    document.getElementById('mf-current-path').value = path;
+    const listDiv = document.getElementById('mf-list');
+    listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:#999; font-size:13px;">🔄 获取目录结构中...</div>';
+    try {
+        const r = await api("/api/openlist/list", { method: "POST", body: JSON.stringify({ olIdx: parseInt(mfIdx), path: path }) });
+        let items = [];
+        if (r.data && r.data.content) items = r.data.content;
+        else if (r.content) items = r.content;
+        else if (Array.isArray(r.data)) items = r.data;
+        else if (Array.isArray(r)) items = r;
+        
+        const folders = items.filter(item => item.is_dir === true || item.type === 1);
+        if (folders.length === 0) {
+            listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc; font-size:13px;">此目录下没有子文件夹</div>';
+            return;
+        }
+        let htmlStr = '';
+        folders.forEach(f => {
+            const isSelf = (path === mfSrcDir && mfTasks.includes(f.name)); 
+            const color = isSelf ? '#ccc' : 'var(--text-main, #333)';
+            const safeName = encodeURIComponent(f.name);
+            const clickAttr = isSelf ? '' : 'onclick="mfEnterDir(\'' + safeName + '\')"';
+            htmlStr += '<div ' + clickAttr + ' style="padding:10px; border-bottom:1px solid var(--border-color, #eee); cursor:' + (isSelf ? 'not-allowed' : 'pointer') + '; display:flex; align-items:center; gap:8px; color:' + color + '; font-size:14px; transition:background 0.2s;">' + 
+                '📁 ' + (window.escapeHtml ? window.escapeHtml(f.name) : f.name) + 
+                (isSelf ? ' <span style="font-size:12px;color:#f0ad4e">(选中项)</span>' : '') + 
+            '</div>';
+        });
+        listDiv.innerHTML = htmlStr;
+    } catch (e) {
+        listDiv.innerHTML = '<div style="text-align:center; padding:30px; color:var(--danger, red); font-size:13px;">❌ 目录加载失败</div>';
+    }
+}
+
+function mfEnterDir(encodedFolderName) {
+    let folderName = decodeURIComponent(encodedFolderName);
+    let cp = document.getElementById('mf-current-path').value;
+    if (cp !== '/') cp += '/';
+    loadMfDir(cp + folderName);
+}
+
+function mfGoUp() {
+    let cp = document.getElementById('mf-current-path').value;
+    if (cp === '/') return;
+    let parts = cp.split('/').filter(p => p);
+    parts.pop();
+    loadMfDir('/' + parts.join('/'));
+}
+
+async function confirmMoveAction() {
+    const targetDir = document.getElementById('mf-current-path').value;
+    if (targetDir === mfSrcDir) return showToast("目标目录与当前所在的目录相同！", "error");
+    const btn = document.getElementById('mf-confirm-btn');
+    const oldText = btn.innerText;
+    btn.innerText = "⏳ 正在转移...";
+    btn.disabled = true;
+    try {
+        const r = await api("/api/openlist/move", { method: "POST", body: JSON.stringify({ olIdx: parseInt(mfIdx), src_dir: mfSrcDir, dst_dir: targetDir, names: mfTasks }) });
+        if(r.code === 200 || r.success) {
+            showToast("✅ 成功转移 " + mfTasks.length + " 个项目");
+            document.getElementById('mf-modal').style.display = 'none';
+            olSelected.clear();
+            if(typeof updateOlSelectionUI === 'function') updateOlSelectionUI();
+            if(typeof loadOpenList === 'function') loadOpenList(currentOpenListPath, mfIdx);
+        } else {
+            showToast("❌ 移动失败: " + (r.message || r.error), "error");
+        }
+    } catch (e) {
+        showToast("❌ 网络异常: " + (e.message || "请求被拒绝"), "error");
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    const mfModal = document.getElementById('mf-modal');
+    if (e.key === 'Enter' && mfModal && mfModal.style.display !== 'none') {
+        if (document.activeElement && document.activeElement.id === 'mf-current-path') return;
+        e.preventDefault();
+        const btn = document.getElementById('mf-confirm-btn');
+        if (btn && !btn.disabled) btn.click();
+    }
+});
+
     async function deleteSelectedFiles(){
       const tasksToProcess = Array.from(olSelected); if(tasksToProcess.length === 0) return;
       if(!confirm(`危险操作：确定要彻底删除云端的 ${tasksToProcess.length} 个文件吗？此操作不可逆！`)) return;
@@ -1804,7 +1917,7 @@ async function localFastRecognize() {
  * 🛡️ OOBE_AUTO_REFRESH_INTERCEPTOR: 全局网络防脱节探针
  * ========================================================= */
 (function() {
-    const isTargetApi = (url) => url && (url.includes('/api/openlist/rename') || url.includes('/api/openlist/remove'));
+    const isTargetApi = (url) => url && (url.includes('/api/openlist/rename') || url.includes('/api/openlist/remove') || url.includes('/api/openlist/move'));
 
     function triggerUIRefresh() {
         // 延迟 500ms 等待后端 Alist 状态彻底落盘

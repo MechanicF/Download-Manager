@@ -95,6 +95,57 @@
 
 
   <link rel="stylesheet" href="/css/main.css">
+
+<style id="mf-mobile-style">
+@media (max-width: 768px) {
+    /* 1. 弹窗铺满屏幕边缘，增加可视面积 */
+    #mf-modal > div {
+        width: 95% !important;
+        max-height: 88vh !important;
+        padding: 15px 12px !important;
+    }
+    /* 2. 疯狂加大文件夹点击热区 (防误触) */
+    #mf-list > div {
+        padding: 18px 10px !important;
+        font-size: 15px !important;
+    }
+    /* 3. 顶部路径输入框稍微缩减高度 */
+    #mf-current-path {
+        font-size: 14px !important;
+        padding: 6px 10px !important;
+    }
+    /* 4. 底部确定/取消按钮变成等宽大按钮，大拇指闭眼按 */
+    #mf-modal > div > div:last-child {
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 12px !important;
+        margin-top: 15px !important;
+    }
+    #mf-modal > div > div:last-child .btn {
+        flex: 1 !important;
+        padding: 12px 0 !important;
+        margin: 0 !important;
+        font-size: 15px !important;
+        font-weight: bold !important;
+        text-align: center !important;
+    }
+}
+</style>
+
+
+<style id="mf-mobile-order-style">
+@media (max-width: 768px) {
+    /* 强制将选中的操作按钮排到 flex 容器的最底部 */
+    #ol-selected-count { order: 90 !important; width: 100% !important; text-align: center !important; margin-bottom: 8px !important; }
+    #btn-ol-download { order: 91 !important; width: 100% !important; margin-bottom: 8px !important; }
+    
+    /* 让重命名、移动、删除三个按钮在同一行平分宽度，美观且防误触 */
+    #btn-ol-rename { order: 92 !important; flex: 1 1 auto !important; margin: 0 2px !important; padding: 10px 0 !important; font-size: 14px !important; }
+    #btn-ol-move { order: 93 !important; flex: 1 1 auto !important; margin: 0 2px !important; padding: 10px 0 !important; font-size: 14px !important; }
+    #btn-ol-delete { order: 94 !important; flex: 1 1 auto !important; margin: 0 2px !important; padding: 10px 0 !important; font-size: 14px !important; }
+}
+</style>
+
 </head>
 <body>
 
@@ -177,6 +228,7 @@
           <span id="ol-selected-count" style="display:none; font-size:13px; font-weight:600; color:var(--primary); margin:0 10px; animation: fadeIn 0.2s ease;">已选择 0 项</span>
           <button class="btn btn-success" id="btn-ol-download" style="display:none;" onclick="showEngineSelectModalForOL()">发送至引擎</button>
           <button class="btn btn-warning" id="btn-ol-rename" style="display:none;" onclick="showRenameModal()">重命名</button>
+          <button class="btn btn-info" id="btn-ol-move" style="display:none; margin-right:5px;" onclick="moveSelectedFiles()">移动</button>
           <button class="btn btn-danger" id="btn-ol-delete" style="display:none;" onclick="deleteSelectedFiles()">删除</button>
         </div>
         <div id="openlist-content" style="background:var(--card-bg); border-radius:var(--radius-md); border:1px solid var(--border-color); overflow-x:auto;"></div>
@@ -458,5 +510,22 @@
   </div>
 
 
-<div id="ui-version" style="position:fixed;bottom:10px;right:15px;font-size:13px;font-weight:bold;color:#9e9e9e;z-index:9999;pointer-events:none;letter-spacing:1px;">v3.0.12</div></body>
+<div id="ui-version" style="position:fixed;bottom:10px;right:15px;font-size:13px;font-weight:bold;color:#9e9e9e;z-index:9999;pointer-events:none;letter-spacing:1px;">v3.0.12</div>
+<div id="mf-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+  <div style="background:var(--card-bg, #fff); width:90%; max-width:450px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; flex-direction:column; max-height:80vh; border:1px solid var(--border-color, #eee);">
+    <h4 style="margin-top:0; color:var(--text-main, #333);">🎯 选择移动至哪个目录</h4>
+    <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
+      <button class="btn btn-default btn-sm" onclick="mfGoUp()">⬆️ 上级</button>
+      <input type="text" id="mf-current-path" class="form-control" onkeydown="if(event.key==='Enter') { event.preventDefault(); loadMfDir(this.value); }" style="flex:1; margin:0; font-family:monospace; background:var(--bg-body, #f5f5f5);">
+    </div>
+    <div id="mf-list" style="flex:1; overflow-y:auto; border:1px solid var(--border-color, #eee); border-radius:6px; min-height:250px; padding:5px; background:var(--bg-body, #fafafa);">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+      <button class="btn btn-default" onclick="document.getElementById('mf-modal').style.display='none'">取消</button>
+      <button class="btn btn-info" id="mf-confirm-btn" onclick="confirmMoveAction()">确定移动到此</button>
+    </div>
+  </div>
+</div>
+
+</body>
 </html>
